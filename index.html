@@ -86,6 +86,10 @@ details[open] summary::after{content:"–"}
 .ctl label{color:#c9c1b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctl output{font-family:var(--font-mono);font-size:11.5px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer}
 .ctl.changed output{color:var(--accent)}
+details.sub{border:1px solid var(--line);border-radius:6px;margin-top:4px}
+details.sub summary{padding:7px 10px;font-size:11px}
+details.sub summary .meta{font-weight:400;letter-spacing:.04em;color:var(--muted);text-transform:none}
+details.sub .ctrls{padding:2px 10px 10px}
 input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;margin:0}
 input[type=range]::-webkit-slider-runnable-track{height:3px;background:#3a342e;border-radius:2px}
 input[type=range]::-moz-range-track{height:3px;background:#3a342e;border-radius:2px}
@@ -244,37 +248,50 @@ const GROUPS = [
     ["grainRough","Clumping",0,1,0.01,0.35,""],
     ["grainShadow","Shadow grain",0,1,0.01,0.3,""],
     ["seed","Seed",0,99,1,7,""],
+    /* Emulsion layers (R/G/B colour records): multipliers on the masters above. Colour-negative defaults:
+       green finest, blue coarsest and noisiest. */
+    ["gAmtR","Red amount",0,2,0.01,1.0,"×","layer"],
+    ["gAmtG","Green amount",0,2,0.01,0.8,"×","layer"],
+    ["gAmtB","Blue amount",0,2,0.01,1.35,"×","layer"],
+    ["gSizeR","Red size",0.5,2,0.01,1.0,"×","layer"],
+    ["gSizeG","Green size",0.5,2,0.01,0.9,"×","layer"],
+    ["gSizeB","Blue size",0.5,2,0.01,1.25,"×","layer"],
+    ["gClumpR","Red clumping",0,2,0.01,1.0,"×","layer"],
+    ["gClumpG","Green clumping",0,2,0.01,0.9,"×","layer"],
+    ["gClumpB","Blue clumping",0,2,0.01,1.2,"×","layer"],
   ]},
 ];
 const DEF = {};
 for (const g of GROUPS) for (const p of g.params) DEF[p[0]] = p[5];
-const NONMIX = ["seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix"];
+const NONMIX = ["seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
+  "gAmtR","gAmtG","gAmtB","gSizeR","gSizeG","gSizeB","gClumpR","gClumpG","gClumpB"];
 const MIXABLE = Object.keys(DEF).filter(k => !NONMIX.includes(k));
-/* Grain stocks: emulations of each stock's grain character (amount, size, dye-cloud colour, clumping, shadow grain) */
+/* Grain stocks: emulations of each stock's grain character (amount, size, dye-cloud colour, clumping, shadow grain)
+   and its emulsion layers (R/G/B amount, size, clumping multipliers). Approximations by eye, not measured data. */
 const GRAIN_STOCKS = {
-  "Kodak Vision3 50D · 35mm":   {grain:0.18,grainSize:0.9, grainCol:0.15,grainResp:0.55,grainRough:0.15,grainShadow:0.25},
-  "Kodak Vision3 250D · 35mm":  {grain:0.35,grainSize:1.25,grainCol:0.22,grainResp:0.6, grainRough:0.3, grainShadow:0.3},
-  "Kodak Vision3 500T · 35mm":  {grain:0.6, grainSize:1.6, grainCol:0.3, grainResp:0.6, grainRough:0.45,grainShadow:0.45},
-  "Fuji Eterna 500 · 35mm":     {grain:0.5, grainSize:1.45,grainCol:0.2, grainResp:0.65,grainRough:0.4, grainShadow:0.4},
-  "Kodak Portra 400":           {grain:0.32,grainSize:1.3, grainCol:0.28,grainResp:0.7, grainRough:0.25,grainShadow:0.3},
-  "Kodak Gold 200":             {grain:0.45,grainSize:1.5, grainCol:0.35,grainResp:0.6, grainRough:0.4, grainShadow:0.35},
-  "CineStill 800T":             {grain:0.72,grainSize:1.8, grainCol:0.35,grainResp:0.55,grainRough:0.5, grainShadow:0.55},
-  "Kodak Ektachrome 100":       {grain:0.2, grainSize:1.0, grainCol:0.2, grainResp:0.45,grainRough:0.15,grainShadow:0.15},
-  "Kodak Tri-X 400 · B&W":      {grain:0.8, grainSize:1.7, grainCol:0,   grainResp:0.5, grainRough:0.65,grainShadow:0.4},
-  "Ilford HP5 pushed +2 · B&W": {grain:1.15,grainSize:2.1, grainCol:0,   grainResp:0.4, grainRough:0.8, grainShadow:0.7},
-  "Kodak 7219 · 16mm":          {grain:1.0, grainSize:2.4, grainCol:0.35,grainResp:0.55,grainRough:0.6, grainShadow:0.6},
-  "Ektachrome · Super 8":       {grain:1.35,grainSize:3.1, grainCol:0.4, grainResp:0.45,grainRough:0.75,grainShadow:0.5},
+  "Kodak Vision3 50D · 35mm":   {grain:0.18,grainSize:0.9, grainCol:0.15,grainResp:0.55,grainRough:0.15,grainShadow:0.25, gAmtR:1.0,gAmtG:0.85,gAmtB:1.25,gSizeR:1.0,gSizeG:0.92,gSizeB:1.2,gClumpR:1.0,gClumpG:0.9,gClumpB:1.15},
+  "Kodak Vision3 250D · 35mm":  {grain:0.35,grainSize:1.25,grainCol:0.22,grainResp:0.6, grainRough:0.3, grainShadow:0.3, gAmtR:1.0,gAmtG:0.8,gAmtB:1.3,gSizeR:1.0,gSizeG:0.9,gSizeB:1.22,gClumpR:1.0,gClumpG:0.9,gClumpB:1.2},
+  "Kodak Vision3 500T · 35mm":  {grain:0.6, grainSize:1.6, grainCol:0.3, grainResp:0.6, grainRough:0.45,grainShadow:0.45, gAmtR:1.0,gAmtG:0.8,gAmtB:1.4,gSizeR:1.0,gSizeG:0.9,gSizeB:1.28,gClumpR:1.0,gClumpG:0.9,gClumpB:1.25},
+  "Fuji Eterna 500 · 35mm":     {grain:0.5, grainSize:1.45,grainCol:0.2, grainResp:0.65,grainRough:0.4, grainShadow:0.4, gAmtR:1.0,gAmtG:0.82,gAmtB:1.35,gSizeR:1.0,gSizeG:0.9,gSizeB:1.25,gClumpR:1.0,gClumpG:0.9,gClumpB:1.2},
+  "Kodak Portra 400":           {grain:0.32,grainSize:1.3, grainCol:0.28,grainResp:0.7, grainRough:0.25,grainShadow:0.3, gAmtR:0.95,gAmtG:0.8,gAmtB:1.25,gSizeR:1.0,gSizeG:0.9,gSizeB:1.2,gClumpR:1.0,gClumpG:0.85,gClumpB:1.15},
+  "Kodak Gold 200":             {grain:0.45,grainSize:1.5, grainCol:0.35,grainResp:0.6, grainRough:0.4, grainShadow:0.35, gAmtR:1.05,gAmtG:0.85,gAmtB:1.4,gSizeR:1.0,gSizeG:0.92,gSizeB:1.3,gClumpR:1.0,gClumpG:0.95,gClumpB:1.25},
+  "CineStill 800T":             {grain:0.72,grainSize:1.8, grainCol:0.35,grainResp:0.55,grainRough:0.5, grainShadow:0.55, gAmtR:1.05,gAmtG:0.85,gAmtB:1.5,gSizeR:1.0,gSizeG:0.92,gSizeB:1.35,gClumpR:1.0,gClumpG:0.95,gClumpB:1.3},
+  "Kodak Ektachrome 100":       {grain:0.2, grainSize:1.0, grainCol:0.2, grainResp:0.45,grainRough:0.15,grainShadow:0.15, gAmtR:0.95,gAmtG:0.9,gAmtB:1.1,gSizeR:1.0,gSizeG:0.95,gSizeB:1.1,gClumpR:1.0,gClumpG:0.95,gClumpB:1.05},
+  "Kodak Tri-X 400 · B&W":      {grain:0.8, grainSize:1.7, grainCol:0,   grainResp:0.5, grainRough:0.65,grainShadow:0.4, gAmtR:1,gAmtG:1,gAmtB:1,gSizeR:1,gSizeG:1,gSizeB:1,gClumpR:1,gClumpG:1,gClumpB:1},
+  "Ilford HP5 pushed +2 · B&W": {grain:1.15,grainSize:2.1, grainCol:0,   grainResp:0.4, grainRough:0.8, grainShadow:0.7, gAmtR:1,gAmtG:1,gAmtB:1,gSizeR:1,gSizeG:1,gSizeB:1,gClumpR:1,gClumpG:1,gClumpB:1},
+  "Kodak 7219 · 16mm":          {grain:1.0, grainSize:2.4, grainCol:0.35,grainResp:0.55,grainRough:0.6, grainShadow:0.6, gAmtR:1.0,gAmtG:0.8,gAmtB:1.4,gSizeR:1.0,gSizeG:0.9,gSizeB:1.28,gClumpR:1.0,gClumpG:0.9,gClumpB:1.25},
+  "Ektachrome · Super 8":       {grain:1.35,grainSize:3.1, grainCol:0.4, grainResp:0.45,grainRough:0.75,grainShadow:0.5, gAmtR:1.0,gAmtG:0.9,gAmtB:1.2,gSizeR:1.0,gSizeG:0.95,gSizeB:1.15,gClumpR:1.0,gClumpG:0.95,gClumpB:1.1},
 };
 
 const PRESETS = {
   "Neutral (no look)": {},
   "ALDI pitch · warm muted": {temp:0.06,con:0.18,roll:0.45,fade:0.065,crush:0.02,gB:0.02,sat:0.78,shHue:195,shAmt:0.07,hiHue:38,hiAmt:0.08,hal:0.35,halThr:0.72,halR:0.55,halWarm:0.6,bloom:0.1,ca:0.35,soft:0.35,softStart:0.45,vig:0.3,vigSize:0.42,vigFeather:0.75,grain:0.55,grainSize:1.5,grainCol:0.2,grainResp:0.6},
-  "Kodak Vision3 250D": {temp:0.08,con:0.32,roll:0.35,fade:0.035,crush:0.01,gR:-0.015,gB:0.03,sat:0.9,shHue:190,shAmt:0.06,hiHue:35,hiAmt:0.06,hal:0.25,halThr:0.75,halR:0.5,bloom:0.07,ca:0.25,soft:0.25,vig:0.22,grain:0.4,grainSize:1.35,grainCol:0.25},
-  "Kodak Vision3 500T": {temp:-0.05,con:0.28,roll:0.42,fade:0.05,crush:0.015,gR:-0.01,gB:0.015,sat:0.84,shHue:200,shAmt:0.1,hiHue:30,hiAmt:0.05,hal:0.45,halThr:0.66,halR:0.6,halWarm:0.7,bloom:0.12,ca:0.3,soft:0.3,vig:0.3,grain:0.65,grainSize:1.7,grainCol:0.3},
-  "Fuji Eterna 500": {temp:-0.02,con:0.08,roll:0.48,fade:0.06,crush:0.02,gR:0.02,gG:-0.012,sat:0.7,shHue:165,shAmt:0.1,hiHue:50,hiAmt:0.04,hal:0.2,halThr:0.72,bloom:0.06,ca:0.2,soft:0.25,vig:0.25,grain:0.5,grainSize:1.5,grainCol:0.2},
-  "Kodak Portra 400": {temp:0.12,tint:0.03,con:0.18,roll:0.5,fade:0.04,sat:0.86,gB:0.02,shHue:210,shAmt:0.04,hiHue:30,hiAmt:0.08,hal:0.15,halThr:0.75,bloom:0.06,vig:0.18,grain:0.35,grainSize:1.3,grainCol:0.3},
-  "CineStill 800T": {temp:-0.15,con:0.34,roll:0.38,fade:0.05,crush:0.01,sat:0.95,shHue:195,shAmt:0.08,hiHue:20,hiAmt:0.04,hal:0.95,halThr:0.55,halR:0.65,halWarm:1,bloom:0.16,ca:0.3,soft:0.2,vig:0.25,grain:0.7,grainSize:1.8,grainCol:0.35},
-  "Kodak Ektachrome 100": {temp:-0.02,con:0.5,roll:0.25,fade:0.01,sat:1.15,gB:-0.01,shHue:220,shAmt:0.07,hiHue:45,hiAmt:0.03,hal:0.1,halThr:0.8,vig:0.2,grain:0.22,grainSize:1.1,grainCol:0.2},
+  "Kodak Vision3 250D": {temp:0.08,con:0.32,roll:0.35,fade:0.035,crush:0.01,gR:-0.015,gB:0.03,sat:0.9,shHue:190,shAmt:0.06,hiHue:35,hiAmt:0.06,hal:0.25,halThr:0.75,halR:0.5,bloom:0.07,ca:0.25,soft:0.25,vig:0.22,grain:0.4,grainSize:1.35,grainCol:0.25,gAmtR:1.0,gAmtG:0.8,gAmtB:1.3,gSizeR:1.0,gSizeG:0.9,gSizeB:1.22,gClumpR:1.0,gClumpG:0.9,gClumpB:1.2},
+  "Kodak Vision3 500T": {temp:-0.05,con:0.28,roll:0.42,fade:0.05,crush:0.015,gR:-0.01,gB:0.015,sat:0.84,shHue:200,shAmt:0.1,hiHue:30,hiAmt:0.05,hal:0.45,halThr:0.66,halR:0.6,halWarm:0.7,bloom:0.12,ca:0.3,soft:0.3,vig:0.3,grain:0.65,grainSize:1.7,grainCol:0.3,gAmtR:1.0,gAmtG:0.8,gAmtB:1.4,gSizeR:1.0,gSizeG:0.9,gSizeB:1.28,gClumpR:1.0,gClumpG:0.9,gClumpB:1.25},
+  "Fuji Eterna 500": {temp:-0.02,con:0.08,roll:0.48,fade:0.06,crush:0.02,gR:0.02,gG:-0.012,sat:0.7,shHue:165,shAmt:0.1,hiHue:50,hiAmt:0.04,hal:0.2,halThr:0.72,bloom:0.06,ca:0.2,soft:0.25,vig:0.25,grain:0.5,grainSize:1.5,grainCol:0.2,gAmtR:1.0,gAmtG:0.82,gAmtB:1.35,gSizeR:1.0,gSizeG:0.9,gSizeB:1.25,gClumpR:1.0,gClumpG:0.9,gClumpB:1.2},
+  "Kodak Portra 400": {temp:0.12,tint:0.03,con:0.18,roll:0.5,fade:0.04,sat:0.86,gB:0.02,shHue:210,shAmt:0.04,hiHue:30,hiAmt:0.08,hal:0.15,halThr:0.75,bloom:0.06,vig:0.18,grain:0.35,grainSize:1.3,grainCol:0.3,gAmtR:0.95,gAmtG:0.8,gAmtB:1.25,gSizeR:1.0,gSizeG:0.9,gSizeB:1.2,gClumpR:1.0,gClumpG:0.85,gClumpB:1.15},
+  "CineStill 800T": {temp:-0.15,con:0.34,roll:0.38,fade:0.05,crush:0.01,sat:0.95,shHue:195,shAmt:0.08,hiHue:20,hiAmt:0.04,hal:0.95,halThr:0.55,halR:0.65,halWarm:1,bloom:0.16,ca:0.3,soft:0.2,vig:0.25,grain:0.7,grainSize:1.8,grainCol:0.35,gAmtR:1.05,gAmtG:0.85,gAmtB:1.5,gSizeR:1.0,gSizeG:0.92,gSizeB:1.35,gClumpR:1.0,gClumpG:0.95,gClumpB:1.3},
+  "Kodak Ektachrome 100": {temp:-0.02,con:0.5,roll:0.25,fade:0.01,sat:1.15,gB:-0.01,shHue:220,shAmt:0.07,hiHue:45,hiAmt:0.03,hal:0.1,halThr:0.8,vig:0.2,grain:0.22,grainSize:1.1,grainCol:0.2,gAmtR:0.95,gAmtG:0.9,gAmtB:1.1,gSizeR:1.0,gSizeG:0.95,gSizeB:1.1,gClumpR:1.0,gClumpG:0.95,gClumpB:1.05},
   "Bleach bypass": {con:0.7,roll:0.2,fade:0.02,sat:0.45,shHue:200,shAmt:0.05,hiHue:45,hiAmt:0.02,hal:0.1,ca:0.2,soft:0.2,vig:0.35,grain:0.5,grainSize:1.5,grainCol:0.1},
 };
 
@@ -308,17 +325,23 @@ function buildRack(){
       sel.addEventListener("change",()=>{ const gs=GRAIN_STOCKS[sel.value]; if(!gs) return; Object.assign(base,gs); syncUI(); sel.value=gsName=sel.value; schedule(); });
       box.appendChild(r);
     }
+    let sub=null;
     for (const p of g.params){
       const [k,label,mn,mx,st] = p;
+      if (p[7]==="layer" && !sub){
+        sub=document.createElement("details"); sub.className="sub";
+        sub.innerHTML='<summary>Emulsion layers <span class="meta">R · G · B</span></summary>';
+        const sb=document.createElement("div"); sb.className="ctrls"; sub.appendChild(sb); box.appendChild(sub);
+      }
       const row=document.createElement("div"); row.className="ctl";
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (k.startsWith("grain")){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       ctlEls[k]={inp,out,row,p};
-      box.appendChild(row);
+      (p[7]==="layer" ? sub.lastChild : box).appendChild(row);
     }
     det.appendChild(box); host.appendChild(det);
   });
@@ -382,6 +405,7 @@ const vec3 W=vec3(0.2126,0.7152,0.0722);
 #define FLOAT_TARGETS ${hasFloat?1:0}
 vec3 stEnc(vec3 l){ l=max(l,0.0); return FLOAT_TARGETS==1 ? l : sqrt(min(l,4.0)*0.25); }
 vec3 stDec(vec3 c){ return FLOAT_TARGETS==1 ? c : c*c*4.0; }
+const float GRAIN_K=1.0;
 `;
 /* Colour pipeline (v0.2), in comp order:
    1. Input transform   source -> scene-linear working space (linear Rec.709/sRGB primaries, unbounded).
@@ -392,7 +416,8 @@ vec3 stDec(vec3 c){ return FLOAT_TARGETS==1 ? c : c*c*4.0; }
    4. Look encoding     extended sRGB OETF: identical to sRGB up to 1.0 and continues above it.
    5. Film look         per-channel gamma, S-curve, highlight roll-off (compresses >1.0), black lift /
                         white crush, saturation, split toning, external LUT -> display 0..1.
-   6. Grain             on the display image, last. */
+   Grain                part of the emulsion: per-layer grain at the end of the optics pass, before the
+                        film curve (see emulsionGrain). */
 const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer;
 vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
@@ -424,6 +449,17 @@ vec3 filmLook(vec3 c){
   if (uLutMix>0.0){ vec3 lc = texture(uLut, c*(uLutSize-1.0)/uLutSize + 0.5/uLutSize).rgb; c = mix(c, lc, uLutMix); }
   return clamp(c,0.0,1.0);
 }`;
+/* Procedural grain noise: hashed value noise, a finer octave and a coarse clumping octave. */
+const GRAIN_FN=`
+uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
+float rnd(vec2 i,float s){ uvec3 h=pcg(uvec3(uvec2(ivec2(i)+ivec2(65536)), uint(s))); return float(h.x)/4294967295.0-0.5; }
+float vn(vec2 p,float s){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(rnd(i,s),rnd(i+vec2(1,0),s),f.x), mix(rnd(i+vec2(0,1),s),rnd(i+vec2(1,1),s),f.x), f.y); }
+float gn(vec2 p,float s,float rough){
+  float fine=vn(p,s), finer=vn(p*2.07+vec2(13.7,4.1),s+101.0), clump=vn(p*0.47+vec2(3.1,9.2),s+211.0);
+  float n=(0.8-0.35*rough)*fine + (0.45-0.15*rough)*finer;
+  n += rough*0.9*clump*(0.6+1.6*abs(fine));   /* clumps: coarse blotches that modulate the fine grain */
+  return n; }`;
 /* 1-2: source -> scene-linear (stored) */
 const FS_SCENE=HEAD+SCENE_FN+`
 uniform sampler2D uSrc;
@@ -444,11 +480,36 @@ void main(){ float w[5]=float[](0.227027,0.1945946,0.1216216,0.054054,0.016216);
   vec3 s=stDec(texture(uTex,vUv).rgb)*w[0];
   for(int i=1;i<5;i++){ vec2 d=uDir*float(i); s+=(stDec(texture(uTex,vUv+d).rgb)+stDec(texture(uTex,vUv-d).rgb))*w[i]; }
   o=vec4(stEnc(s),1.0); }`;
-/* 3: optics in scene-linear */
-const FS_OPTICS=HEAD+`
+/* 3: optics in scene-linear, then the emulsion: per-layer grain as a density fluctuation, before the film curve */
+const FS_OPTICS=HEAD+GRAIN_FN+`
 uniform sampler2D uImg,uSoft,uH2,uH4,uH8;
 uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather;
 uniform vec3 uHalCol;
+uniform float uGrain,uGrainSize,uGrainCol,uGrainResp,uGrainRough,uGrainShadow,uSeed;
+uniform vec3 uGAmt,uGSize,uGClump;
+/* Emulsion grain. Each colour record (R/G/B layer) has its own grain size, amount and clumping, and its
+   grain follows that layer's own exposure. It is added before the film curve, as a fluctuation in a
+   log-like encoding (extended sRGB, close to density), so the film curve and roll-off then shape it:
+   more visible in the mids, compressed in the highlights. "Colour grain" sets how independent the layers
+   are (0 = one shared field, as in B&W). */
+vec3 encToLin(vec3 e){ return mix(e/12.92, pow((max(e,0.04045)+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),e)); }
+vec3 linToEncG(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
+vec3 emulsionGrain(vec3 lin, vec2 uv){
+  vec2 px=uv*uRes/uGrainSize;
+  vec3 rough=clamp(uGrainRough*uGClump,0.0,1.0);
+  float shared=gn(px/dot(uGSize,vec3(1.0/3.0)), uSeed+37.0, uGrainRough);
+  vec3 ind=vec3(gn(px/uGSize.r, uSeed, rough.r),
+                gn(px/uGSize.g+vec2(17.3,5.1), uSeed+11.0, rough.g),
+                gn(px/uGSize.b+vec2(3.7,29.9), uSeed+23.0, rough.b));
+  float k=uGrainCol;
+  vec3 n=((1.0-k)*vec3(shared) + k*ind) / sqrt((1.0-k)*(1.0-k)+k*k);
+  vec3 e=linToEncG(lin);                                   /* per-layer exposure, log-like */
+  vec3 x=clamp(e,0.0,1.0);
+  vec3 resp=mix(vec3(1.0), 1.0-pow(abs(x*2.0-1.0),vec3(2.0))*0.85, uGrainResp)   /* midtone bias */
+           *mix(vec3(1.0), 1.5-1.1*smoothstep(0.05,0.6,x), uGrainShadow);          /* shadow grain */
+  e += n*uGrain*0.22*GRAIN_K*uGAmt*resp;
+  return encToLin(e);
+}
 vec3 img(vec2 uv,float m){ return mix(stDec(texture(uImg,uv).rgb), stDec(texture(uSoft,uv).rgb), m); }
 void main(){
   vec2 uv=vUv; float asp=uRes.x/uRes.y;
@@ -461,26 +522,18 @@ void main(){
   lin += uHalCol*dot(h,W)*uHal*2.0;
   lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
   lin *= 1.0-uVig*smoothstep(uVigSize, uVigSize+uVigFeather, r);
+  if (uGrain>0.0) lin=emulsionGrain(lin,uv);
   o=vec4(stEnc(lin),1.0);
 }`;
 /* 4-5: look encoding + film look -> display */
 const FS_LOOK=HEAD+LOOK_FN+`
 uniform sampler2D uTex;
 void main(){ o=vec4(filmLook(linToEnc(stDec(texture(uTex,vUv).rgb))),1.0); }`;
-/* 6: grain on the display image; original / split view */
+/* 6: display image; original / split view */
 const FS_FINAL=HEAD+`
 uniform sampler2D uImg,uSrc;
-uniform vec2 uRes; uniform float uGrain,uGrainSize,uGrainCol,uGrainResp,uGrainRough,uGrainShadow,uSeed,uSplit;
+uniform vec2 uRes; uniform float uSplit;
 uniform int uOrig;
-uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
-float rnd(vec2 i,float s){ uvec3 h=pcg(uvec3(uvec2(ivec2(i)+ivec2(65536)), uint(s))); return float(h.x)/4294967295.0-0.5; }
-float vn(vec2 p,float s){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
-  return mix(mix(rnd(i,s),rnd(i+vec2(1,0),s),f.x), mix(rnd(i+vec2(0,1),s),rnd(i+vec2(1,1),s),f.x), f.y); }
-float gn(vec2 p,float s){
-  float fine=vn(p,s), finer=vn(p*2.07+vec2(13.7,4.1),s+101.0), clump=vn(p*0.47+vec2(3.1,9.2),s+211.0);
-  float n=(0.8-0.35*uGrainRough)*fine + (0.45-0.15*uGrainRough)*finer;
-  n += uGrainRough*0.9*clump*(0.6+1.6*abs(fine));   /* clumps: coarse blotches that modulate the fine grain */
-  return n; }
 void main(){
   vec2 uv=vUv;
   if (uOrig==1 || (uSplit>=0.0 && uv.x<uSplit)){
@@ -489,18 +542,8 @@ void main(){
     o=vec4(s,1.0); return;
   }
   vec3 col=texture(uImg,uv).rgb;
-  if (uGrain>0.0){
-    vec2 px=uv*uRes/uGrainSize;
-    float nm=gn(px,uSeed);
-    vec3 nc=vec3(gn(px,uSeed+11.0),gn(px,uSeed+23.0),gn(px,uSeed+37.0));
-    vec3 n=mix(vec3(nm),nc,uGrainCol);
-    float lum=dot(col,W);
-    float resp=mix(1.0, 1.0-pow(abs(lum*2.0-1.0),2.0)*0.85, uGrainResp);
-    resp*=mix(1.0, 1.5-1.1*smoothstep(0.05,0.6,lum), uGrainShadow);
-    col += n*uGrain*0.22*resp;
-  }
   if (uSplit>=0.0 && abs(uv.x-uSplit)*uRes.x<1.5) col=vec3(0.9);
-  o=vec4(clamp(col,0.0,1.0),1.0);
+  o=vec4(col,1.0);
 }`;
 
 function compile(fs){
@@ -613,15 +656,16 @@ function render(){
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
     gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
+    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed);
+    gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
   });
   /* 4-5 film look -> display (back into A) */
   drawTo(T.A,P.look,u=>{ bindTex(0,T.B.tex); gl.uniform1i(u.uTex,0); setLookUniforms(u,e); });
-  /* 6 grain */
+  /* 6 display / compare */
   drawTo(null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(5,srcTex); gl.uniform1i(u.uSrc,5);
     gl.uniform2f(u.uRes,srcW,srcH);
-    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0);
   });
 }
@@ -791,9 +835,10 @@ $("btnCube").addEventListener("click", async()=>{
 });
 
 /* ---------------- Looks / JSON ---------------- */
-/* look.json format: 1 = v0.1 (no "format" field), 2 = v0.2 (scene-linear working space).
+/* look.json format: 1 = v0.1 (no "format" field), 2 = v0.2 (scene-linear working space),
+   3 = v0.3 (emulsion grain layers: gAmt*, gSize*, gClump*; older files get the colour-negative defaults).
    The slider values mean the same in both, so format 1 loads unchanged. Future changes migrate here. */
-const LOOK_FORMAT=2;
+const LOOK_FORMAT=3;
 function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This look was saved by a newer Film Lab; some settings may be ignored.",4000); return j; }
 function lookJSON(){ return {app:"Film Lab", format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k,+(+base[k]).toFixed(4)]))}; }
 $("preset").addEventListener("change",ev=>{ const v=ev.target.value; applyPreset(v.slice(2), v.startsWith("u:")); });

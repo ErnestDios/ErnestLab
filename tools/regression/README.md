@@ -20,3 +20,7 @@ them into the highlight roll-off.
 **Optics moved before the film curve (v0.2):** looks change on purpose. Halation now glows against
 darks instead of lifting bright areas, and bright scenes sit lower because nothing lifts the roll-off
 shoulder afterwards. `Neutral (no look)` still matches within 4 levels.
+
+**Emulsion grain (v0.3):** with grain set to 0, every preset matches v0.2 exactly (0 levels). With grain on,
+the green layer (most of the luminance) matches v0.2's strength on neutral grey; red and blue follow
+the layer multipliers.

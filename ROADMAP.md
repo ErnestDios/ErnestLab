@@ -15,9 +15,13 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Preset review: the new order's look changes (halation glows against darks, bright scenes sit lower) accepted as an upgrade; no retune
 
 ## 2. Per-channel emulsion grain — v0.3
-- [ ] Separate R/G/B grain layers: size, amount and clumping per layer (blue usually coarsest)
-- [ ] Per-stock layer settings for the 12 grain stocks
-- [ ] Keep preview = export at any zoom
+- [x] Separate R/G/B grain layers: amount, size and clumping per layer (colour-negative defaults: green finest, blue coarsest and noisiest)
+- [x] Each layer's grain follows that layer's own exposure
+- [x] Grain moved into the emulsion: added before the film curve in a log-like encoding, so the curve and roll-off shape it
+- [x] "Colour grain" = layer independence (0 = one shared field, as in B&W), variance-normalised
+- [x] Per-stock layer settings for the 12 grain stocks and the film presets (approximations by eye, not measured)
+- [x] Keep preview = export at any zoom (grain in image pixels)
+- [x] `look.json` format 3; older looks get the colour-negative layer defaults
 
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
