@@ -30,7 +30,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Format crop in Development, before the lens: Original, 1:1 (6×6), 5:4 (4×5), 4:3, 3:2 (35mm still), 1.66 (Super 16), 16:9, 1.85 (flat), 2:1, 2.20 (65mm), 2.39 (scope)
 - [x] Landscape / portrait, reframe horizontally and vertically; per image; exports at the cropped size
 - [x] Lens effects (vignette, edge softness, CA) follow the cropped frame; grain stays in image pixels
-- [x] Social formats (4:5, 3:4, 9:16, 2:3, 1.91) and a platform hint: which platforms show the export without further cropping, plus a warning under 1080 px wide (specs as of Nov 2026; review when platforms change)
+- [x] Social formats (1:1, 4:5, 3:4, 9:16, 16:9, 1.91, 2:3; 1:1 and 16:9 repeated from Film & photo) and a platform hint: which platforms show the export without further cropping, plus a warning under 1080 px wide (specs as of Nov 2026; review when platforms change)
 - [ ] Later: drag on the image to reframe; frame-line overlay option (show the format over the full image)
 
 ## 3. Channel adjustments
