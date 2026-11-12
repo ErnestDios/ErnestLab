@@ -33,7 +33,8 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Social formats (1:1, 4:5, 3:4, 9:16, 16:9, 1.91, 2:3; 1:1 and 16:9 repeated from Film & photo) and a platform hint: which platforms show the export without further cropping, plus a warning under 1080 px wide (specs as of Nov 2026; review when platforms change)
 - [ ] Later: drag on the image to reframe; frame-line overlay option (show the format over the full image)
 - [x] Share… (system share menu, Web Share API) and Copy image (clipboard), shown only where supported; no direct posting (images never leave the device)
-- [ ] Buy Me a Coffee link in the header (`SUPPORT_URL`, hidden while empty) — needs Ernest's page URL
+- [x] Buy Me a Coffee link in the header and in About (buymeacoffee.com/ernestdios)
+- [x] About panel (click the version): what it is, privacy, non-affiliation note, MIT license, credits, support link; Esc closes dialogs
 
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)

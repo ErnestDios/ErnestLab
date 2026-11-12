@@ -41,6 +41,11 @@ header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent
 .support{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
 .support:hover{color:var(--accent);border-color:var(--accent)}
 #shareRow:empty,#shareRow:not(:has(button:not([hidden]))){display:none}
+button.ver{background:none;border:0;padding:2px 4px;border-radius:4px;cursor:pointer}
+button.ver:hover{color:var(--accent);background:#221f1c}
+a.btn{text-decoration:none;display:inline-flex;align-items:center}
+.about p{margin:0;font-size:13px;line-height:1.5;color:#c9c1b5}
+.about .k{color:var(--muted);font-size:12px}
 .ver{font:500 11px/1 var(--font-mono);letter-spacing:.06em;color:var(--muted);text-transform:none;margin-left:2px}
 .chans{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .chan{background:#221f1c;border:0;border-left:1px solid var(--line);padding:6px 9px;cursor:pointer;font:500 12px/1 var(--font-mono);color:var(--muted);min-width:30px}
@@ -143,7 +148,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 </head>
 <body>
 <header>
-  <h1><span class="perf"><i></i><i></i><i></i></span>Film Lab <span class="ver" id="ver"></span></h1>
+  <h1><span class="perf"><i></i><i></i><i></i></span>Film Lab <button class="ver" id="ver" title="About Film Lab"></button></h1>
   <a class="support" id="support" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a>
   <span class="meta" id="meta">—</span>
   <span class="spacer"></span>
@@ -224,6 +229,16 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 </aside>
 
 <div id="toast"></div>
+<div class="modal" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+  <div class="card about">
+    <h2 id="aboutTitle">Film Lab <span class="ver" id="aboutVer"></span></h2>
+    <p>Film looks for digital stills: development, film-stock colour, lens, halation and three-layer emulsion grain, processed in scene-linear light in the order a lens and a negative would.</p>
+    <p><b>Private by design.</b> Everything runs in your browser with WebGL2. Your images never leave your device: nothing is uploaded, there's no account and no tracking.</p>
+    <p class="k">Film stock names describe the stocks that inspired each look. Film Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
+    <p class="k">Made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License).</p>
+    <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
+  </div>
+</div>
 <div class="modal" id="jsonModal" role="dialog" aria-modal="true" aria-labelledby="jsonTitle">
   <div class="card">
     <h2 id="jsonTitle">Look settings</h2>
@@ -246,8 +261,12 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 const APP_VERSION="0.4.0";
 document.getElementById("ver").textContent="v"+APP_VERSION;
 /* Support link (Buy Me a Coffee). Hidden while empty. */
-const SUPPORT_URL="";
-if (SUPPORT_URL){ const a=document.getElementById("support"); a.href=SUPPORT_URL; a.hidden=false; }
+const SUPPORT_URL="https://buymeacoffee.com/ernestdios";
+if (SUPPORT_URL){ for (const id of ["support","aboutSupport"]){ const a=document.getElementById(id); a.href=SUPPORT_URL; a.hidden=false; } }
+document.getElementById("aboutVer").textContent="v"+APP_VERSION;
+document.getElementById("ver").addEventListener("click",()=>document.getElementById("aboutModal").classList.add("open"));
+document.getElementById("btnCloseAbout").addEventListener("click",()=>document.getElementById("aboutModal").classList.remove("open"));
+document.getElementById("aboutModal").addEventListener("click",ev=>{ if (ev.target.id==="aboutModal") ev.currentTarget.classList.remove("open"); });
 /* ---------------- Development (per image, not part of the look) ---------------- */
 /* Formats: the frame is cropped here, before the lens, so vignette, edge softness and aberration are
    computed for the new frame (as if shot natively on that format). Ratios are width / height. */
@@ -1099,9 +1118,10 @@ function setChan(c){ viewChan = (c===viewChan) ? 0 : c; document.querySelectorAl
 document.querySelectorAll(".chan").forEach(x=>x.addEventListener("click",()=>setChan(+x.dataset.ch)));
 document.addEventListener("keydown",ev=>{
   if (ev.ctrlKey||ev.metaKey||ev.altKey||ev.repeat) return;
+  if (document.querySelector(".modal.open") && ev.code!=="Escape") return;
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.type!=="range") return;
   const c={KeyR:1,KeyG:2,KeyB:3,KeyL:4}[ev.code]; if (c){ ev.preventDefault(); setChan(c); }
-  else if (ev.code==="Escape" && viewChan){ setChan(viewChan); }
+  else if (ev.code==="Escape"){ const m=document.querySelector(".modal.open"); if (m) m.classList.remove("open"); else if (viewChan) setChan(viewChan); }
 });
 canvas.addEventListener("pointerdown",ev=>{ if(!compare) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
 canvas.addEventListener("pointermove",ev=>{ if(dragging) setSplit(ev); });
