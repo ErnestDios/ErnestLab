@@ -26,6 +26,12 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Development section (per image, before the film): shadows / midtones / highlights in stops around mid grey, on luminance, monotonic; not part of the look, not in the `.cube`
 - [ ] Later: film development as part of the stock — push / pull processing (contrast, blacks, grain coarseness)
 
+## v0.4 — Formats
+- [x] Format crop in Development, before the lens: Original, 1:1 (6×6), 5:4 (4×5), 4:3, 3:2 (35mm still), 1.66 (Super 16), 16:9, 1.85 (flat), 2:1, 2.20 (65mm), 2.39 (scope)
+- [x] Landscape / portrait, reframe horizontally and vertically; per image; exports at the cropped size
+- [x] Lens effects (vignette, edge softness, CA) follow the cropped frame; grain stays in image pixels
+- [ ] Later: drag on the image to reframe; frame-line overlay option (show the format over the full image)
+
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
 - [ ] Channel mixer

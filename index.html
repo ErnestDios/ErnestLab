@@ -93,6 +93,13 @@ details[open] summary::after{content:"–"}
 .ctl output{font-family:var(--font-mono);font-size:11.5px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer}
 .ctl.changed output{color:var(--accent)}
 details.develop{background:#1d1a17}
+details.develop #devFrame{padding-bottom:4px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;background:#221f1c;border:0;border-left:1px solid var(--line);padding:6px 8px;cursor:pointer;color:var(--muted);font-size:12.5px}
+.seg button:first-child{border-left:0}
+.seg button.on{background:#2d2822;color:var(--accent)}
+.seg button:disabled{opacity:.45;cursor:default}
+.ctl.off{opacity:.45}
 details.develop summary .meta{font-weight:400;letter-spacing:.02em;color:var(--muted);text-transform:none;margin-left:4px}
 details.develop .devrow{padding:0 14px 8px}
 details.develop .note{padding:0 14px 12px}
@@ -157,9 +164,13 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 <aside id="rack">
   <details class="develop" id="develop" open>
     <summary><span class="tick" id="tick-dev"></span>Development <span class="meta">per image</span></summary>
+    <div class="ctrls" id="devFrame">
+      <div class="grainstock"><label for="devFmt">Format</label><select id="devFmt"></select></div>
+      <div class="grainstock"><label>Orientation</label><div class="seg" id="devOrient" role="group" aria-label="Orientation"><button data-o="land">Landscape</button><button data-o="port">Portrait</button></div></div>
+    </div>
     <div class="ctrls" id="devCtrls"></div>
     <div class="row devrow"><button class="btn" id="btnDevReset">Reset</button><button class="btn" id="btnDevAll" title="Copy this image's development to every still in the strip">Apply to all stills</button></div>
-    <div class="note">Prepares the photo before the film stock: tones are adjusted in linear light, in stops around mid grey, without shifting colour. Each still keeps its own development; changing the film look doesn't touch it.</div>
+    <div class="note">Prepares the photo before the film stock. The format crops the frame before the lens, so vignette, edge softness and aberration follow the new frame, as if shot natively on that format. Tones are adjusted in linear light, in stops around mid grey, without shifting colour. Each still keeps its own development; changing the film look doesn't touch it.</div>
   </details>
   <div class="presetbar">
     <label for="preset">Film stock</label>
@@ -220,26 +231,52 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 
 <script>
 "use strict";
-const APP_VERSION="0.3.0";
+const APP_VERSION="0.4.0";
 document.getElementById("ver").textContent="v"+APP_VERSION;
 /* ---------------- Development (per image, not part of the look) ---------------- */
-const DEV_PARAMS=[["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
-const DEV0=Object.freeze({dShadows:0,dMid:0,dHigh:0});
+/* Formats: the frame is cropped here, before the lens, so vignette, edge softness and aberration are
+   computed for the new frame (as if shot natively on that format). Ratios are width / height. */
+const FORMATS=[["orig","Original",0],["1:1","1:1 · 6×6",1],["5:4","5:4 · 4×5",1.25],["4:3","4:3",4/3],["3:2","3:2 · 35mm still",1.5],
+  ["1.66","1.66 · Super 16",1.66],["16:9","16:9",16/9],["1.85","1.85 · flat",1.85],["2:1","2:1",2],["2.20","2.20 · 65mm",2.2],["2.39","2.39 · scope",2.39]];
+const DEV_PARAMS=[["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
+  ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0});
+function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh; }
+/* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
+   Returns UV rect (top-left origin) and the output size in pixels. */
+function cropRect(d,w,h){
+  const f=FORMATS.find(x=>x[0]===d.fmt); let r=f?f[2]:0;
+  if (!r||!w||!h) return {x:0,y:0,w:1,h:1,W:w,H:h};
+  const port = d.orient==="port" || (d.orient==="auto" && h>w);
+  if (port) r=1/r;
+  let cw=1, ch=1; if (w/h>r) cw=r*h/w; else ch=w/(r*h);
+  const x=(1-cw)*(d.panX+1)/2, y=(1-ch)*(1-d.panY)/2;
+  return {x,y,w:cw,h:ch,W:Math.max(1,Math.round(cw*w)),H:Math.max(1,Math.round(ch*h))};
+}
 const devEls={};
 function curDev(){ const it=items[cur]; return (it&&it.dev)||DEV0; }
 function setDev(k,v){ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{[k]:v}); syncDev(); schedule(); }
-function syncDev(){ const d=curDev(); let live=false;
-  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); row.classList.toggle("changed",d[p[0]]!==0); if(d[p[0]]!==0) live=true; }
-  $("tick-dev").classList.toggle("live",live); }
+function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
+  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); row.classList.toggle("changed",d[p[0]]!==0);
+    if (p[7]==="frame"){ inp.disabled=!cropped; row.classList.toggle("off",!cropped); } }
+  $("devFmt").value=d.fmt;
+  const port = d.orient==="port" || (d.orient==="auto" && srcH>srcW);
+  document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && (b.dataset.o==="port")===port); b.disabled=!cropped || d.fmt==="1:1"; });
+  $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); }
+function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
+  $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : ""); }
 function buildDevelop(){
-  const box=$("devCtrls");
+  const box=$("devCtrls"), fs=$("devFmt");
+  for (const f of FORMATS){ const o=document.createElement("option"); o.value=f[0]; o.textContent=f[1]; fs.appendChild(o); }
+  fs.addEventListener("change",()=>{ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{fmt:fs.value,panX:0,panY:0}); syncDev(); schedule(); });
+  document.querySelectorAll("#devOrient button").forEach(b=>b.addEventListener("click",()=>setDev("orient",b.dataset.o)));
   for (const p of DEV_PARAMS){
     const [k,label,mn,mx,st]=p; const row=document.createElement("div"); row.className="ctl"; const id="p_"+k;
     row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}"><output for="${id}" title="Double-click to reset"></output>`;
     const inp=row.querySelector("input"), out=row.querySelector("output");
     inp.addEventListener("input",()=>setDev(k,+inp.value));
     const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
-    devEls[k]={inp,out,row}; box.appendChild(row);
+    devEls[k]={inp,out,row}; (p[7]==="frame"?$("devFrame"):box).appendChild(row);
   }
   $("btnDevReset").addEventListener("click",()=>{ const it=items[cur]; if(it){ it.dev=Object.assign({},DEV0); syncDev(); schedule(); } });
   $("btnDevAll").addEventListener("click",()=>{ const d=Object.assign({},curDev()); items.forEach(it=>it.dev=Object.assign({},d)); toast(`Development applied to ${items.length} still${items.length===1?"":"s"}.`); });
@@ -518,8 +555,8 @@ float gn(vec2 p,float s,float rough){
   return n; }`;
 /* 1-2: source -> scene-linear (stored) */
 const FS_SCENE=HEAD+SCENE_FN+`
-uniform sampler2D uSrc;
-void main(){ o=vec4(stEnc(sceneLinear(inputTransform(texture(uSrc,vec2(vUv.x,1.0-vUv.y)).rgb))),1.0); }`;
+uniform sampler2D uSrc; uniform vec4 uCrop;   /* format crop: x, y, w, h in source UV (top-left origin) */
+void main(){ o=vec4(stEnc(sceneLinear(inputTransform(texture(uSrc,uCrop.xy+vec2(vUv.x,1.0-vUv.y)*uCrop.zw).rgb))),1.0); }`;
 /* colour only, no optics: used for the .cube export (identity input, not flipped) */
 const FS_GRADE=HEAD+SCENE_FN+LOOK_FN+`
 uniform sampler2D uSrc;
@@ -587,14 +624,14 @@ uniform sampler2D uTex;
 void main(){ o=vec4(filmLook(linToEnc(stDec(texture(uTex,vUv).rgb))),1.0); }`;
 /* 6: display image; original / split view */
 const FS_FINAL=HEAD+`
-uniform sampler2D uImg,uSrc;
+uniform sampler2D uImg,uSrc; uniform vec4 uCrop;
 uniform vec2 uRes; uniform float uSplit;
 uniform int uOrig, uChan;   /* uChan: 0 RGB, 1 R, 2 G, 3 B, 4 luminance (Rec.709) — viewer only, never exported */
 vec3 chan(vec3 c){ return uChan==1?vec3(c.r): uChan==2?vec3(c.g): uChan==3?vec3(c.b): uChan==4?vec3(dot(c,W)): c; }
 void main(){
   vec2 uv=vUv;
   if (uOrig==1 || (uSplit>=0.0 && uv.x<uSplit)){
-    vec3 s=texture(uSrc,vec2(uv.x,1.0-uv.y)).rgb;
+    vec3 s=texture(uSrc,uCrop.xy+vec2(uv.x,1.0-uv.y)*uCrop.zw).rgb;
     s=chan(s);
     if (uOrig==0 && abs(uv.x-uSplit)*uRes.x<1.5) s=vec3(0.9);
     o=vec4(s,1.0); return;
@@ -691,10 +728,11 @@ let showOrig=false, split=-1, compare=false, viewChan=0;
 function render(){
   if (!srcTex) return;
   const e=effective();
-  if (canvas.width!==srcW||canvas.height!==srcH){ canvas.width=srcW; canvas.height=srcH; }
-  ensureTargets(srcW,srcH);
+  const cr=cropRect(curDev(),srcW,srcH), outW=cr.W, outH=cr.H;
+  if (canvas.width!==outW||canvas.height!==outH){ canvas.width=outW; canvas.height=outH; }
+  ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); setSceneUniforms(u,e,curDev()); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,curDev()); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
   const st=1+e.halR;
@@ -710,7 +748,7 @@ function render(){
     bindTex(2,T.b2a.tex); gl.uniform1i(u.uH2,2);
     bindTex(3,T.b4a.tex); gl.uniform1i(u.uH4,3);
     bindTex(4,T.b8a.tex); gl.uniform1i(u.uH8,4);
-    gl.uniform2f(u.uRes,srcW,srcH);
+    gl.uniform2f(u.uRes,outW,outH);
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
     gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
@@ -722,8 +760,8 @@ function render(){
   /* 6 display / compare */
   drawTo(null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
-    bindTex(5,srcTex); gl.uniform1i(u.uSrc,5);
-    gl.uniform2f(u.uRes,srcW,srcH);
+    bindTex(5,srcTex); gl.uniform1i(u.uSrc,5); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h);
+    gl.uniform2f(u.uRes,outW,outH);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0); gl.uniform1i(u.uChan, renderClean?0:viewChan);
   });
 }
@@ -747,7 +785,6 @@ async function addFiles(files){
 }
 function select(i){
   cur=i; const it=items[i]; uploadSource(it.bmp);
-  $("meta").textContent=`${it.name} · ${srcW}×${srcH}`;
   syncDev(); buildStrip(); render();
 }
 function removeItem(i){
@@ -820,7 +857,7 @@ $("btnExportAll").addEventListener("click", async()=>{
   const btn=$("btnExportAll"); btn.disabled=true; const keep=cur; const [t,q,ext]=fmtInfo(); const files=[];
   try{
     for (let i=0;i<items.length;i++){ if (items[i].sample) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; uploadSource(items[i].bmp); const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
-    const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && (it.dev.dShadows||it.dev.dMid||it.dev.dHigh)) dv[it.name]=it.dev;
+    const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && devActive(it.dev)) dv[it.name]=it.dev;
     if (Object.keys(dv).length) lj.development=dv;   /* per-image source prep, for the record (not loaded as part of the look) */
     files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lj,null,2))});
     btn.textContent="Zipping…"; const zip=makeZip(files);

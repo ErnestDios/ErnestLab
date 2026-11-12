@@ -16,7 +16,7 @@ Drop images on the window, pick a film stock, adjust, and export.
 
 ## Features
 
-**Development** (per image, before the film): shadows, midtones and highlights in stops around mid grey, in linear light and on luminance so colours don't shift. Prepares each photo (pull hot highlights, open crushed shadows) before the film stock; changing the look doesn't touch it, and "Apply to all stills" copies it across a batch.
+**Development** (per image, before the film): format crop (Original, 1:1, 5:4, 4:3, 3:2, 1.66, 16:9, 1.85, 2:1, 2.20, 2.39; landscape/portrait; reframe) applied before the lens, so vignette, edge softness and aberration follow the new frame; shadows, midtones and highlights in stops around mid grey, in linear light and on luminance so colours don't shift. Prepares each photo (pull hot highlights, open crushed shadows) before the film stock; changing the look doesn't touch it, and "Apply to all stills" copies it across a batch.
 
 **Looks:** eight film-stock presets (own emulations) with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
 
