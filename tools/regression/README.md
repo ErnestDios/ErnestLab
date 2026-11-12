@@ -16,3 +16,7 @@ SwiftShader rendering is deterministic, so identical code gives zero difference.
 **v0.1 → v0.2 result:** exposure 0 matches within 1–2 levels (max) for every preset. At +1 EV the
 differences are intended: v0.1 clipped scene values above 1.0 before the film curve, v0.2 carries
 them into the highlight roll-off.
+
+**Optics moved before the film curve (v0.2):** looks change on purpose. Halation now glows against
+darks instead of lifting bright areas, and bright scenes sit lower because nothing lifts the roll-off
+shoulder afterwards. `Neutral (no look)` still matches within 4 levels.

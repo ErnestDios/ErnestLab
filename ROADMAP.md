@@ -11,7 +11,15 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Built-in presets match v0.1 at exposure 0 (max 1–2 levels; see `tools/regression`)
 - [x] `.cube` export stays display-referred Rec.709/sRGB (matches v0.1 within 0.0015)
 - [x] `look.json` gets a `format` field (2) and a migration hook; v0.1 files load unchanged
-- [ ] Decide: move halation, bloom and vignette before the film curve (physically correct, scene-linear) — changes every look, so it needs its own look pass. Proposed for the RAW phase, where highlights above 1.0 make it matter most.
+- [x] Optics in scene-linear, before the film curve (comp order): chromatic aberration, edge softness, halation, bloom, vignette. Grain stays last, on the display image.
+- [ ] Review the built-in presets against v0.1 on real images and retune where the new order changed them (halation now glows against darks rather than lifting bright areas; bright scenes sit lower without the post-curve glow)
+
+## v0.3 — Post-process stage
+An optional stage after the grade, on the display image, for effects that belong on top of the finished picture.
+
+- [ ] Post-process effects section: glow, halation, vignette and chromatic aberration applied after the grade (the v0.1 behaviour as an explicit choice)
+- [ ] Order shown in the panel: Scene → Optics → Film look → Grain → Post
+- [ ] Include in `look.json`; excluded from the `.cube` export like the other spatial effects
 
 ## 2. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)

@@ -37,15 +37,14 @@ Drop images on the window, pick a film stock, adjust, and export.
 
 Single page, WebGL2:
 
-1. Grade pass at full resolution (RGBA16F when `EXT_color_buffer_float` is available):
-   - **Input transform** to a scene-linear working space (linear Rec.709/sRGB primaries, unbounded). 8-bit images are linearised with the sRGB curve.
-   - **Scene-linear operations:** exposure and white balance, with no clipping.
-   - **Look encoding:** an extended sRGB curve that keeps values above 1.0, so bright highlights reach the film curve and highlight roll-off instead of being clipped.
-   - **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, split toning, external LUT → display.
-2. Bright-pass and a blur pyramid (½, ¼, ⅛) for halation and bloom.
-3. A ¼-resolution blur for edge softness.
-4. Final pass: chromatic aberration, halation/bloom added in linear light, vignette, soft clip, procedural grain with a clumping octave.
+1. **Input transform** to a scene-linear working space (linear Rec.709/sRGB primaries, unbounded). 8-bit images are linearised with the sRGB curve.
+2. **Scene-linear operations:** exposure and white balance, with no clipping.
+3. **Optics, in scene-linear** (comp order, before the grade): chromatic aberration, edge softness, halation and bloom from a blur pyramid (½, ¼, ⅛), vignette.
+4. **Look encoding:** an extended sRGB curve that keeps values above 1.0, so bright highlights reach the film curve and highlight roll-off instead of being clipped.
+5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, split toning, external LUT → display.
+6. **Grain** on the display image: procedural value noise with a clumping octave.
 
+Intermediate images are RGBA16F when `EXT_color_buffer_float` is available.
 The `.cube` export renders the grade shader over an identity 33³ texture and reads it back. Zips are written in-page (store-only, CRC32).
 
 ## Film stock names
