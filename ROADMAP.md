@@ -22,6 +22,9 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Per-stock layer settings for the 12 grain stocks and the film presets (approximations by eye, not measured)
 - [x] Keep preview = export at any zoom (grain in image pixels)
 - [x] `look.json` format 3; older looks get the colour-negative layer defaults
+- [x] Version label in the header; channel viewer (R, G, B, L keys / header switch, same key again for RGB)
+- [x] Development section (per image, before the film): shadows / midtones / highlights in stops around mid grey, on luminance, monotonic; not part of the look, not in the `.cube`
+- [ ] Later: film development as part of the stock — push / pull processing (contrast, blacks, grain coarseness)
 
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)

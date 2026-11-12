@@ -92,6 +92,10 @@ details[open] summary::after{content:"–"}
 .ctl label{color:#c9c1b5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ctl output{font-family:var(--font-mono);font-size:11.5px;text-align:right;color:var(--muted);font-variant-numeric:tabular-nums;cursor:pointer}
 .ctl.changed output{color:var(--accent)}
+details.develop{background:#1d1a17}
+details.develop summary .meta{font-weight:400;letter-spacing:.02em;color:var(--muted);text-transform:none;margin-left:4px}
+details.develop .devrow{padding:0 14px 8px}
+details.develop .note{padding:0 14px 12px}
 details.sub{border:1px solid var(--line);border-radius:6px;margin-top:4px}
 details.sub summary{padding:7px 10px;font-size:11px}
 details.sub summary .meta{font-weight:400;letter-spacing:.04em;color:var(--muted);text-transform:none}
@@ -151,6 +155,12 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 
 <div id="resizer" role="separator" aria-orientation="vertical" aria-label="Resize the control panel" tabindex="0" title="Drag to widen the panel (double-click to reset)"></div>
 <aside id="rack">
+  <details class="develop" id="develop" open>
+    <summary><span class="tick" id="tick-dev"></span>Development <span class="meta">per image</span></summary>
+    <div class="ctrls" id="devCtrls"></div>
+    <div class="row devrow"><button class="btn" id="btnDevReset">Reset</button><button class="btn" id="btnDevAll" title="Copy this image's development to every still in the strip">Apply to all stills</button></div>
+    <div class="note">Prepares the photo before the film stock: tones are adjusted in linear light, in stops around mid grey, without shifting colour. Each still keeps its own development; changing the film look doesn't touch it.</div>
+  </details>
   <div class="presetbar">
     <label for="preset">Film stock</label>
     <select id="preset"></select>
@@ -212,6 +222,29 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 "use strict";
 const APP_VERSION="0.3.0";
 document.getElementById("ver").textContent="v"+APP_VERSION;
+/* ---------------- Development (per image, not part of the look) ---------------- */
+const DEV_PARAMS=[["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
+const DEV0=Object.freeze({dShadows:0,dMid:0,dHigh:0});
+const devEls={};
+function curDev(){ const it=items[cur]; return (it&&it.dev)||DEV0; }
+function setDev(k,v){ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{[k]:v}); syncDev(); schedule(); }
+function syncDev(){ const d=curDev(); let live=false;
+  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); row.classList.toggle("changed",d[p[0]]!==0); if(d[p[0]]!==0) live=true; }
+  $("tick-dev").classList.toggle("live",live); }
+function buildDevelop(){
+  const box=$("devCtrls");
+  for (const p of DEV_PARAMS){
+    const [k,label,mn,mx,st]=p; const row=document.createElement("div"); row.className="ctl"; const id="p_"+k;
+    row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}"><output for="${id}" title="Double-click to reset"></output>`;
+    const inp=row.querySelector("input"), out=row.querySelector("output");
+    inp.addEventListener("input",()=>setDev(k,+inp.value));
+    const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
+    devEls[k]={inp,out,row}; box.appendChild(row);
+  }
+  $("btnDevReset").addEventListener("click",()=>{ const it=items[cur]; if(it){ it.dev=Object.assign({},DEV0); syncDev(); schedule(); } });
+  $("btnDevAll").addEventListener("click",()=>{ const d=Object.assign({},curDev()); items.forEach(it=>it.dev=Object.assign({},d)); toast(`Development applied to ${items.length} still${items.length===1?"":"s"}.`); });
+}
+
 /* ---------------- Parameters ---------------- */
 const GROUPS = [
   {id:"tone", title:"Exposure & balance", params:[
@@ -421,6 +454,7 @@ const float GRAIN_K=1.0;
 /* Colour pipeline (v0.2), in comp order:
    1. Input transform   source -> scene-linear working space (linear Rec.709/sRGB primaries, unbounded).
                         8-bit images are sRGB-encoded; RAW (later) arrives already linear (uInXfer=1).
+   1b. Development      per-image source prep: shadows / midtones / highlights (tone equaliser on luminance).
    2. Scene-linear      exposure, white balance. Nothing is clipped.
    3. Optics            chromatic aberration, edge softness, halation, bloom, vignette, all in scene-linear,
                         before the film curve (what the lens and the negative see).
@@ -430,9 +464,20 @@ const float GRAIN_K=1.0;
    Grain                part of the emulsion: per-layer grain at the end of the optics pass, before the
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
-uniform float uExp,uTemp,uTint; uniform int uInXfer;
+uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
+/* Development (source prep, per image): shadows / midtones / highlights in stops around mid grey, on
+   luminance so hue is kept. Three operators applied in sequence, each monotonic, so tones never invert. */
+float ssd(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.0,1.0); return t*t*(3.0-2.0*t); }
+vec3 develop(vec3 l){
+  if (uDev==vec3(0.0)) return l;
+  float y=max(dot(l,W),1e-7), st=log2(y/0.18), x=st;
+  x += uDev.y*(1.0-ssd(0.0,3.0,abs(x)));     /* midtones */
+  x += uDev.x*(1.0-ssd(-5.0,-0.5,x));        /* shadows */
+  x += uDev.z*ssd(0.5,3.5,x);                /* highlights */
+  return l*exp2(x-st);
+}
 vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
-vec3 inputTransform(vec3 c){ return uInXfer==1 ? c : srgbToLin(c); }
+vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? c : srgbToLin(c)); }
 vec3 sceneLinear(vec3 l){
   l *= exp2(uExp);
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
@@ -619,7 +664,7 @@ const dummyLut=makeLutTex(2,new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0, 0,0,1,
 
 function hueRGB(h){ h=((h%360)+360)%360/60; const x=1-Math.abs(h%2-1); const c=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; return c; }
 
-function setSceneUniforms(u,e){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); }
+function setSceneUniforms(u,e,dv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh); }
 function setGradeUniforms(u,e){ setSceneUniforms(u,e); setLookUniforms(u,e); }
 function setLookUniforms(u,e){
   gl.uniform1f(u.uCon,e.con); gl.uniform1f(u.uRoll,e.roll); gl.uniform1f(u.uFade,e.fade); gl.uniform1f(u.uCrush,e.crush);
@@ -649,7 +694,7 @@ function render(){
   if (canvas.width!==srcW||canvas.height!==srcH){ canvas.width=srcW; canvas.height=srcH; }
   ensureTargets(srcW,srcH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); setSceneUniforms(u,e); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); setSceneUniforms(u,e,curDev()); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
   const st=1+e.halR;
@@ -703,7 +748,7 @@ async function addFiles(files){
 function select(i){
   cur=i; const it=items[i]; uploadSource(it.bmp);
   $("meta").textContent=`${it.name} · ${srcW}×${srcH}`;
-  buildStrip(); render();
+  syncDev(); buildStrip(); render();
 }
 function removeItem(i){
   const it=items[i]; if (it.url && !it.sample) URL.revokeObjectURL(it.url);
@@ -775,7 +820,9 @@ $("btnExportAll").addEventListener("click", async()=>{
   const btn=$("btnExportAll"); btn.disabled=true; const keep=cur; const [t,q,ext]=fmtInfo(); const files=[];
   try{
     for (let i=0;i<items.length;i++){ if (items[i].sample) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; uploadSource(items[i].bmp); const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
-    files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lookJSON(),null,2))});
+    const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && (it.dev.dShadows||it.dev.dMid||it.dev.dHigh)) dv[it.name]=it.dev;
+    if (Object.keys(dv).length) lj.development=dv;   /* per-image source prep, for the record (not loaded as part of the look) */
+    files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lj,null,2))});
     btn.textContent="Zipping…"; const zip=makeZip(files);
     await offer(`film_lab_${slug(presetName)}.zip`, new Blob([zip],{type:"application/zip"}));
   } finally { btn.disabled=false; btn.textContent="Export all (.zip)"; select(keep); }
@@ -970,7 +1017,7 @@ document.addEventListener("keyup",ev=>{ if (ev.code==="Space" && showOrig){ show
 })();
 
 /* ---------------- Boot ---------------- */
-buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
+buildDevelop(); buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
 makeSample();
 </script>
 </body>
