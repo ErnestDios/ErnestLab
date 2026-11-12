@@ -52,7 +52,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 
 ## Release prep (open source)
 - [ ] Check the name ("Film Lab" may be taken) before announcing
-- [ ] Rename presets to own names tagged "-inspired", e.g. "Tungsten 500 (Vision3 500T-inspired)"
+- [x] Rename presets and grain stocks to own names tagged "-inspired", e.g. "Tungsten 500 (Vision3 500T-inspired)"; "ALDI pitch" look → Warm Muted; new Cold Muted preset
 - [ ] About panel: license, credits, support link
 - [ ] GitHub Pages hosting
 - [ ] Before/after images in the README

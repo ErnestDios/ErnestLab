@@ -18,7 +18,7 @@ Drop images on the window, pick a film stock, adjust, and export.
 
 **Development** (per image, before the film): format crop (film & photo: Original, 1:1, 5:4, 4:3, 3:2, 1.66, 16:9, 1.85, 2:1, 2.20, 2.39, landscape/portrait; social: 1:1, 4:5, 3:4, 9:16, 16:9, 1.91, 2:3; reframe; a hint shows which platforms will show the export without further cropping) applied before the lens, so vignette, edge softness and aberration follow the new frame; shadows, midtones and highlights in stops around mid grey, in linear light and on luminance so colours don't shift. Prepares each photo (pull hot highlights, open crushed shadows) before the film stock; changing the look doesn't touch it, and "Apply to all stills" copies it across a batch.
 
-**Looks:** eight film-stock presets (own emulations) with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
+**Looks:** ten presets: Neutral, Warm Muted, Cold Muted, Bleach bypass, and six film-stock looks named after the stocks that inspired them (Daylight 250, Tungsten 500, Soft 500, Portrait 400, Night 800T, Slide 100), with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
 
 **Grade** (display-referred, sRGB in): exposure, temperature, tint, S-curve contrast, highlight roll-off, black lift, white crush, per-channel gamma, saturation, shadow/highlight split toning, and an external 3D `.cube` LUT with a mix control.
 
@@ -26,7 +26,7 @@ Drop images on the window, pick a film stock, adjust, and export.
 
 **Lens:** radial chromatic aberration, edge softness, vignette (amount, size, feather).
 
-**Grain:** emulsion grain with three layers (the red, green and blue colour records), each with its own amount, size and clumping. Each layer's grain follows that layer's own exposure and sits in the negative, before the film curve, so the curve shapes it. Master controls: amount, size in image pixels (preview matches export), colour grain (how independent the layers are), midtone bias, clumping, shadow grain, seed. A grain-stock picker with 12 stocks sets the masters and the layers, independent of the colour look.
+**Grain:** emulsion grain with three layers (the red, green and blue colour records), each with its own amount, size and clumping. Each layer's grain follows that layer's own exposure and sits in the negative, before the film curve, so the curve shapes it. Master controls: amount, size in image pixels (preview matches export), colour grain (how independent the layers are), midtone bias, clumping, shadow grain, seed. A grain-stock picker with 12 stocks (own names, each tagged with the stock that inspired it) sets the masters and the layers, independent of the colour look.
 
 **Workflow:** batch drag-and-drop, film strip, click to flip original/film, hold Space to peek, channel view (R, G, B, L keys or the header switch; same key again for RGB; works with the before/after split), before/after split, Fit/100%, resizable panel, double-click a value to reset it, Clear session.
 
