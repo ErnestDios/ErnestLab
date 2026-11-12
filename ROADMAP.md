@@ -12,7 +12,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] `.cube` export stays display-referred Rec.709/sRGB (matches v0.1 within 0.0015)
 - [x] `look.json` gets a `format` field (2) and a migration hook; v0.1 files load unchanged
 - [x] Optics in scene-linear, before the film curve (comp order): chromatic aberration, edge softness, halation, bloom, vignette. Grain stays last, on the display image.
-- [ ] Review the built-in presets against v0.1 on real images and retune where the new order changed them (halation now glows against darks rather than lifting bright areas; bright scenes sit lower without the post-curve glow)
+- [x] Preset review: the new order's look changes (halation glows against darks, bright scenes sit lower) accepted as an upgrade; no retune
 
 ## 2. Per-channel emulsion grain — v0.3
 - [ ] Separate R/G/B grain layers: size, amount and clumping per layer (blue usually coarsest)
