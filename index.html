@@ -100,6 +100,9 @@ details.develop #devFrame{padding-bottom:4px}
 .seg button.on{background:#2d2822;color:var(--accent)}
 .seg button:disabled{opacity:.45;cursor:default}
 .ctl.off{opacity:.45}
+.devhint{font-size:11.5px;color:var(--muted);line-height:1.35;padding:2px 0 2px 112px}
+.devhint.ok{color:#9fc98a}
+.devhint.ok::before{content:"✓ ";}
 details.develop summary .meta{font-weight:400;letter-spacing:.02em;color:var(--muted);text-transform:none;margin-left:4px}
 details.develop .devrow{padding:0 14px 8px}
 details.develop .note{padding:0 14px 12px}
@@ -167,6 +170,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
     <div class="ctrls" id="devFrame">
       <div class="grainstock"><label for="devFmt">Format</label><select id="devFmt"></select></div>
       <div class="grainstock"><label>Orientation</label><div class="seg" id="devOrient" role="group" aria-label="Orientation"><button data-o="land">Landscape</button><button data-o="port">Portrait</button></div></div>
+      <div class="devhint" id="devHint" title="Based on each platform's published image specs as of Nov 2026; platforms change these often."></div>
     </div>
     <div class="ctrls" id="devCtrls"></div>
     <div class="row devrow"><button class="btn" id="btnDevReset">Reset</button><button class="btn" id="btnDevAll" title="Copy this image's development to every still in the strip">Apply to all stills</button></div>
@@ -237,7 +241,25 @@ document.getElementById("ver").textContent="v"+APP_VERSION;
 /* Formats: the frame is cropped here, before the lens, so vignette, edge softness and aberration are
    computed for the new frame (as if shot natively on that format). Ratios are width / height. */
 const FORMATS=[["orig","Original",0],["1:1","1:1 · 6×6",1],["5:4","5:4 · 4×5",1.25],["4:3","4:3",4/3],["3:2","3:2 · 35mm still",1.5],
-  ["1.66","1.66 · Super 16",1.66],["16:9","16:9",16/9],["1.85","1.85 · flat",1.85],["2:1","2:1",2],["2.20","2.20 · 65mm",2.2],["2.39","2.39 · scope",2.39]];
+  ["1.66","1.66 · Super 16",1.66],["16:9","16:9",16/9],["1.85","1.85 · flat",1.85],["2:1","2:1",2],["2.20","2.20 · 65mm",2.2],["2.39","2.39 · scope",2.39],
+  /* Social: fixed orientation (ratio already as width / height) */
+  ["s4:5","4:5 · Instagram, Threads, LinkedIn feed",4/5,"social"],["s3:4","3:4 · Instagram feed + grid",3/4,"social"],
+  ["s9:16","9:16 · Reels, Stories, TikTok, Shorts",9/16,"social"],["s2:3","2:3 · Pinterest",2/3,"social"],["s1.91","1.91 · link previews",1.91,"social"]];
+/* Which platforms show an image of this ratio (width / height) without cropping it further. Specs as of
+   Nov 2026 (Instagram feed 1.91:1 to 3:4, profile grid 3:4; LinkedIn crops taller than 4:5; Pinterest taller
+   than 2:3); platforms change these often. */
+const PLATFORM_FITS=[
+  ["Instagram feed", r=>r>=0.75-0.008 && r<=1.91+0.02],
+  ["Instagram grid (whole image)", r=>Math.abs(r-0.75)<0.008],
+  ["Reels · Stories · TikTok · Shorts", r=>Math.abs(r-9/16)<0.006],
+  ["YouTube · X", r=>Math.abs(r-16/9)<0.015],
+  ["LinkedIn feed", r=>r>=0.8-0.008 && r<=1.91+0.02],
+  ["Link previews", r=>Math.abs(r-1.91)<0.02],
+  ["Pinterest", r=>Math.abs(r-2/3)<0.008],
+];
+function platformHint(W,H){ const r=W/H, fits=PLATFORM_FITS.filter(p=>p[1](r)).map(p=>p[0]);
+  const small = fits.length && W<1080 ? ` — only ${W} px wide; these platforms show 1080 px, so they'll upscale it` : "";
+  return fits.length ? {ok:true,text:fits.join(" · ")+small} : {ok:false,text:"Social feeds will crop or letterbox this ratio"}; }
 const DEV_PARAMS=[["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
   ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
 const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0});
@@ -247,7 +269,7 @@ function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh; }
 function cropRect(d,w,h){
   const f=FORMATS.find(x=>x[0]===d.fmt); let r=f?f[2]:0;
   if (!r||!w||!h) return {x:0,y:0,w:1,h:1,W:w,H:h};
-  const port = d.orient==="port" || (d.orient==="auto" && h>w);
+  const port = f[3]!=="social" && (d.orient==="port" || (d.orient==="auto" && h>w));
   if (port) r=1/r;
   let cw=1, ch=1; if (w/h>r) cw=r*h/w; else ch=w/(r*h);
   const x=(1-cw)*(d.panX+1)/2, y=(1-ch)*(1-d.panY)/2;
@@ -261,13 +283,18 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
     if (p[7]==="frame"){ inp.disabled=!cropped; row.classList.toggle("off",!cropped); } }
   $("devFmt").value=d.fmt;
   const port = d.orient==="port" || (d.orient==="auto" && srcH>srcW);
-  document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && (b.dataset.o==="port")===port); b.disabled=!cropped || d.fmt==="1:1"; });
+  const social=(FORMATS.find(x=>x[0]===d.fmt)||[])[3]==="social";
+  document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && !social && (b.dataset.o==="port")===port); b.disabled=!cropped || social || d.fmt==="1:1"; });
+  const c=cropRect(d,srcW,srcH), hnt=platformHint(c.W,c.H), he=$("devHint");
+  he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
   $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : ""); }
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
-  for (const f of FORMATS){ const o=document.createElement("option"); o.value=f[0]; o.textContent=f[1]; fs.appendChild(o); }
+  const gF=document.createElement("optgroup"); gF.label="Film & photo"; const gS=document.createElement("optgroup"); gS.label="Social";
+  for (const f of FORMATS){ const o=document.createElement("option"); o.value=f[0]; o.textContent=f[1]; (f[3]==="social"?gS:f[0]==="orig"?fs:gF).appendChild(o); }
+  fs.appendChild(gF); fs.appendChild(gS);
   fs.addEventListener("change",()=>{ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{fmt:fs.value,panX:0,panY:0}); syncDev(); schedule(); });
   document.querySelectorAll("#devOrient button").forEach(b=>b.addEventListener("click",()=>setDev("orient",b.dataset.o)));
   for (const p of DEV_PARAMS){
