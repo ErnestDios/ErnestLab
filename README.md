@@ -26,7 +26,7 @@ Drop images on the window, pick a film stock, adjust, and export.
 
 **Grain:** emulsion grain with three layers (the red, green and blue colour records), each with its own amount, size and clumping. Each layer's grain follows that layer's own exposure and sits in the negative, before the film curve, so the curve shapes it. Master controls: amount, size in image pixels (preview matches export), colour grain (how independent the layers are), midtone bias, clumping, shadow grain, seed. A grain-stock picker with 12 stocks sets the masters and the layers, independent of the colour look.
 
-**Workflow:** batch drag-and-drop, film strip, click to flip original/film, hold Space to peek, before/after split, Fit/100%, resizable panel, double-click a value to reset it, Clear session.
+**Workflow:** batch drag-and-drop, film strip, click to flip original/film, hold Space to peek, channel view (R, G, B, L keys or the header switch; same key again for RGB; works with the before/after split), before/after split, Fit/100%, resizable panel, double-click a value to reset it, Clear session.
 
 **Output:**
 - Export the current still at full resolution (JPEG 95 or PNG).
