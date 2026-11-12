@@ -61,6 +61,7 @@ a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .guide kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:2px 5px;color:var(--ink);background:#221f1c}
 .guide .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;color:#c9c1b5;align-items:center}
 .about .k{color:var(--muted);font-size:12px}
+.guide #installState{color:#9fc98a}
 .ver{font:500 11px/1 var(--font-mono);letter-spacing:.06em;color:var(--muted);text-transform:none;margin-left:2px}
 .chans{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .chan{background:#221f1c;border:0;border-left:1px solid var(--line);padding:6px 9px;cursor:pointer;font:500 12px/1 var(--font-mono);color:var(--muted);min-width:30px}
@@ -294,9 +295,16 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
       <li><b>Export look as .cube</b> takes the colour part of the look to Resolve or Nuke (in ACES, apply it after the output transform).</li>
     </ul>
 
-    <h3>6 · Install &amp; privacy</h3>
+    <h3>6 · Install as an app &amp; privacy</h3>
+    <p>Installed, Ernest Lab gets its own icon and window and <b>works offline</b>. It updates itself when a new version is out.</p>
+    <p id="installState" class="k" hidden></p>
+    <div class="row" id="installRow" hidden><button class="btn primary" id="btnInstall">Install Ernest Lab</button></div>
     <ul>
-      <li><b>Install</b> from your browser (Install button, or Share → Add to Home Screen): Ernest Lab gets its own window and works offline.</li>
+      <li><b>iPhone / iPad (Safari):</b> tap <b>Share</b> (square with an arrow; on newer iOS it's behind <b>…</b> next to the address bar) → <b>Add to Home Screen</b> → <b>Add</b>. Not in the list? Scroll down → <b>Edit Actions</b>. In Chrome on iPhone it's also under <b>Share</b>.</li>
+      <li><b>Android (Chrome):</b> <b>⋮</b> menu → <b>Install app</b> (or <b>Add to Home screen</b>) → <b>Install</b>.</li>
+      <li><b>Computer (Chrome / Edge):</b> the <b>install icon</b> at the right end of the address bar, or menu → <b>Cast, save and share</b> / <b>Apps</b> → <b>Install</b>.</li>
+      <li><b>Mac (Safari):</b> <b>File</b> → <b>Add to Dock</b>.</li>
+      <li>Then open it <b>from the new icon</b>, not from the browser.</li>
       <li>Everything runs on your device. Your photos are never uploaded.</li>
     </ul>
 
@@ -1257,6 +1265,19 @@ document.addEventListener("keyup",ev=>{ if (ev.code==="Space" && showOrig){ show
 
 /* ---------------- Boot ---------------- */
 buildDevelop(); buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
+/* Install: a real Install button where the browser offers one (Chromium: beforeinstallprompt);
+   otherwise the per-platform steps in the guide. Shows when already running as the installed app. */
+let installEvt=null;
+const isStandalone=()=> (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone===true;
+function syncInstallUI(){
+  const st=$("installState"), row=$("installRow");
+  if (isStandalone()){ st.textContent="✓ You're using the installed app."; st.hidden=false; row.hidden=true; return; }
+  st.hidden=true; row.hidden=!installEvt;
+}
+window.addEventListener("beforeinstallprompt",ev=>{ ev.preventDefault(); installEvt=ev; syncInstallUI(); });
+window.addEventListener("appinstalled",()=>{ installEvt=null; syncInstallUI(); toast("Installed. Open Ernest Lab from its new icon."); });
+$("btnInstall").addEventListener("click",async()=>{ if(!installEvt) return; installEvt.prompt(); try{ await installEvt.userChoice; }catch(e){} installEvt=null; syncInstallUI(); });
+syncInstallUI();
 /* Guide: "?" button, the ? key, and a one-time hint on the first visit. */
 function openGuide(){ $("guideModal").classList.add("open"); try{ localStorage.setItem("filmlab.guideSeen","1"); }catch(e){} }
 $("btnGuide").addEventListener("click",openGuide);
