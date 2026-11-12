@@ -761,7 +761,7 @@ out vec2 vUv;
 void main(){ vec2 p=vec2(float((gl_VertexID<<1)&2), float(gl_VertexID&2)); vUv=p; gl_Position=vec4(p*2.0-1.0,0.0,1.0); }`;
 
 const HEAD=`#version 300 es
-precision highp float; precision highp sampler3D;
+precision highp float; precision highp int; precision highp sampler3D;   /* highp int: the grain hash needs 32-bit uints; fragment ints default to mediump (16-bit on Mali) */
 in vec2 vUv; out vec4 o;
 const vec3 W=vec3(0.2126,0.7152,0.0722);
 /* Scene-linear values are unbounded. Float targets hold them as-is; on GPUs without float render
