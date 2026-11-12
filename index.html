@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
 <style>
 /* IBM Plex (SIL Open Font License 1.1, see licenses/IBM-Plex-OFL.txt), latin subset, embedded so the page makes no third-party requests */
@@ -161,11 +161,89 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 .modal textarea{width:100%;height:240px;background:#0f0e0d;border:1px solid var(--line);border-radius:6px;font:12px/1.4 var(--font-mono);padding:8px}
 .modal img{max-width:100%;border-radius:4px}
 
-@media (max-width:820px){
-  #resizer{display:none}
-  body{grid-template-columns:1fr;grid-template-rows:auto 55vh auto auto;grid-template-areas:"top" "view" "strip" "rack";overflow:auto}
-  #rack{border-left:0;overflow:visible}
-}
+/* ---------- Phone & small-tablet layout (v0.5). Applied by script as body.m (width ≤ 820, or a touch screen ≤ 520 tall).
+   Photo pinned on top, slim bar with ⋯ menu, controls split into tabs. The desktop layout above is untouched. ---------- */
+.mbar,#tabs,#moreMenu{display:none}
+.ibtn{width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;background:#221f1c;border:1px solid var(--line);border-radius:9px;padding:0;cursor:pointer;color:var(--ink);flex:0 0 auto}
+.ibtn svg{width:20px;height:20px}
+.ibtn.on{border-color:var(--accent);color:var(--accent)}
+body.m{height:100vh;height:100dvh;grid-template-columns:1fr;grid-template-rows:auto minmax(0,48fr) auto minmax(0,52fr) auto;grid-template-areas:"top" "view" "strip" "rack" "tabs";padding:0 env(safe-area-inset-right) 0 env(safe-area-inset-left);-webkit-tap-highlight-color:transparent}
+body.m header{flex-wrap:nowrap;gap:6px;padding:6px 8px 6px 12px;padding-top:max(6px,env(safe-area-inset-top))}
+body.m header > :not(h1):not(.mbar){display:none}
+body.m header h1{font-size:14px;flex:1;min-width:0;white-space:nowrap}
+body.m #btnGuide{display:none}
+body.m .mbar{display:flex;gap:6px}
+body.m #view.fit canvas{max-width:calc(100% - 16px);max-height:calc(100% - 16px)}
+body.m #view.full canvas{margin:8px}
+body.m canvas#gl{box-shadow:0 4px 22px rgba(0,0,0,.6);touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.m #view.cmp canvas#gl{touch-action:none}
+body.m .badge{top:8px;left:8px}
+body.m .hint{left:8px;right:8px;bottom:8px;text-align:center;transition:opacity .5s}
+body.m .hint.gone{opacity:0;pointer-events:none}
+body.m #strip{min-height:0;padding:6px 10px;gap:6px}
+body.m .thumb{height:46px}
+body.m .thumb .nm{display:none}
+body.m .thumb .x{width:22px;height:22px;line-height:22px}
+body.m .addtile{height:46px;width:64px;font-size:11px;line-height:1.2}
+body.m #resizer{display:none}
+body.m #rack{border-left:0;border-top:1px solid var(--line);overscroll-behavior:contain}
+body.m:not([data-tab=dev]) #rack [data-tab=dev],
+body.m:not([data-tab=look]) #rack [data-tab=look],
+body.m:not([data-tab=color]) #rack [data-tab=color],
+body.m:not([data-tab=fx]) #rack [data-tab=fx],
+body.m:not([data-tab=grain]) #rack [data-tab=grain],
+body.m:not([data-tab=export]) #rack [data-tab=export]{display:none}
+body.m #tabs{grid-area:tabs;display:grid;grid-template-columns:repeat(6,1fr);background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{position:relative;background:none;border:0;color:var(--muted);font:500 12.5px/1 var(--font-body);letter-spacing:.03em;padding:0 2px;min-height:50px;cursor:pointer}
+#tabs button.on{color:var(--accent)}
+#tabs button.on::before{content:"";position:absolute;top:-1px;left:18%;right:18%;height:2px;background:var(--accent);border-radius:0 0 2px 2px}
+#tabs button.live::after{content:"";position:absolute;top:11px;right:calc(50% - 26px);width:5px;height:5px;border-radius:50%;background:var(--accent)}
+/* bigger touch targets */
+body.m .ctrls{gap:4px}
+body.m .ctl{grid-template-columns:112px 1fr 50px;font-size:14px;gap:6px}
+body.m .ctl output{font-size:12.5px;padding:9px 0}
+body.m input[type=range]{height:36px}
+body.m input[type=range]::-webkit-slider-runnable-track{height:4px}
+body.m input[type=range]::-moz-range-track{height:4px}
+body.m input[type=range]::-webkit-slider-thumb{width:22px;height:22px;margin-top:-9px;box-shadow:0 1px 4px rgba(0,0,0,.5)}
+body.m input[type=range]::-moz-range-thumb{width:22px;height:22px}
+body.m input.hue::-webkit-slider-runnable-track{height:6px}
+body.m input.hue::-webkit-slider-thumb{margin-top:-8px}
+body.m .btn{padding:9px 13px;min-height:42px}
+body.m select,body.m input[type=text]{min-height:42px;font-size:16px}
+body.m summary{padding:12px 14px;min-height:48px}
+body.m details.sub summary{padding:10px;min-height:44px}
+body.m .byp{width:44px;height:26px}
+body.m .byp::after{top:3px;left:3px;width:18px;height:18px}
+body.m .byp[aria-checked="true"]::after{left:21px}
+body.m .seg button{padding:11px 8px;font-size:14px}
+body.m .grainstock{grid-template-columns:112px 1fr;font-size:14px}
+body.m .devhint{padding:2px 0}
+body.m .strength{font-size:14px}
+body.m .row.wrap .btn{flex:1 1 auto}
+body.m .exportbox .row .btn{flex:1 1 0}
+body.m #shareRow{order:-1}
+body.m #shareRow .btn{background:#2d2822;border-color:var(--accent);color:var(--accent);font-weight:600}
+/* long explanations fold to one line; tap to read */
+body.m .note{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+body.m .note::before{content:"ⓘ ";color:var(--accent)}
+body.m .note.open{white-space:normal}
+body.m #toast{cursor:pointer;bottom:calc(62px + env(safe-area-inset-bottom));max-width:calc(100vw - 24px);text-align:center}
+/* ⋯ menu */
+body.m #moreMenu.open{display:block;position:fixed;inset:0;z-index:25;background:rgba(0,0,0,.45)}
+#moreMenu .card{position:absolute;top:calc(54px + env(safe-area-inset-top));right:calc(8px + env(safe-area-inset-right));width:min(300px,calc(100vw - 16px));max-height:calc(100% - 70px);overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+#moreMenu .mmeta{font:12px/1.4 var(--font-mono);color:var(--muted);word-break:break-all}
+#moreMenu .lbl{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+#moreMenu .chans{display:grid;grid-template-columns:repeat(5,1fr)}
+#moreMenu .chan{padding:12px 0;font-size:13px}
+#moreMenu .mi{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;background:#221f1c;border:1px solid var(--line);border-radius:9px;padding:0 12px;min-height:46px;cursor:pointer;color:var(--ink);text-decoration:none;font-size:14.5px}
+#moreMenu .mi .v{font:12px/1 var(--font-mono);color:var(--muted)}
+#moreMenu .mi.danger{border-color:#c0563a;color:#f0a58e}
+/* landscape phone: photo left, controls right */
+body.m.land{grid-template-columns:minmax(0,1fr) min(390px,46vw);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"top top" "view rack" "strip tabs"}
+body.m.land #rack{border-top:0;border-left:1px solid var(--line)}
+body.m.land #tabs{border-left:1px solid var(--line)}
+body.m.land #tabs button{min-height:44px;font-size:12px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
@@ -182,6 +260,11 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
   <button class="btn" id="btnZoom">Fit</button>
   <button class="btn" id="btnClear" title="Remove all images, unload the LUT and reset the grade to the default look. Saved looks are kept.">Clear session</button>
   <button class="btn" id="btnAdd">Add images</button>
+  <div class="mbar">
+    <button class="ibtn" id="mAdd" aria-label="Add images" title="Add images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="ibtn" id="mCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button>
+    <button class="ibtn" id="mMore" aria-label="More" title="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
+  </div>
   <input type="file" id="fileIn" accept="image/*" multiple hidden>
   <input type="file" id="lookIn" accept=".json,application/json" multiple hidden>
 </header>
@@ -197,7 +280,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 
 <div id="resizer" role="separator" aria-orientation="vertical" aria-label="Resize the control panel" tabindex="0" title="Drag to widen the panel (double-click to reset)"></div>
 <aside id="rack">
-  <details class="develop" id="develop" open>
+  <details class="develop" id="develop" data-tab="dev" open>
     <summary><span class="tick" id="tick-dev"></span>Development <span class="meta">per image</span></summary>
     <div class="ctrls" id="devFrame">
       <div class="grainstock"><label for="devFmt">Format</label><select id="devFmt"></select></div>
@@ -208,7 +291,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
     <div class="row devrow"><button class="btn" id="btnDevReset">Reset</button><button class="btn" id="btnDevAll" title="Copy this image's development to every still in the strip">Apply to all stills</button></div>
     <div class="note">Prepares the photo before the film stock. The format crops the frame before the lens, so vignette, edge softness and aberration follow the new frame, as if shot natively on that format. Tones are adjusted in linear light, in stops around mid grey, without shifting colour. Each still keeps its own development; changing the film look doesn't touch it.</div>
   </details>
-  <div class="presetbar">
+  <div class="presetbar" data-tab="look">
     <label for="preset">Film stock</label>
     <select id="preset"></select>
     <div class="strength"><span>Look strength</span><input type="range" id="mix" min="0" max="1" step="0.01" value="1"><output id="mixOut" class="meta">100%</output></div>
@@ -223,7 +306,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
       <button class="btn" id="btnReset">Reset</button>
     </div>
   </div>
-  <div class="exportbox">
+  <div class="exportbox" data-tab="export">
     <div class="row">
       <select id="fmt" aria-label="Export format">
         <option value="jpg">JPEG · quality 95</option>
@@ -241,7 +324,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
     <div class="note" id="dlNote">Exports render at full resolution. Batch export bundles every still in the strip into one zip.</div>
   </div>
   <div id="groups"></div>
-  <div class="exportbox">
+  <div class="exportbox" data-tab="color">
     <div class="row">
       <button class="btn" id="btnLut">Load .cube LUT</button>
       <button class="btn" id="btnCube">Export look as .cube</button>
@@ -250,6 +333,23 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
     <div class="note" id="lutNote">No external LUT loaded. The exported .cube holds the colour part of the look (exposure, balance, curve, colour, split tone, loaded LUT) as a 33-point LUT for Rec.709/sRGB display-referred images. In an ACES pipeline, apply it after the output transform. Grain, halation, aberration, softness and vignette are spatial and stay in Ernest Lab.</div>
   </div>
 </aside>
+<nav id="tabs" role="tablist" aria-label="Controls">
+  <button role="tab" data-t="dev">Develop</button><button role="tab" data-t="look">Look</button><button role="tab" data-t="color">Colour</button><button role="tab" data-t="fx">Effects</button><button role="tab" data-t="grain">Grain</button><button role="tab" data-t="export">Export</button>
+</nav>
+<div id="moreMenu" role="dialog" aria-label="More">
+  <div class="card">
+    <div class="mmeta" id="mMeta"></div>
+    <div class="lbl">View channel</div>
+    <div class="chans" role="group" aria-label="View channel">
+      <button class="chan on" data-ch="0">RGB</button><button class="chan" data-ch="1">R</button><button class="chan" data-ch="2">G</button><button class="chan" data-ch="3">B</button><button class="chan" data-ch="4">L</button>
+    </div>
+    <button class="mi" id="mZoom"><span>Zoom</span><span class="v" id="mZoomV">Fit</span></button>
+    <button class="mi" id="mGuide"><span>Guide &amp; install</span><span class="v">?</span></button>
+    <button class="mi" id="mAbout"><span>About Ernest Lab</span><span class="v" id="mVer"></span></button>
+    <a class="mi" id="mSupport" target="_blank" rel="noopener" hidden><span>☕ Buy me a coffee</span><span class="v">↗</span></a>
+    <button class="mi" id="mClear"><span>Clear session</span><span class="v">removes stills</span></button>
+  </div>
+</div>
 
 <div id="toast"></div>
 <div class="modal guide" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
@@ -279,6 +379,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
       <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
       <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
       <li><b>Double-click</b> a slider's value to reset it.</li>
+      <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
     </ul>
 
     <h3>4 · Looks</h3>
@@ -347,7 +448,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 
 <script>
 "use strict";
-const APP_VERSION="0.4.1";
+const APP_VERSION="0.5.0";
 document.getElementById("ver").textContent="v"+APP_VERSION;
 /* Support link (Buy Me a Coffee). Hidden while empty. */
 const SUPPORT_URL="https://buymeacoffee.com/ernestdios";
@@ -555,7 +656,7 @@ const ctlEls = {};
 function buildRack(){
   const host=$("groups");
   GROUPS.forEach((g,gi)=>{
-    const det=document.createElement("details"); if (gi<6) det.open = gi!==0 ? true : true;
+    const det=document.createElement("details"); det.dataset.tab={tone:"color",curve:"color",color:"color",hal:"fx",lens:"fx",grain:"grain"}[g.id]; if (gi<6) det.open = gi!==0 ? true : true;
     const sum=document.createElement("summary"); sum.innerHTML=`<span class="tick" id="tick-${g.id}"></span>${g.title}`; det.appendChild(sum); makeSwitch(g.id, sum, det);
     const box=document.createElement("div"); box.className="ctrls";
     if (g.id==="grain"){
@@ -1203,7 +1304,7 @@ async function clearSession(){
   cur=-1;
   if (lutTex){ gl.deleteTexture(lutTex); lutTex=null; } lut=null; lutSize=2; $("lutNote").textContent=LUT_NOTE0;
   for (const id in bypass) if (bypass[id]) setBypass(id,false);
-  compare=false; split=-1; showOrig=false; clickOrig=false; $("btnCompare").classList.remove("on"); if (viewChan) setChan(viewChan); updateBadge();
+  compare=false; split=-1; showOrig=false; clickOrig=false; $("btnCompare").classList.remove("on"); view.classList.remove("cmp"); if (viewChan) setChan(viewChan); updateBadge();
   const d="Warm Muted"; applyPreset(d,false); lookMix=1; buildPresetSelect(); $("preset").value="p:"+d; $("lookName").value="";
   syncUI(); await makeSample(); schedule();
   toast("Session cleared. Saved looks are still in My looks.");
@@ -1224,7 +1325,7 @@ view.addEventListener("dragleave",ev=>{ if (ev.target===view) view.classList.rem
 view.addEventListener("drop",ev=>{ ev.preventDefault(); view.classList.remove("dragging"); handleDropped(ev.dataTransfer.files); });
 document.addEventListener("dragover",ev=>ev.preventDefault()); document.addEventListener("drop",ev=>{ ev.preventDefault(); if(!view.contains(ev.target)) handleDropped(ev.dataTransfer.files); });
 $("btnZoom").addEventListener("click",()=>{ const full=view.classList.toggle("full"); view.classList.toggle("fit",!full); $("btnZoom").textContent=full?"100%":"Fit"; });
-$("btnCompare").addEventListener("click",()=>{ compare=!compare; if (compare && split<0) split=0.5; if (compare){ clickOrig=false; showOrig=false; } $("btnCompare").classList.toggle("on",compare); updateBadge(); schedule(); });
+$("btnCompare").addEventListener("click",()=>{ compare=!compare; if (compare && split<0) split=0.5; if (compare){ clickOrig=false; showOrig=false; } $("btnCompare").classList.toggle("on",compare); view.classList.toggle("cmp",compare); updateBadge(); schedule(); });
 function setSplit(ev){ const r=canvas.getBoundingClientRect(); split=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)); schedule(); }
 let dragging=false;
 let clickOrig=false;
@@ -1243,7 +1344,7 @@ document.addEventListener("keydown",ev=>{
 canvas.addEventListener("pointerdown",ev=>{ if(!compare) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
 canvas.addEventListener("pointermove",ev=>{ if(dragging) setSplit(ev); });
 canvas.addEventListener("pointerup",()=>dragging=false);
-canvas.addEventListener("click",()=>{ if (compare) return; clickOrig=!clickOrig; showOrig=clickOrig; updateBadge(); schedule(); });
+canvas.addEventListener("click",()=>{ if (held){ held=false; return; } if (compare) return; clickOrig=!clickOrig; showOrig=clickOrig; updateBadge(); schedule(); });
 document.addEventListener("keydown",ev=>{ if (ev.code==="Space" && !/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)){ ev.preventDefault(); if(!showOrig){ showOrig=true; updateBadge(); schedule(); } } });
 document.addEventListener("keyup",ev=>{ if (ev.code==="Space" && showOrig){ showOrig=clickOrig; updateBadge(); schedule(); } });
 
@@ -1284,7 +1385,67 @@ $("btnGuide").addEventListener("click",openGuide);
 $("btnCloseGuide").addEventListener("click",()=>$("guideModal").classList.remove("open"));
 $("guideModal").addEventListener("click",ev=>{ if (ev.target.id==="guideModal") ev.currentTarget.classList.remove("open"); });
 (function firstVisit(){ let seen=false; try{ seen=!!localStorage.getItem("filmlab.guideSeen"); }catch(e){}
-  if (!seen) setTimeout(()=>toast("New here? Press ? or the ? next to the title for a quick guide.",6000),1200); })();
+  if (!seen) setTimeout(()=>toast(isPhone()?"New here? Tap ⋯ → Guide & install for a quick tour.":"New here? Press ? or the ? next to the title for a quick guide.",6000),1200); })();
+
+/* ---------------- Phone layout (v0.5) ----------------
+   body.m switches the CSS to the phone layout; data-tab picks which controls show. Every phone control
+   drives the same desktop buttons, so there is one code path for state. */
+const phoneMQ = matchMedia("(max-width: 820px), (pointer: coarse) and (max-height: 520px)");
+function isPhone(){ return document.body.classList.contains("m"); }
+const HINT_DESK=$("hint").textContent, HINT_PHONE="Tap the photo to flip · touch and hold to peek at the original";
+function applyPhone(){
+  const m=phoneMQ.matches; document.body.classList.toggle("m",m);
+  document.body.classList.toggle("land", m && innerWidth>innerHeight);
+  $("hint").textContent = m ? HINT_PHONE : HINT_DESK;
+  if (!m) closeMore();
+}
+function setTab(t){
+  document.body.dataset.tab=t;
+  document.querySelectorAll("#tabs button").forEach(b=>{ const on=b.dataset.t===t; b.classList.toggle("on",on); b.setAttribute("aria-selected",on); });
+  $("rack").scrollTop=0; try{ localStorage.setItem("filmlab.tab",t); }catch(e){}
+}
+document.querySelectorAll("#tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.t)));
+{ let t="look"; try{ t=localStorage.getItem("filmlab.tab")||t; }catch(e){} if (!document.querySelector(`#tabs [data-t="${t}"]`)) t="look"; setTab(t); }
+/* a dot on a tab when something in it differs from neutral (same rule as the section ticks) */
+function updTabDots(){ document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("live", !!document.querySelector(`#rack [data-tab="${b.dataset.t}"] .tick.live`))); }
+new MutationObserver(updTabDots).observe($("rack"),{subtree:true,attributes:true,attributeFilter:["class"]}); updTabDots();
+/* mirror desktop buttons into their phone twins */
+function mirror(src,fn){ new MutationObserver(fn).observe(src,{attributes:true,childList:true,characterData:true,subtree:true}); fn(); }
+mirror($("btnCompare"),()=>$("mCompare").classList.toggle("on",$("btnCompare").classList.contains("on")));
+mirror($("btnZoom"),()=>$("mZoomV").textContent=$("btnZoom").textContent);
+mirror($("btnClear"),()=>{ const armed=$("btnClear").classList.contains("danger"); $("mClear").classList.toggle("danger",armed); $("mClear").firstElementChild.textContent=armed?"Tap again to clear":"Clear session"; });
+$("mAdd").addEventListener("click",()=>$("fileIn").click());
+$("mCompare").addEventListener("click",()=>$("btnCompare").click());
+/* ⋯ menu */
+function openMore(){ $("mMeta").textContent=$("meta").textContent; $("mVer").textContent="v"+APP_VERSION; $("moreMenu").classList.add("open"); $("mMore").setAttribute("aria-expanded","true"); }
+function closeMore(){ $("moreMenu").classList.remove("open"); $("mMore").setAttribute("aria-expanded","false"); }
+$("mMore").addEventListener("click",()=> $("moreMenu").classList.contains("open") ? closeMore() : openMore());
+$("moreMenu").addEventListener("click",ev=>{ if (ev.target.id==="moreMenu" || ev.target.closest(".chan")) closeMore(); });
+$("mZoom").addEventListener("click",()=>{ $("btnZoom").click(); closeMore(); });
+$("mGuide").addEventListener("click",()=>{ closeMore(); openGuide(); });
+$("mAbout").addEventListener("click",()=>{ closeMore(); $("ver").click(); });
+$("mClear").addEventListener("click",()=>{ const armed=$("btnClear").classList.contains("danger"); $("btnClear").click(); if (armed) closeMore(); });
+if (SUPPORT_URL){ $("mSupport").href=SUPPORT_URL; $("mSupport").hidden=false; $("mSupport").addEventListener("click",closeMore); }
+document.addEventListener("keydown",ev=>{ if (ev.code==="Escape") closeMore(); });
+/* touch and hold the photo to peek at the original (the phone's Space bar) */
+let held=false, holdT=0;
+canvas.addEventListener("pointerdown",ev=>{ held=false; clearTimeout(holdT); $("hint").classList.add("gone"); if (compare || ev.pointerType==="mouse") return;
+  holdT=setTimeout(()=>{ held=true; showOrig=true; updateBadge(); schedule(); },300); });
+function endHold(){ clearTimeout(holdT); if (held){ showOrig=clickOrig; updateBadge(); schedule(); } }
+canvas.addEventListener("pointerup",endHold);
+canvas.addEventListener("pointercancel",()=>{ endHold(); held=false; });
+canvas.addEventListener("contextmenu",ev=>{ if (isPhone()) ev.preventDefault(); });
+/* tap a value to reset it (double-click is awkward on glass); tap a folded note to read it */
+$("rack").addEventListener("click",ev=>{
+  if (!isPhone()) return;
+  const o=ev.target.closest(".ctl output"); if (o){ o.dispatchEvent(new MouseEvent("dblclick",{bubbles:true})); return; }
+  const n=ev.target.closest(".note"); if (n) n.classList.toggle("open");
+});
+phoneMQ.addEventListener ? phoneMQ.addEventListener("change",applyPhone) : phoneMQ.addListener(applyPhone);
+$("toast").addEventListener("click",()=>{ $("toast").style.display="none"; });
+addEventListener("resize",()=>document.body.classList.toggle("land", isPhone() && innerWidth>innerHeight));
+applyPhone();
+setTimeout(()=>{ if (isPhone()) $("hint").classList.add("gone"); },7000);
 makeSample();
 </script>
 </body>
