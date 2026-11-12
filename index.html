@@ -652,6 +652,12 @@ async function offer(filename, blob){
     try{ await downloads.save({filename, data:blob}); toast("Saved "+filename); return; }
     catch(err){ if (err && err.code==="declined"){ toast("Save cancelled."); return; } if (err && err.code==="rate_limited"){ toast("A save prompt is already open. Finish it, then try again."); return; } }
   }
+  // Standalone (opened from disk or a normal web host): regular browser download.
+  if (!window.claude){
+    const url=URL.createObjectURL(blob), a=document.createElement("a");
+    a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000); toast("Saved "+filename); return;
+  }
   if (blob.type.startsWith("image/")){ $("saveImg").src=URL.createObjectURL(blob); $("saveModal").classList.add("open"); }
   else toast("Downloads are not available in this view. Open this page on claude.ai to save files.",4200);
 }
