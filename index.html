@@ -38,6 +38,9 @@ header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent
 .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a1209;font-weight:600}
 .btn.primary:hover{filter:brightness(1.08)}
 .btn.on{border-color:var(--accent);color:var(--accent)}
+.support{font-size:12px;color:var(--muted);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+.support:hover{color:var(--accent);border-color:var(--accent)}
+#shareRow:empty,#shareRow:not(:has(button:not([hidden]))){display:none}
 .ver{font:500 11px/1 var(--font-mono);letter-spacing:.06em;color:var(--muted);text-transform:none;margin-left:2px}
 .chans{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .chan{background:#221f1c;border:0;border-left:1px solid var(--line);padding:6px 9px;cursor:pointer;font:500 12px/1 var(--font-mono);color:var(--muted);min-width:30px}
@@ -141,6 +144,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 <body>
 <header>
   <h1><span class="perf"><i></i><i></i><i></i></span>Film Lab <span class="ver" id="ver"></span></h1>
+  <a class="support" id="support" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a>
   <span class="meta" id="meta">—</span>
   <span class="spacer"></span>
   <div class="chans" role="group" aria-label="View channel (keys R, G, B, L)">
@@ -202,6 +206,10 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
       <button class="btn primary" id="btnExport">Export this still</button>
       <button class="btn" id="btnExportAll">Export all (.zip)</button>
     </div>
+    <div class="row" id="shareRow">
+      <button class="btn" id="btnShare" hidden title="Open your device's share menu (Instagram, WhatsApp, Messages… on phones)">Share…</button>
+      <button class="btn" id="btnCopy" hidden title="Copy the finished image, then paste it into X, LinkedIn, Slack…">Copy image</button>
+    </div>
     <div class="note" id="dlNote">Exports render at full resolution. Batch export bundles every still in the strip into one zip.</div>
   </div>
   <div id="groups"></div>
@@ -237,6 +245,9 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 "use strict";
 const APP_VERSION="0.4.0";
 document.getElementById("ver").textContent="v"+APP_VERSION;
+/* Support link (Buy Me a Coffee). Hidden while empty. */
+const SUPPORT_URL="";
+if (SUPPORT_URL){ const a=document.getElementById("support"); a.href=SUPPORT_URL; a.hidden=false; }
 /* ---------------- Development (per image, not part of the look) ---------------- */
 /* Formats: the frame is cropped here, before the lens, so vignette, edge softness and aberration are
    computed for the new frame (as if shot natively on that format). Ratios are width / height. */
@@ -795,7 +806,7 @@ function render(){
   });
 }
 let renderClean=false, rafId=0;
-function schedule(){ if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
+function schedule(){ editStamp++; if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
 
 async function addFiles(files){
   const list=[...files].filter(f=>f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
@@ -814,7 +825,7 @@ async function addFiles(files){
 }
 function select(i){
   cur=i; const it=items[i]; uploadSource(it.bmp);
-  syncDev(); buildStrip(); render();
+  editStamp++; syncDev(); buildStrip(); render();
 }
 function removeItem(i){
   const it=items[i]; if (it.url && !it.sample) URL.revokeObjectURL(it.url);
@@ -1017,6 +1028,39 @@ function handleDropped(fileList){
 }
 $("btnLoadLook").addEventListener("click",()=>$("lookIn").click());
 $("lookIn").addEventListener("change",ev=>{ loadLookFiles([...ev.target.files]); ev.target.value=""; });
+
+/* ---------------- Share / copy ----------------
+   No direct posting: images never leave the device. Share hands the finished image to the OS share menu
+   (Web Share API; on phones this lists Instagram, WhatsApp, TikTok…). Copy puts a PNG on the clipboard for
+   pasting into web composers. Each button only shows where the browser supports it; inside the claude.ai
+   preview (a sandboxed frame) they usually don't. */
+let editStamp=0, shareCache=null;
+function shareName(ext){ return `${items[cur].name}_${slug(presetName)}.${ext}`; }
+(function initShare(){
+  let canFiles=false;
+  try{ canFiles = !!(navigator.canShare && navigator.share && navigator.canShare({files:[new File([new Uint8Array(1)],"t.jpg",{type:"image/jpeg"})]})); }catch(e){}
+  $("btnShare").hidden=!canFiles;
+  $("btnCopy").hidden=!(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem && window.isSecureContext);
+})();
+$("btnShare").addEventListener("click", async()=>{
+  if (cur<0) return; const [t,q,ext]=fmtInfo();
+  try{
+    /* Some browsers (Safari) only allow sharing right after the tap: reuse a render made for the same edit. */
+    if (!shareCache || shareCache.stamp!==editStamp || shareCache.type!==t){ shareCache={stamp:editStamp,type:t,file:new File([await renderToBlob(t,q)], shareName(ext), {type:t})}; }
+    await navigator.share({files:[shareCache.file], title:"Film Lab"});
+  }catch(err){
+    if (err && err.name==="AbortError") return;
+    if (err && err.name==="NotAllowedError") { toast("Ready — tap Share again to open the share menu."); return; }
+    toast("Sharing isn't available here. Use Export or Copy image instead.",3600);
+  }
+});
+$("btnCopy").addEventListener("click", async()=>{
+  if (cur<0) return;
+  try{
+    await navigator.clipboard.write([new ClipboardItem({"image/png": renderToBlob("image/png")})]);   /* promise keeps the tap's permission in Safari */
+    toast("Image copied — paste it into your post.");
+  }catch(err){ toast("Copying images isn't allowed here. Use Export instead.",3600); }
+});
 
 /* ---------------- Clear session ---------------- */
 const LUT_NOTE0=$("lutNote").textContent;

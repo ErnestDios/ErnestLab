@@ -33,6 +33,7 @@ Drop images on the window, pick a film stock, adjust, and export.
 **Output:**
 - Export the current still at full resolution (JPEG 95 or PNG).
 - Export all stills as one zip, with the look's `look.json`.
+- **Share…** hands the finished image to your device's share menu (on phones: Instagram, WhatsApp, TikTok, Messages…), and **Copy image** puts it on the clipboard for pasting into web composers. Nothing is uploaded by Film Lab; each button appears only where the browser supports it.
 - Export the look's colour part as a 33-point `.cube` LUT (Rec.709/sRGB display-referred; in an ACES pipeline apply it after the output transform). Grain, halation, aberration, softness and vignette are spatial and stay in Film Lab.
 
 ## How it works
