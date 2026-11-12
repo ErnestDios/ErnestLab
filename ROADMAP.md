@@ -2,15 +2,16 @@
 
 Order matters: step 1 changes the colour pipeline that every later control lives in, so it comes before adding more controls.
 
-## 1. Shared linear working space (8-bit only)
+## 1. Shared linear working space (8-bit only) — v0.2
 Move the grade from display-referred sRGB to a scene-linear working space. 8-bit images are linearised from sRGB on load; RAW will plug into the same space later.
 
-- [ ] Linearise 8-bit input (sRGB EOTF) and define the working space and primaries
-- [ ] Port exposure, balance, curve, colour and split toning to the linear space
-- [ ] Display transform at the end of the pipeline (film curve + sRGB output)
-- [ ] Re-tune the built-in presets so existing looks match (side-by-side check against the current version)
-- [ ] `.cube` export: keep it display-referred for Rec.709/sRGB, document the change
-- [ ] Load older `look.json` files (version field + migration)
+- [x] Input transform: linearise 8-bit input (exact sRGB EOTF) into scene-linear Rec.709/sRGB primaries, unbounded; a switch for already-linear sources (RAW)
+- [x] Exposure and white balance in scene-linear, no clipping
+- [x] Look encoding with headroom (extended sRGB OETF) so values above 1.0 reach the film curve and highlight roll-off instead of being clipped
+- [x] Built-in presets match v0.1 at exposure 0 (max 1–2 levels; see `tools/regression`)
+- [x] `.cube` export stays display-referred Rec.709/sRGB (matches v0.1 within 0.0015)
+- [x] `look.json` gets a `format` field (2) and a migration hook; v0.1 files load unchanged
+- [ ] Decide: move halation, bloom and vignette before the film curve (physically correct, scene-linear) — changes every look, so it needs its own look pass. Proposed for the RAW phase, where highlights above 1.0 make it matter most.
 
 ## 2. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)

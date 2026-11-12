@@ -378,23 +378,36 @@ precision highp float; precision highp sampler3D;
 in vec2 vUv; out vec4 o;
 const vec3 W=vec3(0.2126,0.7152,0.0722);
 `;
+/* Grade pass. Colour pipeline (v0.2):
+   1. Input transform   source -> scene-linear working space (linear Rec.709/sRGB primaries, unbounded).
+                        8-bit images are sRGB-encoded; RAW (later) arrives already linear.
+   2. Scene-linear ops  exposure, white balance. Values may go above 1.0: nothing is clipped here.
+   3. Look encoding     extended sRGB OETF: identical to sRGB up to 1.0 and continues above it,
+                        so highlights keep their headroom into the film curve.
+   4. Film look         per-channel gamma, S-curve, highlight roll-off (compresses >1.0 to the shoulder),
+                        black lift / white crush, saturation, split toning, external LUT -> display (0..1). */
 const FS_GRADE=HEAD+`
 uniform sampler2D uSrc; uniform sampler3D uLut; uniform float uLutMix, uLutSize;
 uniform float uExp,uTemp,uTint,uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt;
-uniform vec3 uGam,uShCol,uHiCol; uniform int uFlip;
-vec3 toLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
-vec3 toS(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
+uniform vec3 uGam,uShCol,uHiCol; uniform int uFlip, uInXfer;
+vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
+vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
 float sc(float x){ const float k=6.0, p=0.45; float a=sg(-k*p), b=sg(k*(1.0-p)); return (sg(k*(x-p))-a)/(b-a); }
-float curve(float x){ float s=sc(x); return uCon>=0.0 ? mix(x,s,uCon) : clamp(mix(x,2.0*x-s,-uCon),0.0,1.0); }
+float curve(float x){ float s=sc(x); return uCon>=0.0 ? mix(x,s,uCon) : max(mix(x,2.0*x-s,-uCon),0.0); }
 float roll(float y){ float kn=1.0-0.6*uRoll; if (y<=kn||uRoll<=0.0) return y; float r=1.0-kn; return kn + r*(1.0-exp(-(y-kn)/r)); }
-void main(){
-  vec2 uv = uFlip==1 ? vec2(vUv.x,1.0-vUv.y) : vUv;
-  vec3 c = texture(uSrc,uv).rgb;
-  vec3 l = toLin(c)*exp2(uExp);
+
+/* 1. input transform */
+vec3 inputTransform(vec3 c){ return uInXfer==1 ? c : srgbToLin(c); }
+/* 2. scene-linear operations */
+vec3 sceneLinear(vec3 l){
+  l *= exp2(uExp);
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
-  wb /= dot(wb,W); l *= wb;
-  c = clamp(toS(l),0.0,1.0);
+  wb /= dot(wb,W);
+  return max(l*wb, 0.0);
+}
+/* 4. film look on encoded values (may exceed 1.0 until the roll-off / final clamp) */
+vec3 filmLook(vec3 c){
   c = pow(c, vec3(1.0)+uGam);
   c = vec3(curve(c.r),curve(c.g),curve(c.b));
   c = vec3(roll(c.r),roll(c.g),roll(c.b));
@@ -405,7 +418,12 @@ void main(){
   c += (uShCol-dot(uShCol,W))*uShAmt*ws + (uHiCol-dot(uHiCol,W))*uHiAmt*wh;
   c = clamp(c,0.0,1.0);
   if (uLutMix>0.0){ vec3 lc = texture(uLut, c*(uLutSize-1.0)/uLutSize + 0.5/uLutSize).rgb; c = mix(c, lc, uLutMix); }
-  o = vec4(clamp(c,0.0,1.0),1.0);
+  return clamp(c,0.0,1.0);
+}
+void main(){
+  vec2 uv = uFlip==1 ? vec2(vUv.x,1.0-vUv.y) : vUv;
+  vec3 lin = sceneLinear(inputTransform(texture(uSrc,uv).rgb));
+  o = vec4(filmLook(linToEnc(lin)),1.0);   /* 3. look encoding */
 }`;
 const FS_BRIGHT=HEAD+`
 uniform sampler2D uTex; uniform float uThr;
@@ -538,7 +556,7 @@ function setGradeUniforms(u,e){
 }
 
 /* ---------------- Images ---------------- */
-const items=[]; let cur=-1; let srcTex=null, srcW=0, srcH=0;
+const items=[]; let cur=-1; let srcTex=null, srcW=0, srcH=0, srcXfer=0;   /* srcXfer: 0 = sRGB-encoded 8-bit, 1 = scene-linear (RAW, later) */
 function uploadSource(bmp){
   if (srcTex) gl.deleteTexture(srcTex);
   srcTex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,srcTex);
@@ -555,7 +573,7 @@ function render(){
   const e=effective();
   if (canvas.width!==srcW||canvas.height!==srcH){ canvas.width=srcW; canvas.height=srcH; }
   ensureTargets(srcW,srcH);
-  drawTo(T.grade,P.grade,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uFlip,1); setGradeUniforms(u,e); });
+  drawTo(T.grade,P.grade,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uFlip,1); gl.uniform1i(u.uInXfer,srcXfer); setGradeUniforms(u,e); });
   const thr=Math.pow(e.halThr,2.2);
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.grade.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,thr); });
   const st=1+e.halR;
@@ -730,7 +748,7 @@ async function buildCube(N=33){
   const out=mkTex(W,H,ifmt,gl.RGBA,hasFloat?gl.FLOAT:gl.UNSIGNED_BYTE,null,gl.NEAREST);
   const fb=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,out,0);
   gl.viewport(0,0,W,H); gl.useProgram(P.grade.p); const u=P.grade.u;
-  bindTex(0,src); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uFlip,0); setGradeUniforms(u,effective());
+  bindTex(0,src); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uFlip,0); gl.uniform1i(u.uInXfer,0); setGradeUniforms(u,effective());
   gl.drawArrays(gl.TRIANGLES,0,3);
   let px; if (hasFloat){ px=new Float32Array(W*H*4); gl.readPixels(0,0,W,H,gl.RGBA,gl.FLOAT,px); } else { const b=new Uint8Array(W*H*4); gl.readPixels(0,0,W,H,gl.RGBA,gl.UNSIGNED_BYTE,b); px=Float32Array.from(b,v=>v/255); }
   gl.deleteFramebuffer(fb); gl.deleteTexture(src); gl.deleteTexture(out);
@@ -745,7 +763,11 @@ $("btnCube").addEventListener("click", async()=>{
 });
 
 /* ---------------- Looks / JSON ---------------- */
-function lookJSON(){ return {app:"Film Lab", name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k,+(+base[k]).toFixed(4)]))}; }
+/* look.json format: 1 = v0.1 (no "format" field), 2 = v0.2 (scene-linear working space).
+   The slider values mean the same in both, so format 1 loads unchanged. Future changes migrate here. */
+const LOOK_FORMAT=2;
+function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This look was saved by a newer Film Lab; some settings may be ignored.",4000); return j; }
+function lookJSON(){ return {app:"Film Lab", format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k,+(+base[k]).toFixed(4)]))}; }
 $("preset").addEventListener("change",ev=>{ const v=ev.target.value; applyPreset(v.slice(2), v.startsWith("u:")); });
 $("mix").addEventListener("input",ev=>{ lookMix=+ev.target.value; $("mixOut").textContent=Math.round(lookMix*100)+"%"; schedule(); });
 $("btnReset").addEventListener("click",()=>{ base=Object.assign({},presetVals); lookMix=1; syncUI(); schedule(); });
@@ -759,7 +781,7 @@ $("btnCloseJson").addEventListener("click",()=>$("jsonModal").classList.remove("
 $("btnCloseSave").addEventListener("click",()=>$("saveModal").classList.remove("open"));
 $("btnCopyJson").addEventListener("click",async()=>{ try{ await navigator.clipboard.writeText($("jsonText").value); toast("Copied."); }catch(e){ $("jsonText").select(); toast("Select the text and copy it with Ctrl/Cmd+C."); } });
 $("btnApplyJson").addEventListener("click",()=>{
-  try{ const j=JSON.parse($("jsonText").value); const v=j.values||j; for(const k in DEF) if (typeof v[k]==="number") base[k]=v[k]; if (typeof j.strength==="number") lookMix=j.strength; syncUI(); schedule(); $("jsonModal").classList.remove("open"); toast("Look applied."); }
+  try{ const j=migrateLook(JSON.parse($("jsonText").value)); const v=j.values||j; for(const k in DEF) if (typeof v[k]==="number") base[k]=v[k]; if (typeof j.strength==="number") lookMix=j.strength; syncUI(); schedule(); $("jsonModal").classList.remove("open"); toast("Look applied."); }
   catch(e){ toast("That text is not valid look JSON."); }
 });
 /* Load look(s) from .json files: applies the look and adds it to "My looks" in this browser. */
@@ -774,7 +796,7 @@ async function loadLookFiles(files){
   let last=null, ok=0, bad=[];
   for (const f of files){
     try{
-      const j=JSON.parse(await f.text()); const v=(j&&typeof j.values==="object"&&j.values)||j;
+      const j=migrateLook(JSON.parse(await f.text())); const v=(j&&typeof j.values==="object"&&j.values)||j;
       const vals={}; let hits=0;
       for (const k in DEF) if (typeof v[k]==="number" && isFinite(v[k])){ vals[k]=v[k]; hits++; }
       if (!hits) throw new Error("no values");
