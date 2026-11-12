@@ -1,6 +1,6 @@
 # Roadmap
 
-Order matters: step 1 changes the colour pipeline that every later control lives in, so it comes before adding more controls.
+Order matters: step 1 changes the colour pipeline that every later control lives in, so it comes before adding more controls. Effects run in physical order internally (optics before the film curve); there is no separate post-grade stage.
 
 ## 1. Shared linear working space (8-bit only) — v0.2
 Move the grade from display-referred sRGB to a scene-linear working space. 8-bit images are linearised from sRGB on load; RAW will plug into the same space later.
@@ -14,24 +14,17 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Optics in scene-linear, before the film curve (comp order): chromatic aberration, edge softness, halation, bloom, vignette. Grain stays last, on the display image.
 - [ ] Review the built-in presets against v0.1 on real images and retune where the new order changed them (halation now glows against darks rather than lifting bright areas; bright scenes sit lower without the post-curve glow)
 
-## v0.3 — Post-process stage
-An optional stage after the grade, on the display image, for effects that belong on top of the finished picture.
+## 2. Per-channel emulsion grain — v0.3
+- [ ] Separate R/G/B grain layers: size, amount and clumping per layer (blue usually coarsest)
+- [ ] Per-stock layer settings for the 12 grain stocks
+- [ ] Keep preview = export at any zoom
 
-- [ ] Post-process effects section: glow, halation, vignette and chromatic aberration applied after the grade (the v0.1 behaviour as an explicit choice)
-- [ ] Panel stays in the familiar order (colour first, then effects); processing order is internal. Post goes last in the panel
-- [ ] Include in `look.json`; excluded from the `.cube` export like the other spatial effects
-
-## 2. Channel adjustments
+## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
 - [ ] Channel mixer
 - [ ] Lift / gamma / gain wheels
 - [ ] Hue-vs-hue and hue-vs-sat
 - [ ] Include all of the above in `look.json` and the `.cube` export
-
-## 3. Per-channel emulsion grain
-- [ ] Separate R/G/B grain layers: size, amount and clumping per layer (blue usually coarsest)
-- [ ] Per-stock layer settings for the 12 grain stocks
-- [ ] Keep preview = export at any zoom
 
 ## 4. RAW support (LibRaw → WebAssembly)
 - [ ] Build LibRaw to WASM as a separate, replaceable module (LGPL-2.1/CDDL: ship its license and source link)
