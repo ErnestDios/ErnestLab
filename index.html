@@ -92,6 +92,13 @@ details{border-bottom:1px solid var(--line)}
 summary{list-style:none;cursor:pointer;padding:10px 14px;display:flex;align-items:center;gap:8px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
 summary::-webkit-details-marker{display:none}
 summary .tick{width:8px;height:8px;border-radius:2px;background:#3a342e}
+.byp{margin-left:auto;width:30px;height:16px;border-radius:999px;border:1px solid var(--line);background:#3a342e;position:relative;cursor:pointer;padding:0;flex:0 0 auto}
+.byp::after{content:"";position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:#8d857a;transition:left .12s}
+.byp[aria-checked="true"]{background:#5a4326;border-color:var(--accent)}
+.byp[aria-checked="true"]::after{left:16px;background:var(--accent)}
+summary.hasbyp::after{margin-left:10px}
+details.bypassed > .ctrls, details.bypassed > .row, details.bypassed > .note, details.bypassed > #devFrame{opacity:.4}
+details.bypassed > summary{color:var(--muted)}
 summary .tick.live{background:var(--accent)}
 summary::after{content:"+";margin-left:auto;color:var(--muted);font-weight:400}
 details[open] summary::after{content:"–"}
@@ -324,6 +331,7 @@ function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : ""); }
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
+  makeSwitch("dev", $("develop").querySelector("summary"), $("develop"));
   const gF=document.createElement("optgroup"); gF.label="Film & photo"; const gS=document.createElement("optgroup"); gS.label="Social";
   for (const f of FORMATS){ const o=document.createElement("option"); o.value=f[0]; o.textContent=f[1]; (f[3]==="social"?gS:f[0]==="orig"?fs:gF).appendChild(o); }
   fs.appendChild(gF); fs.appendChild(gS);
@@ -456,7 +464,7 @@ function buildRack(){
   const host=$("groups");
   GROUPS.forEach((g,gi)=>{
     const det=document.createElement("details"); if (gi<6) det.open = gi!==0 ? true : true;
-    const sum=document.createElement("summary"); sum.innerHTML=`<span class="tick" id="tick-${g.id}"></span>${g.title}`; det.appendChild(sum);
+    const sum=document.createElement("summary"); sum.innerHTML=`<span class="tick" id="tick-${g.id}"></span>${g.title}`; det.appendChild(sum); makeSwitch(g.id, sum, det);
     const box=document.createElement("div"); box.className="ctrls";
     if (g.id==="grain"){
       const r=document.createElement("div"); r.className="grainstock";
@@ -518,11 +526,25 @@ function applyPreset(name, isUser){
   syncUI(); schedule();
   $("btnDelLook").disabled = !isUser;
 }
+/* Section switches (bypass, like disabling a node): a section that is off renders at its neutral values,
+   in the viewer and in exports (what you see is what you export). Not saved in looks. Development's switch
+   bypasses its tone sliders only; the format crop stays so the frame doesn't jump. */
+const bypass={};
 function effective(){
   const e=Object.assign({}, base);
   for (const k of MIXABLE) e[k] = DEF[k] + (base[k]-DEF[k])*lookMix;
+  for (const g of GROUPS) if (bypass[g.id]) for (const p of g.params) if (!NONMIX.includes(p[0])) e[p[0]]=DEF[p[0]];
+  if (bypass.color) e.lutMix=0;
   return e;
 }
+function makeSwitch(id, sum, det){
+  const b=document.createElement("button"); b.className="byp"; b.setAttribute("role","switch"); b.setAttribute("aria-checked","true");
+  b.title="Turn this section off to compare (also off in exports)"; b.setAttribute("aria-label","Turn section on or off");
+  b.addEventListener("click",ev=>{ ev.preventDefault(); ev.stopPropagation(); setBypass(id,!bypass[id]); });
+  sum.classList.add("hasbyp"); sum.appendChild(b); bypassEls[id]={b,det};
+}
+const bypassEls={};
+function setBypass(id,off){ bypass[id]=!!off; const x=bypassEls[id]; if (x){ x.b.setAttribute("aria-checked", off?"false":"true"); x.det.classList.toggle("bypassed",!!off); } schedule(); }
 
 /* ---------------- WebGL ---------------- */
 const canvas=$("gl");
@@ -792,7 +814,7 @@ function render(){
   if (canvas.width!==outW||canvas.height!==outH){ canvas.width=outW; canvas.height=outH; }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,curDev()); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev()); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
   const st=1+e.halR;
@@ -1088,6 +1110,7 @@ async function clearSession(){
   for (const it of items.splice(0)){ if (it.url && !it.sample) URL.revokeObjectURL(it.url); try{ it.bmp.close&&it.bmp.close(); }catch(e){} }
   cur=-1;
   if (lutTex){ gl.deleteTexture(lutTex); lutTex=null; } lut=null; lutSize=2; $("lutNote").textContent=LUT_NOTE0;
+  for (const id in bypass) if (bypass[id]) setBypass(id,false);
   compare=false; split=-1; showOrig=false; clickOrig=false; $("btnCompare").classList.remove("on"); if (viewChan) setChan(viewChan); updateBadge();
   const d="Warm Muted"; applyPreset(d,false); lookMix=1; buildPresetSelect(); $("preset").value="p:"+d; $("lookName").value="";
   syncUI(); await makeSample(); schedule();

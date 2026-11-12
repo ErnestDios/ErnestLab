@@ -34,6 +34,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [ ] Later: drag on the image to reframe; frame-line overlay option (show the format over the full image)
 - [x] Share… (system share menu, Web Share API) and Copy image (clipboard), shown only where supported; no direct posting (images never leave the device)
 - [x] Buy Me a Coffee link in the header and in About (buymeacoffee.com/ernestdios)
+- [x] Section on/off switches (bypass) on every section header; affect viewer and export, not saved in looks; Development's switch bypasses tones, keeps the crop
 - [x] About panel (click the version): what it is, privacy, non-affiliation note, MIT license, credits, support link; Esc closes dialogs
 
 ## 3. Channel adjustments
