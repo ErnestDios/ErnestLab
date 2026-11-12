@@ -1,8 +1,10 @@
-# Film Lab
+# Ernest Lab
+
+*An Ernest Studios app.*
 
 A browser app that gives digital stills a cinematographic film look: film-stock colour, halation, lens character and grain.
 
-Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Film Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
+Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
 
 > Status: working app for 8-bit images (JPEG, PNG, WebP). RAW support is on the [roadmap](ROADMAP.md).
 
@@ -10,9 +12,9 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 
 ## Use it
 
-**Online:** open **https://ernestdios.github.io/FilmLab/** in a recent Chrome, Edge, Firefox or Safari.
+**Online:** open **https://ernestdios.github.io/ErnestLab/** in a recent Chrome, Edge, Firefox or Safari.
 
-**Install it as an app (optional):** in Chrome or Edge use the **Install** button in the address bar; on iPhone or Android use **Share → Add to Home Screen**. Film Lab then opens in its own window with its own icon and **works offline**. It updates itself when a new version is published.
+**Install it as an app (optional):** in Chrome or Edge use the **Install** button in the address bar; on iPhone or Android use **Share → Add to Home Screen**. Ernest Lab then opens in its own window with its own icon and **works offline**. It updates itself when a new version is published.
 
 **Offline download:** grab `index.html` from the latest release and open it. It's a single self-contained file (fonts included) with no build step and no dependencies.
 
@@ -37,8 +39,8 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 **Output:**
 - Export the current still at full resolution (JPEG 95 or PNG).
 - Export all stills as one zip, with the look's `look.json`.
-- **Share…** hands the finished image to your device's share menu (on phones: Instagram, WhatsApp, TikTok, Messages…), and **Copy image** puts it on the clipboard for pasting into web composers. Nothing is uploaded by Film Lab; each button appears only where the browser supports it.
-- Export the look's colour part as a 33-point `.cube` LUT (Rec.709/sRGB display-referred; in an ACES pipeline apply it after the output transform). Grain, halation, aberration, softness and vignette are spatial and stay in Film Lab.
+- **Share…** hands the finished image to your device's share menu (on phones: Instagram, WhatsApp, TikTok, Messages…), and **Copy image** puts it on the clipboard for pasting into web composers. Nothing is uploaded by Ernest Lab; each button appears only where the browser supports it.
+- Export the look's colour part as a 33-point `.cube` LUT (Rec.709/sRGB display-referred; in an ACES pipeline apply it after the output transform). Grain, halation, aberration, softness and vignette are spatial and stay in Ernest Lab.
 
 ## How it works
 
@@ -55,10 +57,10 @@ The `.cube` export renders the grade shader over an identity 33³ texture and re
 
 ## Film stock names
 
-Preset names refer to the film stocks that inspired them. Film Lab is not affiliated with or endorsed by Kodak, Fujifilm, Ilford, CineStill or any other manufacturer. The presets are original approximations, not measured profiles.
+Preset names refer to the film stocks that inspired them. Ernest Lab is not affiliated with or endorsed by Kodak, Fujifilm, Ilford, CineStill or any other manufacturer. The presets are original approximations, not measured profiles.
 
 ## License
 
 [MIT](LICENSE) © 2026 Ernest Dios Viaplana. Interface fonts: IBM Plex, [SIL Open Font License 1.1](licenses/IBM-Plex-OFL.txt).
 
-If Film Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕
+If Ernest Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕

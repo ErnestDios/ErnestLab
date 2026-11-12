@@ -1,6 +1,6 @@
 {
-  "name": "Film Lab",
-  "short_name": "Film Lab",
+  "name": "Ernest Lab",
+  "short_name": "Ernest Lab",
   "description": "Film looks for digital stills: development, film-stock colour, lens, halation and emulsion grain. Runs locally; your images never leave your device.",
   "start_url": "./",
   "scope": "./",

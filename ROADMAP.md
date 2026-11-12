@@ -1,4 +1,4 @@
-# Roadmap
+# Roadmap — Ernest Lab
 
 Order matters: step 1 changes the colour pipeline that every later control lives in, so it comes before adding more controls. Effects run in physical order internally (optics before the film curve); there is no separate post-grade stage.
 
@@ -52,7 +52,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [ ] Memory limits for big files (40–100 MP)
 
 ## Release prep (open source)
-- [ ] Check the name ("Film Lab" may be taken) before announcing
+- [x] Name: renamed to **Ernest Lab** (an Ernest Studios app) after "Film Lab", Revela, Emulsio, Darkroom etc. turned out taken in the photo-app space; repo renamed to ErnestLab
 - [x] Rename presets and grain stocks to own names tagged "-inspired", e.g. "Tungsten 500 (Vision3 500T-inspired)"; "ALDI pitch" look → Warm Muted; new Cold Muted preset
 - [x] About panel: license, credits, support link
 - [ ] GitHub Pages hosting (repo public → Settings → Pages → main / root); PWA install + offline ready (manifest, sw.js, icons, .nojekyll)
