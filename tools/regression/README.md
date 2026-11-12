@@ -28,3 +28,9 @@ the layer multipliers.
 **v0.4:** preset names changed (renders are named differently from v0.3 references) and the in-app test
 still now draws its caption with the embedded IBM Plex font (before, headless renders used a fallback font),
 so compare v0.4 against v0.4 references from here on.
+
+**Grain relative to the frame (v0.5):** grain size now scales with the frame's short side (Size 1 = one
+pixel at 3000 px), and the noise hash uses 24 bits (exact in float32 on every GPU). Grain patterns differ
+from v0.4.1, so per-pixel diffs are large for looks with grain; Neutral is identical, mean shift is 0.00
+and 16 px block means stay within 1 level for every look. For a 12 MP (3000 px short side) photo the grain
+size and strength match v0.4.1; at 1080 px wide the grain no longer fades on bigger photos.

@@ -429,6 +429,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <p>Film looks for digital stills: development, film-stock colour, lens, halation and three-layer emulsion grain, processed in scene-linear light in the order a lens and a negative would.</p>
     <p><b>Private by design.</b> Everything runs in your browser with WebGL2. Your images never leave your device: Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites. The page itself is hosted on GitHub Pages.</p>
     <p class="k">Film stock names describe the stocks that inspired each look. Ernest Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
+    <p class="k" id="aboutGpu"></p>
     <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License).</p>
     <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
   </div>
@@ -453,6 +454,9 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 <script>
 "use strict";
 const APP_VERSION="0.5.0";
+/* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
+   (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
+const GRAIN_REF=3000;
 document.getElementById("ver").textContent="v"+APP_VERSION;
 /* Support link (Buy Me a Coffee). Hidden while empty. */
 const SUPPORT_URL="https://buymeacoffee.com/ernestdios";
@@ -586,7 +590,7 @@ const GROUPS = [
   ]},
   {id:"grain", title:"Grain", params:[
     ["grain","Amount",0,2,0.01,0,""],
-    ["grainSize","Size",0.6,4,0.01,1.4,"px"],
+    ["grainSize","Size",0.6,4,0.01,1.4,""],
     ["grainCol","Colour grain",0,1,0.01,0.25,""],
     ["grainResp","Midtone bias",0,1,0.01,0.6,""],
     ["grainRough","Clumping",0,1,0.01,0.35,""],
@@ -824,7 +828,7 @@ vec3 filmLook(vec3 c){
 /* Procedural grain noise: hashed value noise, a finer octave and a coarse clumping octave. */
 const GRAIN_FN=`
 uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
-float rnd(vec2 i,float s){ uvec3 h=pcg(uvec3(uvec2(ivec2(i)+ivec2(65536)), uint(s))); return float(h.x)/4294967295.0-0.5; }
+float rnd(vec2 i,float s){ uvec3 h=pcg(uvec3(uvec2(ivec2(i)+ivec2(65536)), uint(s))); return float(h.x>>8u)*(1.0/16777215.0)-0.5; }   /* 24 bits: exact in float32 on every GPU */
 float vn(vec2 p,float s){ vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
   return mix(mix(rnd(i,s),rnd(i+vec2(1,0),s),f.x), mix(rnd(i+vec2(0,1),s),rnd(i+vec2(1,1),s),f.x), f.y); }
 float gn(vec2 p,float s,float rough){
@@ -1034,7 +1038,7 @@ function render(){
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
     gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
-    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed);
+    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed);
     gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
   });
   /* 4-5 film look -> display (back into A) */
@@ -1488,6 +1492,8 @@ phoneMQ.addEventListener ? phoneMQ.addEventListener("change",applyPhone) : phone
 $("toast").addEventListener("click",()=>{ $("toast").style.display="none"; });
 addEventListener("resize",()=>document.body.classList.toggle("land", isPhone() && innerWidth>innerHeight));
 applyPhone();
+{ let r=""; try{ const x=gl.getExtension("WEBGL_debug_renderer_info"); r=x?gl.getParameter(x.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER); }catch(e){}
+  $("aboutGpu").textContent=`Graphics: ${r||"unknown"} · ${hasFloat?"16-bit float":"8-bit fallback"} pipeline · ${gl.getParameter(gl.MAX_TEXTURE_SIZE)} px max.`; }
 setTimeout(()=>{ if (isPhone()) $("hint").classList.add("gone"); },7000);
 makeSample();
 </script>
