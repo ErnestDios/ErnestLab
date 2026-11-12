@@ -18,7 +18,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 An optional stage after the grade, on the display image, for effects that belong on top of the finished picture.
 
 - [ ] Post-process effects section: glow, halation, vignette and chromatic aberration applied after the grade (the v0.1 behaviour as an explicit choice)
-- [ ] Order shown in the panel: Scene → Optics → Film look → Grain → Post
+- [ ] Panel stays in the familiar order (colour first, then effects); processing order is internal. Post goes last in the panel
 - [ ] Include in `look.json`; excluded from the `.cube` export like the other spatial effects
 
 ## 2. Channel adjustments
