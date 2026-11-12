@@ -50,6 +50,16 @@ button.ver{background:none;border:0;padding:2px 4px;border-radius:4px;cursor:poi
 button.ver:hover{color:var(--accent);background:#221f1c}
 a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .about p{margin:0;font-size:13px;line-height:1.5;color:#c9c1b5}
+.help{width:20px;height:20px;border-radius:50%;border:1px solid var(--line);background:#221f1c;color:var(--muted);font:600 12px/1 var(--font-body);cursor:pointer;padding:0;margin-left:2px}
+.help:hover{color:var(--accent);border-color:var(--accent)}
+.guide .card{width:min(680px,100%)}
+.guide h3{margin:6px 0 0;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.guide p,.guide li{font-size:13px;line-height:1.5;color:#c9c1b5}
+.guide p{margin:0}
+.guide ul{margin:0;padding-left:18px;display:grid;gap:3px}
+.guide b{color:var(--ink)}
+.guide kbd{font:500 11px/1 var(--font-mono);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:2px 5px;color:var(--ink);background:#221f1c}
+.guide .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:13px;color:#c9c1b5;align-items:center}
 .about .k{color:var(--muted);font-size:12px}
 .ver{font:500 11px/1 var(--font-mono);letter-spacing:.06em;color:var(--muted);text-transform:none;margin-left:2px}
 .chans{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
@@ -160,7 +170,7 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 </head>
 <body>
 <header>
-  <h1><span class="perf"><i></i><i></i><i></i></span>Ernest Lab <button class="ver" id="ver" title="About Ernest Lab"></button></h1>
+  <h1><span class="perf"><i></i><i></i><i></i></span>Ernest Lab <button class="ver" id="ver" title="About Ernest Lab"></button><button class="help" id="btnGuide" title="How Ernest Lab works (?)" aria-label="Guide">?</button></h1>
   <a class="support" id="support" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a>
   <span class="meta" id="meta">—</span>
   <span class="spacer"></span>
@@ -241,6 +251,65 @@ input.hue::-moz-range-track{height:5px;background:linear-gradient(90deg,#f33,#fa
 </aside>
 
 <div id="toast"></div>
+<div class="modal guide" id="guideModal" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <div class="card">
+    <h2 id="guideTitle">How Ernest Lab works</h2>
+
+    <h3>1 · Quick start</h3>
+    <ul>
+      <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG and WebP; RAW is coming.</li>
+      <li><b>Development</b> prepares the photo first: format / crop, then shadows, midtones and highlights.</li>
+      <li><b>Film stock</b> picks the look; <b>Look strength</b> blends it in.</li>
+      <li>Fine-tune any section, then <b>Export this still</b> or <b>Export all</b>.</li>
+    </ul>
+
+    <h3>2 · Batch: one look, individual development</h3>
+    <ul>
+      <li>The <b>film look</b> (stock, grade, halation, lens, grain) applies to <b>every still in the strip</b>, like shooting one roll of film.</li>
+      <li><b>Development is per image.</b> Each still keeps its own format, framing and tones, so you can rescue a dark shot without touching the others.</li>
+      <li><b>Apply to all stills</b> copies the current image's development to the whole strip.</li>
+      <li><b>Export all</b> renders every still at full resolution into one zip, with the look's <code>look.json</code>.</li>
+    </ul>
+
+    <h3>3 · Compare</h3>
+    <ul>
+      <li><b>Click the image</b> to flip original / film; <b>hold Space</b> to peek at the original.</li>
+      <li><b>Before / after</b> splits the view; drag on the image to move the split.</li>
+      <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
+      <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
+      <li><b>Double-click</b> a slider's value to reset it.</li>
+    </ul>
+
+    <h3>4 · Looks</h3>
+    <ul>
+      <li><b>Save look</b> keeps it in this browser under My looks.</li>
+      <li>To move looks between devices: <b>Settings JSON</b>, <b>Load look…</b>, or drop a <code>.json</code> on the image.</li>
+      <li><b>Grain stock</b> changes only the grain, independent of the colour look. Emulsion layers fine-tune the red, green and blue grain.</li>
+    </ul>
+
+    <h3>5 · Output</h3>
+    <ul>
+      <li>JPEG or PNG at full resolution, at the cropped size when a format is set. The hint under Format shows which platforms won't crop it further.</li>
+      <li><b>Share…</b> and <b>Copy image</b> appear where your browser supports them (on phones, Share lists Instagram, WhatsApp…).</li>
+      <li><b>Export look as .cube</b> takes the colour part of the look to Resolve or Nuke (in ACES, apply it after the output transform).</li>
+    </ul>
+
+    <h3>6 · Install &amp; privacy</h3>
+    <ul>
+      <li><b>Install</b> from your browser (Install button, or Share → Add to Home Screen): Ernest Lab gets its own window and works offline.</li>
+      <li>Everything runs on your device. Your photos are never uploaded.</li>
+    </ul>
+
+    <h3>Shortcuts</h3>
+    <div class="keys">
+      <span><kbd>Space</kbd></span><span>hold to see the original</span>
+      <span><kbd>R</kbd> <kbd>G</kbd> <kbd>B</kbd> <kbd>L</kbd></span><span>view a channel (again for colour)</span>
+      <span><kbd>Esc</kbd></span><span>back to colour, close a dialog</span>
+      <span><kbd>?</kbd></span><span>this guide</span>
+    </div>
+    <div class="row"><span class="spacer"></span><button class="btn primary" id="btnCloseGuide">Got it</button></div>
+  </div>
+</div>
 <div class="modal" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
   <div class="card about">
     <h2 id="aboutTitle">Ernest Lab <span class="ver" id="aboutVer"></span></h2>
@@ -1157,6 +1226,7 @@ function setChan(c){ viewChan = (c===viewChan) ? 0 : c; document.querySelectorAl
 document.querySelectorAll(".chan").forEach(x=>x.addEventListener("click",()=>setChan(+x.dataset.ch)));
 document.addEventListener("keydown",ev=>{
   if (ev.ctrlKey||ev.metaKey||ev.altKey||ev.repeat) return;
+  if (ev.key==="?" && !document.querySelector(".modal.open")){ ev.preventDefault(); openGuide(); return; }
   if (document.querySelector(".modal.open") && ev.code!=="Escape") return;
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.type!=="range") return;
   const c={KeyR:1,KeyG:2,KeyB:3,KeyL:4}[ev.code]; if (c){ ev.preventDefault(); setChan(c); }
@@ -1187,6 +1257,13 @@ document.addEventListener("keyup",ev=>{ if (ev.code==="Space" && showOrig){ show
 
 /* ---------------- Boot ---------------- */
 buildDevelop(); buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
+/* Guide: "?" button, the ? key, and a one-time hint on the first visit. */
+function openGuide(){ $("guideModal").classList.add("open"); try{ localStorage.setItem("filmlab.guideSeen","1"); }catch(e){} }
+$("btnGuide").addEventListener("click",openGuide);
+$("btnCloseGuide").addEventListener("click",()=>$("guideModal").classList.remove("open"));
+$("guideModal").addEventListener("click",ev=>{ if (ev.target.id==="guideModal") ev.currentTarget.classList.remove("open"); });
+(function firstVisit(){ let seen=false; try{ seen=!!localStorage.getItem("filmlab.guideSeen"); }catch(e){}
+  if (!seen) setTimeout(()=>toast("New here? Press ? or the ? next to the title for a quick guide.",6000),1200); })();
 makeSample();
 </script>
 </body>
