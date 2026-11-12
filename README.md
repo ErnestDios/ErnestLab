@@ -2,7 +2,7 @@
 
 A browser app that gives digital stills a cinematographic film look: film-stock colour, halation, lens character and grain.
 
-Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** There is no server, no upload and no account.
+Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Film Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
 
 > Status: working app for 8-bit images (JPEG, PNG, WebP). RAW support is on the [roadmap](ROADMAP.md).
 
@@ -10,9 +10,13 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 
 ## Use it
 
-Open `index.html` in a recent Chrome, Edge, Firefox or Safari. It's a single file with no build step and no dependencies. A hosted version will follow on GitHub Pages.
+**Online:** open **https://ernestdios.github.io/FilmLab/** in a recent Chrome, Edge, Firefox or Safari.
 
-Drop images on the window, pick a film stock, adjust, and export.
+**Install it as an app (optional):** in Chrome or Edge use the **Install** button in the address bar; on iPhone or Android use **Share → Add to Home Screen**. Film Lab then opens in its own window with its own icon and **works offline**. It updates itself when a new version is published.
+
+**Offline download:** grab `index.html` from the latest release and open it. It's a single self-contained file (fonts included) with no build step and no dependencies.
+
+Drop images on the window, pick a format and a film look, adjust, and export or share.
 
 ## Features
 
@@ -55,4 +59,6 @@ Preset names refer to the film stocks that inspired them. Film Lab is not affili
 
 ## License
 
-[MIT](LICENSE) © 2026 Ernest Dios Viaplana
+[MIT](LICENSE) © 2026 Ernest Dios Viaplana. Interface fonts: IBM Plex, [SIL Open Font License 1.1](licenses/IBM-Plex-OFL.txt).
+
+If Film Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕

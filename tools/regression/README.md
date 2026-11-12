@@ -24,3 +24,7 @@ shoulder afterwards. `Neutral (no look)` still matches within 4 levels.
 **Emulsion grain (v0.3):** with grain set to 0, every preset matches v0.2 exactly (0 levels). With grain on,
 the green layer (most of the luminance) matches v0.2's strength on neutral grey; red and blue follow
 the layer multipliers.
+
+**v0.4:** preset names changed (renders are named differently from v0.3 references) and the in-app test
+still now draws its caption with the embedded IBM Plex font (before, headless renders used a fallback font),
+so compare v0.4 against v0.4 references from here on.
