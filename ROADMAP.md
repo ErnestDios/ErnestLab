@@ -37,6 +37,13 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Section on/off switches (bypass) on every section header; affect viewer and export, not saved in looks; Development's switch bypasses tones, keeps the crop
 - [x] About panel (click the version): what it is, privacy, non-affiliation note, MIT license, credits, support link; Esc closes dialogs
 
+## v0.5 Phone layout ✅
+- [x] Phone & small-tablet layout (≤ 820 px, or touch screens ≤ 520 px tall): photo pinned on top, slim bar (add, before/after, ⋯ menu), controls in tabs (Develop · Look · Colour · Effects · Grain · Export) with live dots, landscape side by side; desktop unchanged
+- [x] Touch: tap to flip, hold to peek, pinch to zoom / drag to pan, tap a value to reset; larger targets; notes fold to one line
+- [x] Filtered fit view on phones (screen-sized canvas sampling mipmaps); exports keep the exact full-size path
+- [x] Grain relative to the frame (Size 1 = 1 px at a 3000 px short side): same grain on any camera, survives social-media resizing
+- [x] Mali GPUs: `precision highp int` in fragment shaders (grain hash was 16-bit → no grain); About shows the GPU
+
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
 - [ ] Channel mixer
@@ -44,7 +51,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [ ] Hue-vs-hue and hue-vs-sat
 - [ ] Include all of the above in `look.json` and the `.cube` export
 
-## 4. RAW support (LibRaw → WebAssembly)
+## 4. RAW support (LibRaw → WebAssembly), planned for v0.6
 - [ ] Build LibRaw to WASM as a separate, replaceable module (LGPL-2.1/CDDL: ship its license and source link)
 - [ ] Decode CR2/CR3, NEF, ARW, RAF (incl. X-Trans), RW2, ORF, DNG/ProRAW into the linear working space
 - [ ] RAW-only controls: as-shot / custom white balance, highlight recovery, wider exposure range
@@ -55,7 +62,7 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Name: renamed to **Ernest Lab** (an Ernest Studios app) after "Film Lab", Revela, Emulsio, Darkroom etc. turned out taken in the photo-app space; repo renamed to ErnestLab
 - [x] Rename presets and grain stocks to own names tagged "-inspired", e.g. "Tungsten 500 (Vision3 500T-inspired)"; "ALDI pitch" look → Warm Muted; new Cold Muted preset
 - [x] About panel: license, credits, support link
-- [ ] GitHub Pages hosting (repo public → Settings → Pages → main / root); PWA install + offline ready (manifest, sw.js, icons, .nojekyll)
+- [x] GitHub Pages hosting (repo public → Settings → Pages → main / root); PWA install + offline ready (manifest, sw.js, icons, .nojekyll)
 - [x] Fonts embedded (no third-party requests); privacy wording mentions GitHub Pages hosting
 - [ ] Before/after images in the README
 - [ ] Test pass: Chrome, Safari, Firefox; big RAWs; phone JPEGs
