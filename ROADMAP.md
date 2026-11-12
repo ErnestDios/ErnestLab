@@ -51,12 +51,13 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [ ] Hue-vs-hue and hue-vs-sat
 - [ ] Include all of the above in `look.json` and the `.cube` export
 
-## 4. RAW support (LibRaw → WebAssembly), planned for v0.6
-- [ ] Build LibRaw to WASM as a separate, replaceable module (LGPL-2.1/CDDL: ship its license and source link)
-- [ ] Decode CR2/CR3, NEF, ARW, RAF (incl. X-Trans), RW2, ORF, DNG/ProRAW into the linear working space
-- [ ] RAW-only controls: as-shot / custom white balance, highlight recovery, wider exposure range
-- [ ] Fast proxy preview while grading, full-resolution render on export
-- [ ] Memory limits for big files (40–100 MP)
+## 4. RAW support (LibRaw → WebAssembly), v0.6 (branch `raw-v0.6`)
+- [x] LibRaw 0.22.1 as a separate, replaceable WASM module in `raw/` (libraw-wasm 1.6.0 build; LGPL-2.1/CDDL + Little CMS MIT licenses shipped, source links in `raw/README.md`); lazy-loaded, cached for offline on first use
+- [x] Decode CR2/CR3, NEF, ARW, RAF, RW2, ORF, DNG… into the linear working space (camera WB, linear Rec.709, 16-bit → RGBA16F, `uInXfer=1`); base exposure matched to the camera's embedded preview (tested: Sony FX30 ARW, DNG without preview)
+- [ ] RAW-only controls: as-shot / custom white balance, highlight recovery (currently clip to white), base-exposure override
+- [ ] ~~Proxy preview~~ dropped: with frame-relative grain a reduced-size render shows sub-pixel grain stronger than the export; the viewer stays full-res (phones filter it with mipmaps)
+- [x] Memory: decoder worker per file (memory returned), only the current RAW held (re-developed when revisited), half-size decode above the GPU's max texture size
+- [ ] Test on real phones (decode time, memory) and more cameras (CR3, RAF X-Trans, NEF, iPhone ProRAW)
 
 ## Release prep (open source)
 - [x] Name: renamed to **Ernest Lab** (an Ernest Studios app) after "Film Lab", Revela, Emulsio, Darkroom etc. turned out taken in the photo-app space; repo renamed to ErnestLab

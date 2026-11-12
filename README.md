@@ -6,7 +6,7 @@ A browser app that gives digital stills a cinematographic film look: film-stock 
 
 Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
 
-> Status: working app for 8-bit images (JPEG, PNG, WebP). RAW support is on the [roadmap](ROADMAP.md).
+> Status: working app for JPEG, PNG, WebP and camera RAW files (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…), on desktop and phones.
 
 <!-- TODO: before/after images -->
 
@@ -21,6 +21,8 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 Drop images on the window, pick a format and a film look, adjust, and export or share.
 
 ## Features
+
+**RAW:** camera RAW files are developed in the browser with [LibRaw](https://www.libraw.org) (WebAssembly, loaded only when you open a RAW): camera white balance, linear Rec.709/sRGB primaries, 16-bit, straight into the scene-linear working space. Base exposure is matched to the camera's own embedded preview, so a RAW opens as bright as the camera rendered it. Highlights above the old 8-bit ceiling roll off through the film curve.
 
 **Development** (per image, before the film): format crop (film & photo: Original, 1:1, 5:4, 4:3, 3:2, 1.66, 16:9, 1.85, 2:1, 2.20, 2.39, landscape/portrait; social: 1:1, 4:5, 3:4, 9:16, 16:9, 1.91, 2:3; reframe; a hint shows which platforms will show the export without further cropping) applied before the lens, so vignette, edge softness and aberration follow the new frame; shadows, midtones and highlights in stops around mid grey, in linear light and on luminance so colours don't shift. Prepares each photo (pull hot highlights, open crushed shadows) before the film stock; changing the look doesn't touch it, and "Apply to all stills" copies it across a batch.
 
@@ -62,5 +64,7 @@ Preset names refer to the film stocks that inspired them. Ernest Lab is not affi
 ## License
 
 [MIT](LICENSE) © 2026 Ernest Dios Viaplana. Interface fonts: IBM Plex, [SIL Open Font License 1.1](licenses/IBM-Plex-OFL.txt).
+
+The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
 
 If Ernest Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕

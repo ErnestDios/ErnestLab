@@ -37,6 +37,8 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:upp
 header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+header #meta{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header > .spacer{display:none}   /* #meta takes the free space and truncates long RAW info instead of wrapping the bar */
 .spacer{flex:1}
 .btn{background:#221f1c;border:1px solid var(--line);border-radius:6px;padding:6px 11px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:#4a433b}
@@ -181,6 +183,9 @@ body.m canvas#gl{touch-action:none}
 body.m .zchip{display:block;position:absolute;right:8px;top:8px;font:500 12px/1 var(--font-mono);padding:8px 10px;border-radius:7px;border:1px solid var(--accent);background:rgba(15,14,13,.85);color:var(--accent);cursor:pointer}
 body.m .zchip[hidden]{display:none}
 body.m .badge{top:8px;left:8px}
+.badge.busy{background:#2d2822;color:var(--accent);border:1px solid var(--accent);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+.thumb .rawph{display:flex;align-items:center;justify-content:center;height:100%;aspect-ratio:3/2;font:600 11px/1 var(--font-mono);letter-spacing:.1em;color:var(--muted);background:#1b1916}
 body.m .hint{left:8px;right:8px;bottom:8px;text-align:center;transition:opacity .5s}
 body.m .hint.gone{opacity:0;pointer-events:none}
 body.m #strip{min-height:0;padding:6px 10px;gap:6px}
@@ -268,7 +273,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <button class="ibtn" id="mCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button>
     <button class="ibtn" id="mMore" aria-label="More" title="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </div>
-  <input type="file" id="fileIn" accept="image/*" multiple hidden>
+  <input type="file" id="fileIn" accept="image/*,.dng,.cr2,.cr3,.nef,.nrw,.arw,.sr2,.srf,.raf,.rw2,.rwl,.orf,.pef,.srw,.x3f,.3fr,.iiq,.erf,.mef,.mos,.kdc,.dcr,.mrw" multiple hidden>
   <input type="file" id="lookIn" accept=".json,application/json" multiple hidden>
 </header>
 
@@ -362,10 +367,18 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
     <h3>1 · Quick start</h3>
     <ul>
-      <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG and WebP; RAW is coming.</li>
+      <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG, WebP and <b>camera RAW</b> (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF and more).</li>
       <li><b>Development</b> prepares the photo first: format / crop, then shadows, midtones and highlights.</li>
       <li><b>Film stock</b> picks the look; <b>Look strength</b> blends it in.</li>
       <li>Fine-tune any section, then <b>Export this still</b> or <b>Export all</b>.</li>
+    </ul>
+
+    <h3>RAW files</h3>
+    <ul>
+      <li>RAW files are developed in your browser with <b>LibRaw</b>: camera white balance, full sensor range, straight into Ernest Lab's linear working space, so highlights roll off like film instead of clipping like a JPEG.</li>
+      <li><b>Base exposure</b> is matched to the camera's own preview in the file, so a RAW opens as bright as the camera saw it (shown next to the file name). Adjust with Exposure, or per image with Development.</li>
+      <li>Opening a RAW takes a few seconds (longer on phones). Only the still you're looking at is held in memory; switching back to a RAW develops it again.</li>
+      <li>The decoder (about 1.5 MB) loads the first time you open a RAW, then also works offline.</li>
     </ul>
 
     <h3>2 · Batch: one look, individual development</h3>
@@ -430,7 +443,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <p><b>Private by design.</b> Everything runs in your browser with WebGL2. Your images never leave your device: Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites. The page itself is hosted on GitHub Pages.</p>
     <p class="k">Film stock names describe the stocks that inspired each look. Ernest Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
     <p class="k" id="aboutGpu"></p>
-    <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License).</p>
+    <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository.</p>
     <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
   </div>
 </div>
@@ -453,7 +466,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
 <script>
 "use strict";
-const APP_VERSION="0.5.0";
+const APP_VERSION="0.6.0";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;
@@ -528,7 +541,9 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
   he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
   $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
-  $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : ""); }
+  $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
+    + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "");
+  $("meta").title = $("meta").textContent + (it.raw && it.baseEV!=null ? `\n${it.cam||"RAW"}: decoded with LibRaw, camera white balance, linear. Base exposure ${it.baseAuto?"matched to the camera's own preview":"+1 EV (no camera preview in the file)"}; use Exposure and Development to adjust.` : ""); }
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
   makeSwitch("dev", $("develop").querySelector("summary"), $("develop"));
@@ -909,12 +924,13 @@ void main(){ o=vec4(filmLook(linToEnc(stDec(texture(uTex,vUv).rgb))),1.0); }`;
 const FS_FINAL=HEAD+`
 uniform sampler2D uImg,uSrc; uniform vec4 uCrop;
 uniform vec2 uRes; uniform float uSplit; uniform vec3 uView;   /* uView: centre (uv) and 1/zoom of the phone viewer; (0.5,0.5,1) = whole image */
-uniform int uOrig, uChan;   /* uChan: 0 RGB, 1 R, 2 G, 3 B, 4 luminance (Rec.709) — viewer only, never exported */
+uniform int uOrig, uChan, uSrcLin;   /* uSrcLin: source is scene-linear (RAW) → shown with a plain sRGB encode; uChan: 0 RGB, 1 R, 2 G, 3 B, 4 luminance (Rec.709) — viewer only, never exported */
 vec3 chan(vec3 c){ return uChan==1?vec3(c.r): uChan==2?vec3(c.g): uChan==3?vec3(c.b): uChan==4?vec3(dot(c,W)): c; }
 void main(){
   vec2 uv=(uView==vec3(0.5,0.5,1.0)) ? vUv : uView.xy+(vUv-0.5)*uView.z;   /* exact path for exports and desktop */
   if (uOrig==1 || (uSplit>=0.0 && vUv.x<uSplit)){
     vec3 s=texture(uSrc,uCrop.xy+vec2(uv.x,1.0-uv.y)*uCrop.zw).rgb;
+    if (uSrcLin==1){ s=clamp(s,0.0,1.0); s=mix(s*12.92, 1.055*pow(s,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),s)); }
     s=chan(s);
     if (uOrig==0 && abs(vUv.x-uSplit)*uRes.x<1.5) s=vec3(0.9);
     o=vec4(s,1.0); return;
@@ -996,16 +1012,99 @@ function setLookUniforms(u,e){
 }
 
 /* ---------------- Images ---------------- */
-const items=[]; let cur=-1; let srcTex=null, srcW=0, srcH=0, srcXfer=0, srcMip=false;   /* srcXfer: 0 = sRGB-encoded 8-bit, 1 = scene-linear (RAW, later) */
-function uploadSource(bmp){
-  if (srcTex) gl.deleteTexture(srcTex);
+const items=[]; let cur=-1, srcItem=null; let srcTex=null, srcW=0, srcH=0, srcXfer=0, srcMip=false;   /* srcXfer: 0 = sRGB-encoded 8-bit, 1 = scene-linear (RAW, later) */
+function uploadSource(bmp,isRaw){
+  srcItem=null; if (srcTex) gl.deleteTexture(srcTex);
   srcTex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,srcTex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,bmp);
+  if (isRaw){ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,bmp.W,bmp.H,0,gl.RGBA,gl.HALF_FLOAT,bmp.data); srcXfer=1; bmp={width:bmp.W,height:bmp.H}; }
+  else { gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,bmp); srcXfer=0; }
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   srcW=bmp.width; srcH=bmp.height; srcMip=false;
 }
+
+/* ---------------- RAW (v0.6) ----------------
+   LibRaw (WebAssembly, ./raw/) decodes in a worker that is created per file and closed afterwards, so its memory
+   is returned. Output: camera white balance, demosaiced (AHD), converted to linear Rec.709/sRGB primaries, 16-bit,
+   no auto-brightening; sensor clipping = 1.0, so highlights clip to white. The data is scaled by a base exposure
+   that matches the camera's own JPEG preview (median scene luminance), then uploaded as RGBA16F scene-linear:
+   it enters the pipeline at the input transform with uInXfer=1, the slot reserved for it since v0.2. */
+const RAW_EXT=/\.(3fr|ari|arw|cr2|cr3|crw|dcr|dng|erf|fff|iiq|k25|kdc|mef|mos|mrw|nef|nrw|orf|pef|raf|raw|rw2|rwl|sr2|srf|srw|x3f)$/i;
+const RAW_OPTS={useCameraWb:true, useCameraMatrix:1, outputColor:1, outputBps:16, gamm:[1,1], noAutoBright:true, highlight:0, userQual:3};
+let rawMod=null, rawQueue=Promise.resolve();
+async function rawLib(){ if (!rawMod) rawMod=import("./raw/index.js").then(m=>m.default); return new (await rawMod)(); }
+function rawJob(fn){ const r=rawQueue.then(fn,fn); rawQueue=r.then(()=>{},()=>{}); return r; }   /* one decode at a time (memory) */
+const f2h=(()=>{ const f=new Float32Array(1), u=new Uint32Array(f.buffer);
+  return v=>{ f[0]=v; const x=u[0], sgn=(x>>>16)&0x8000; let e=((x>>>23)&0xff)-112, m=x&0x7fffff;
+    if (e<=0){ if (e<-10) return sgn; m|=0x800000; const sh=14-e; let h=m>>>sh; if ((m>>>(sh-1))&1) h++; return sgn|h; }
+    if (e>=31) return sgn|0x7c00; let h=sgn|(e<<10)|(m>>>13); if (m&0x1000) h++; return h; }; })();
+function medianLum(get,n){ const a=new Float32Array(n); for (let i=0;i<n;i++) a[i]=get(i); a.sort(); return a[n>>1]; }
+const srgbDec=v=>{ v/=255; return v<=0.04045?v/12.92:Math.pow((v+0.055)/1.055,2.4); };
+/* add-time: metadata + embedded preview (thumbnail, brightness reference); the full decode waits until the still is shown */
+async function rawProbe(f){
+  return rawJob(async()=>{
+    const lr=await rawLib();
+    try{
+      await lr.open(new Uint8Array(await f.arrayBuffer()), RAW_OPTS);
+      const meta=await lr.metadata()||{}; let th=null; try{ th=await lr.thumbnailData(); }catch(e){}
+      const it={name:f.name.replace(/\.[^.]+$/,""), raw:true, file:f, w:meta.width, h:meta.height, flip:meta.flip|0,
+        cam:[meta.camera_make,meta.camera_model].filter(Boolean).join(" ").trim(), iso:meta.iso_speed, url:null, refLum:null};
+      if (it.flip===5||it.flip===6){ const t=it.w; it.w=it.h; it.h=t; }
+      if (th && th.format==="jpeg" && th.data){
+        const bmp=await createImageBitmap(new Blob([th.data],{type:"image/jpeg"}));
+        const sc=Math.min(1,480/Math.max(bmp.width,bmp.height)), tw=Math.max(1,Math.round(bmp.width*sc)), thh=Math.max(1,Math.round(bmp.height*sc));
+        const rot=(it.flip===5||it.flip===6), c=document.createElement("canvas"); c.width=rot?thh:tw; c.height=rot?tw:thh; const x=c.getContext("2d");
+        x.translate(c.width/2,c.height/2); x.rotate(it.flip===3?Math.PI: it.flip===6?Math.PI/2: it.flip===5?-Math.PI/2: 0); x.drawImage(bmp,-tw/2,-thh/2,tw,thh); bmp.close&&bmp.close();
+        const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data, n=Math.min(20000,d.length>>2), step=Math.max(1,Math.floor((d.length>>2)/n));
+        it.refLum=medianLum(i=>{ const k=i*step*4; return 0.2126*srgbDec(d[k])+0.7152*srgbDec(d[k+1])+0.0722*srgbDec(d[k+2]); }, n);
+        it.url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)));
+      }
+      return it;
+    } finally { lr.dispose(); }
+  });
+}
+/* full decode → RGBA16F data, scaled by the base exposure */
+async function rawDecode(it){
+  return rawJob(async()=>{
+    const lr=await rawLib();
+    try{
+      const half = Math.max(it.w,it.h)>MAXTEX;
+      await lr.open(new Uint8Array(await it.file.arrayBuffer()), {...RAW_OPTS, halfSize:half});
+      const img=await lr.imageData(); const W=img.width, H=img.height, d=img.data;
+      if (!d || img.colors!==3 || img.bits!==16) throw new Error("unexpected RAW output");
+      if (it.baseEV==null){
+        const n=Math.min(40000,W*H), step=Math.max(1,Math.floor(W*H/n));
+        const med=medianLum(i=>{ const k=i*step*3; return (0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])/65535; }, n);
+        it.baseEV = (it.refLum && med>0) ? Math.min(4,Math.max(-2,Math.log2(it.refLum/med))) : 1;
+        it.baseAuto = !!(it.refLum && med>0);
+      }
+      const g=Math.pow(2,it.baseEV)/65535, lut=new Uint16Array(65536); for (let v=0;v<65536;v++) lut[v]=f2h(v*g);
+      const out=new Uint16Array(W*H*4), ONE=0x3c00;
+      for (let i=0,j=0;i<d.length;i+=3,j+=4){ out[j]=lut[d[i]]; out[j+1]=lut[d[i+1]]; out[j+2]=lut[d[i+2]]; out[j+3]=ONE; }
+      if (!it.url){   /* no embedded preview: thumbnail from the decoded data */
+        const sc=Math.min(1,480/Math.max(W,H)), tw=Math.max(1,Math.round(W*sc)), thh=Math.max(1,Math.round(H*sc));
+        const c=document.createElement("canvas"); c.width=tw; c.height=thh; const x=c.getContext("2d"), im=x.createImageData(tw,thh);
+        const enc=v=>{ v=Math.min(1,Math.max(0,v)); return 255*(v<=0.0031308?v*12.92:1.055*Math.pow(v,1/2.4)-0.055); }, k=Math.pow(2,it.baseEV)/65535;
+        for (let y=0;y<thh;y++) for (let xx=0;xx<tw;xx++){ const s=(Math.floor(y/sc)*W+Math.floor(xx/sc))*3, o=(y*tw+xx)*4;
+          im.data[o]=enc(d[s]*k); im.data[o+1]=enc(d[s+1]*k); im.data[o+2]=enc(d[s+2]*k); im.data[o+3]=255; }
+        x.putImageData(im,0,0); it.url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85))); buildStrip();
+      }
+      if (half) toast(`${it.name} was decoded at half size (${W}×${H}), the largest this GPU handles.`);
+      return {W,H,data:out};
+    } finally { lr.dispose(); }
+  });
+}
+/* make item i the GPU source (decodes a RAW first). Returns false if it failed or was superseded. */
+async function ensureSource(i){
+  const it=items[i]; if (srcItem===it && srcTex) return true;
+  if (!it.raw){ uploadSource(it.bmp); srcItem=it; return true; }
+  const badge=$("badge"), old=badge.textContent; badge.textContent="Developing RAW…"; badge.classList.add("busy");
+  try{ const r=await rawDecode(it); uploadSource(r,true); srcItem=it; return true; }
+  catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
+  finally{ badge.classList.remove("busy"); updateBadge(); }
+}
+
 
 let showOrig=false, split=-1, compare=false, viewChan=0;
 function render(){
@@ -1047,11 +1146,11 @@ function render(){
   /* On phones the canvas is screen-sized and samples mipmapped copies: a properly filtered shrink (grain averages
      as it would in a downscaled export, instead of aliasing into dark speckle) and sharp pinch zoom. Exports use the full-size path. */
   const mipOn=t=>{ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,t?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR); };
-  if (scr){ bindTex(0,T.A.tex); gl.generateMipmap(gl.TEXTURE_2D); mipOn(true); bindTex(5,srcTex); if (!srcMip){ gl.generateMipmap(gl.TEXTURE_2D); srcMip=true; } mipOn(true); }
+  if (scr){ bindTex(0,T.A.tex); gl.generateMipmap(gl.TEXTURE_2D); mipOn(true); bindTex(5,srcTex); if (!srcMip && (srcXfer===0||hasFloat)){ gl.generateMipmap(gl.TEXTURE_2D); srcMip=true; } if (srcMip) mipOn(true); }
   drawTo(null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(5,srcTex); gl.uniform1i(u.uSrc,5); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h);
-    gl.uniform2f(u.uRes,cw,ch); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
+    gl.uniform2f(u.uRes,cw,ch); gl.uniform1i(u.uSrcLin,srcXfer); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0); gl.uniform1i(u.uChan, renderClean?0:viewChan);
   });
   if (scr){ bindTex(0,T.A.tex); mipOn(false); bindTex(5,srcTex); mipOn(false); }
@@ -1073,10 +1172,15 @@ let renderClean=false, rafId=0;
 function schedule(){ editStamp++; if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
 
 async function addFiles(files){
-  const list=[...files].filter(f=>f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
-  if (!list.length){ toast("Those files are not images Ernest Lab can read. Use PNG, JPEG or WebP."); return; }
+  const list=[...files].filter(f=>RAW_EXT.test(f.name)||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
+  if (!list.length){ toast("Those files are not images Ernest Lab can read. Use JPEG, PNG, WebP or a camera RAW file."); return; }
   let first=-1;
   for (const f of list){
+    if (RAW_EXT.test(f.name)){
+      try{ toast(`Reading ${f.name}…`,1500); const it=await rawProbe(f); items.push(it); if (first<0) first=items.length-1; }
+      catch(err){ console.error(err); toast(`Could not open ${f.name} as RAW.`); }
+      continue;
+    }
     try{
       let bmp=await createImageBitmap(f,{imageOrientation:"from-image",premultiplyAlpha:"none",colorSpaceConversion:"none"});
       if (bmp.width>MAXTEX||bmp.height>MAXTEX){ const s=MAXTEX/Math.max(bmp.width,bmp.height); bmp=await createImageBitmap(bmp,{resizeWidth:Math.floor(bmp.width*s),resizeHeight:Math.floor(bmp.height*s),resizeQuality:"high"}); toast(`${f.name} was scaled to ${bmp.width}×${bmp.height}, the largest this GPU handles.`); }
@@ -1087,9 +1191,10 @@ async function addFiles(files){
   if (items.length && items[0].sample && items.length>1){ removeItem(0); first=Math.max(0,first-1); }
   buildStrip(); if (first>=0) select(first);
 }
-function select(i){
-  cur=i; const it=items[i]; uploadSource(it.bmp);
-  editStamp++; syncDev(); buildStrip(); render();
+async function select(i){
+  cur=i; editStamp++; syncDev(); buildStrip();
+  if (!(await ensureSource(i)) || cur!==i) return;
+  editStamp++; syncDev(); render();
 }
 function removeItem(i){
   const it=items[i]; if (it.url && !it.sample) URL.revokeObjectURL(it.url);
@@ -1101,7 +1206,7 @@ function buildStrip(){
   const s=$("strip"); s.innerHTML="";
   items.forEach((it,i)=>{
     const d=document.createElement("div"); d.className="thumb"+(i===cur?" sel":""); d.tabIndex=0; d.setAttribute("role","button"); d.setAttribute("aria-label","Show "+it.name);
-    d.innerHTML=`<img alt="" src="${it.url}"><span class="nm"></span><button class="x" aria-label="Remove ${it.name}">✕</button>`;
+    d.innerHTML=`${it.url?`<img alt="" src="${it.url}">`:`<span class="rawph">RAW</span>`}<span class="nm"></span><button class="x" aria-label="Remove ${it.name}">✕</button>`;
     d.querySelector(".nm").textContent=it.name;
     d.addEventListener("click",ev=>{ if (ev.target.classList.contains("x")) return; select(i); });
     d.addEventListener("keydown",ev=>{ if (ev.key==="Enter") select(i); });
@@ -1160,7 +1265,7 @@ $("btnExportAll").addEventListener("click", async()=>{
   const real=items.filter(it=>!it.sample); if (!real.length){ toast("Add your stills first."); return; }
   const btn=$("btnExportAll"); btn.disabled=true; const keep=cur; const [t,q,ext]=fmtInfo(); const files=[];
   try{
-    for (let i=0;i<items.length;i++){ if (items[i].sample) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; uploadSource(items[i].bmp); const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
+    for (let i=0;i<items.length;i++){ if (items[i].sample) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; if (!(await ensureSource(i))) continue; const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
     const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && devActive(it.dev)) dv[it.name]=it.dev;
     if (Object.keys(dv).length) lj.development=dv;   /* per-image source prep, for the record (not loaded as part of the look) */
     files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lj,null,2))});
@@ -1329,7 +1434,8 @@ $("btnCopy").addEventListener("click", async()=>{
 /* ---------------- Clear session ---------------- */
 const LUT_NOTE0=$("lutNote").textContent;
 async function clearSession(){
-  for (const it of items.splice(0)){ if (it.url && !it.sample) URL.revokeObjectURL(it.url); try{ it.bmp.close&&it.bmp.close(); }catch(e){} }
+  for (const it of items.splice(0)){ if (it.url && !it.sample) URL.revokeObjectURL(it.url); try{ it.bmp&&it.bmp.close&&it.bmp.close(); }catch(e){} }
+  srcItem=null;
   cur=-1;
   if (lutTex){ gl.deleteTexture(lutTex); lutTex=null; } lut=null; lutSize=2; $("lutNote").textContent=LUT_NOTE0;
   for (const id in bypass) if (bypass[id]) setBypass(id,false);
