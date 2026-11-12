@@ -175,8 +175,11 @@ body.m #btnGuide{display:none}
 body.m .mbar{display:flex;gap:6px}
 body.m #view.fit canvas{max-width:calc(100% - 16px);max-height:calc(100% - 16px)}
 body.m #view.full canvas{margin:8px}
-body.m canvas#gl{box-shadow:0 4px 22px rgba(0,0,0,.6);touch-action:manipulation;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
-body.m #view.cmp canvas#gl{touch-action:none}
+body.m canvas#gl{box-shadow:0 4px 22px rgba(0,0,0,.6);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+body.m canvas#gl{touch-action:none}
+.zchip{display:none}
+body.m .zchip{display:block;position:absolute;right:8px;top:8px;font:500 12px/1 var(--font-mono);padding:8px 10px;border-radius:7px;border:1px solid var(--accent);background:rgba(15,14,13,.85);color:var(--accent);cursor:pointer}
+body.m .zchip[hidden]{display:none}
 body.m .badge{top:8px;left:8px}
 body.m .hint{left:8px;right:8px;bottom:8px;text-align:center;transition:opacity .5s}
 body.m .hint.gone{opacity:0;pointer-events:none}
@@ -273,6 +276,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
   <canvas id="gl" width="16" height="9"></canvas>
   <div id="drop">Drop images (or a look .json) to add them</div>
   <div class="badge" id="badge">Film</div>
+  <button class="zchip" id="zoomChip" hidden title="Back to the whole image"></button>
   <div class="hint" id="hint">Click the image to flip original / film · hold Space to peek · R G B L to view a channel · double-click a value to reset it</div>
 </main>
 
@@ -379,7 +383,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
       <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
       <li><b>Double-click</b> a slider's value to reset it.</li>
-      <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
+      <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>pinch</b> to zoom in and check the grain, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
     </ul>
 
     <h3>4 · Looks</h3>
@@ -900,19 +904,19 @@ void main(){ o=vec4(filmLook(linToEnc(stDec(texture(uTex,vUv).rgb))),1.0); }`;
 /* 6: display image; original / split view */
 const FS_FINAL=HEAD+`
 uniform sampler2D uImg,uSrc; uniform vec4 uCrop;
-uniform vec2 uRes; uniform float uSplit;
+uniform vec2 uRes; uniform float uSplit; uniform vec3 uView;   /* uView: centre (uv) and 1/zoom of the phone viewer; (0.5,0.5,1) = whole image */
 uniform int uOrig, uChan;   /* uChan: 0 RGB, 1 R, 2 G, 3 B, 4 luminance (Rec.709) — viewer only, never exported */
 vec3 chan(vec3 c){ return uChan==1?vec3(c.r): uChan==2?vec3(c.g): uChan==3?vec3(c.b): uChan==4?vec3(dot(c,W)): c; }
 void main(){
-  vec2 uv=vUv;
-  if (uOrig==1 || (uSplit>=0.0 && uv.x<uSplit)){
+  vec2 uv=(uView==vec3(0.5,0.5,1.0)) ? vUv : uView.xy+(vUv-0.5)*uView.z;   /* exact path for exports and desktop */
+  if (uOrig==1 || (uSplit>=0.0 && vUv.x<uSplit)){
     vec3 s=texture(uSrc,uCrop.xy+vec2(uv.x,1.0-uv.y)*uCrop.zw).rgb;
     s=chan(s);
-    if (uOrig==0 && abs(uv.x-uSplit)*uRes.x<1.5) s=vec3(0.9);
+    if (uOrig==0 && abs(vUv.x-uSplit)*uRes.x<1.5) s=vec3(0.9);
     o=vec4(s,1.0); return;
   }
   vec3 col=chan(texture(uImg,uv).rgb);
-  if (uSplit>=0.0 && abs(uv.x-uSplit)*uRes.x<1.5) col=vec3(0.9);
+  if (uSplit>=0.0 && abs(vUv.x-uSplit)*uRes.x<1.5) col=vec3(0.9);
   o=vec4(col,1.0);
 }`;
 
@@ -988,7 +992,7 @@ function setLookUniforms(u,e){
 }
 
 /* ---------------- Images ---------------- */
-const items=[]; let cur=-1; let srcTex=null, srcW=0, srcH=0, srcXfer=0;   /* srcXfer: 0 = sRGB-encoded 8-bit, 1 = scene-linear (RAW, later) */
+const items=[]; let cur=-1; let srcTex=null, srcW=0, srcH=0, srcXfer=0, srcMip=false;   /* srcXfer: 0 = sRGB-encoded 8-bit, 1 = scene-linear (RAW, later) */
 function uploadSource(bmp){
   if (srcTex) gl.deleteTexture(srcTex);
   srcTex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,srcTex);
@@ -996,7 +1000,7 @@ function uploadSource(bmp){
   gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,bmp);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-  srcW=bmp.width; srcH=bmp.height;
+  srcW=bmp.width; srcH=bmp.height; srcMip=false;
 }
 
 let showOrig=false, split=-1, compare=false, viewChan=0;
@@ -1004,7 +1008,10 @@ function render(){
   if (!srcTex) return;
   const e=effective();
   const cr=cropRect(curDev(),srcW,srcH), outW=cr.W, outH=cr.H;
-  if (canvas.width!==outW||canvas.height!==outH){ canvas.width=outW; canvas.height=outH; }
+  const scr=screenView(), fd=scr?fitDims(outW,outH):null, cw=scr?fd.dw:outW, ch=scr?fd.dh:outH;
+  if (scr){ canvas.style.width=fd.cw+"px"; canvas.style.height=fd.ch+"px"; } else if (canvas.style.width){ canvas.style.width=canvas.style.height=""; }
+  if (canvas.width!==cw||canvas.height!==ch){ canvas.width=cw; canvas.height=ch; }
+  const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
   drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev()); });
@@ -1033,13 +1040,31 @@ function render(){
   /* 4-5 film look -> display (back into A) */
   drawTo(T.A,P.look,u=>{ bindTex(0,T.B.tex); gl.uniform1i(u.uTex,0); setLookUniforms(u,e); });
   /* 6 display / compare */
+  /* On phones the canvas is screen-sized and samples mipmapped copies: a properly filtered shrink (grain averages
+     as it would in a downscaled export, instead of aliasing into dark speckle) and sharp pinch zoom. Exports use the full-size path. */
+  const mipOn=t=>{ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,t?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR); };
+  if (scr){ bindTex(0,T.A.tex); gl.generateMipmap(gl.TEXTURE_2D); mipOn(true); bindTex(5,srcTex); if (!srcMip){ gl.generateMipmap(gl.TEXTURE_2D); srcMip=true; } mipOn(true); }
   drawTo(null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(5,srcTex); gl.uniform1i(u.uSrc,5); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h);
-    gl.uniform2f(u.uRes,outW,outH);
+    gl.uniform2f(u.uRes,cw,ch); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0); gl.uniform1i(u.uChan, renderClean?0:viewChan);
   });
+  if (scr){ bindTex(0,T.A.tex); mipOn(false); bindTex(5,srcTex); mipOn(false); }
 }
+/* Phone viewer zoom: vz 1 = fit; (vcx,vcy) = view centre in image uv (y up, as in the shader). */
+let vz=1, vcx=0.5, vcy=0.5, viewKey="";
+function screenView(){ return !renderClean && document.body.classList.contains("m") && $("view").classList.contains("fit"); }
+function fitDims(outW,outH){
+  const v=$("view"), pad=16, dpr=window.devicePixelRatio||1;
+  const sc=Math.min(1,(v.clientWidth-pad)/outW,(v.clientHeight-pad)/outH);
+  const cw=Math.max(1,Math.floor(outW*sc)), chh=Math.max(1,Math.floor(outH*sc));
+  return {cw, ch:chh, dw:Math.min(outW,Math.round(cw*dpr)), dh:Math.min(outH,Math.round(chh*dpr))};
+}
+function clampView(){ vz=Math.min(Math.max(vz,1),zoomMax()); const h=0.5/vz; vcx=Math.min(1-h,Math.max(h,vcx)); vcy=Math.min(1-h,Math.max(h,vcy)); }
+function zoomMax(){ return Math.max(1, 4*TW/Math.max(1,canvas.width)); }   /* up to 4 screen pixels per image pixel */
+function zoomPct(){ return Math.round(vz*canvas.width/Math.max(1,TW)*100); }   /* image pixels shown per screen pixel, % */
+function updZoomUI(){ const z=$("zoomChip"); if (!z) return; const on=vz>1.001; z.hidden=!on; if (on) z.textContent=zoomPct()+"%  ·  Fit"; $("mZoomV").textContent = on ? zoomPct()+"%" : "Fit"; }
 let renderClean=false, rafId=0;
 function schedule(){ editStamp++; if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
 
@@ -1344,7 +1369,7 @@ document.addEventListener("keydown",ev=>{
 canvas.addEventListener("pointerdown",ev=>{ if(!compare) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
 canvas.addEventListener("pointermove",ev=>{ if(dragging) setSplit(ev); });
 canvas.addEventListener("pointerup",()=>dragging=false);
-canvas.addEventListener("click",()=>{ if (held){ held=false; return; } if (compare) return; clickOrig=!clickOrig; showOrig=clickOrig; updateBadge(); schedule(); });
+canvas.addEventListener("click",()=>{ if (held||gestured){ held=false; gestured=false; return; } if (compare) return; clickOrig=!clickOrig; showOrig=clickOrig; updateBadge(); schedule(); });
 document.addEventListener("keydown",ev=>{ if (ev.code==="Space" && !/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)){ ev.preventDefault(); if(!showOrig){ showOrig=true; updateBadge(); schedule(); } } });
 document.addEventListener("keyup",ev=>{ if (ev.code==="Space" && showOrig){ showOrig=clickOrig; updateBadge(); schedule(); } });
 
@@ -1392,7 +1417,7 @@ $("guideModal").addEventListener("click",ev=>{ if (ev.target.id==="guideModal") 
    drives the same desktop buttons, so there is one code path for state. */
 const phoneMQ = matchMedia("(max-width: 820px), (pointer: coarse) and (max-height: 520px)");
 function isPhone(){ return document.body.classList.contains("m"); }
-const HINT_DESK=$("hint").textContent, HINT_PHONE="Tap the photo to flip · touch and hold to peek at the original";
+const HINT_DESK=$("hint").textContent, HINT_PHONE="Tap to flip · hold to peek at the original · pinch to zoom";
 function applyPhone(){
   const m=phoneMQ.matches; document.body.classList.toggle("m",m);
   document.body.classList.toggle("land", m && innerWidth>innerHeight);
@@ -1412,7 +1437,6 @@ new MutationObserver(updTabDots).observe($("rack"),{subtree:true,attributes:true
 /* mirror desktop buttons into their phone twins */
 function mirror(src,fn){ new MutationObserver(fn).observe(src,{attributes:true,childList:true,characterData:true,subtree:true}); fn(); }
 mirror($("btnCompare"),()=>$("mCompare").classList.toggle("on",$("btnCompare").classList.contains("on")));
-mirror($("btnZoom"),()=>$("mZoomV").textContent=$("btnZoom").textContent);
 mirror($("btnClear"),()=>{ const armed=$("btnClear").classList.contains("danger"); $("mClear").classList.toggle("danger",armed); $("mClear").firstElementChild.textContent=armed?"Tap again to clear":"Clear session"; });
 $("mAdd").addEventListener("click",()=>$("fileIn").click());
 $("mCompare").addEventListener("click",()=>$("btnCompare").click());
@@ -1421,7 +1445,26 @@ function openMore(){ $("mMeta").textContent=$("meta").textContent; $("mVer").tex
 function closeMore(){ $("moreMenu").classList.remove("open"); $("mMore").setAttribute("aria-expanded","false"); }
 $("mMore").addEventListener("click",()=> $("moreMenu").classList.contains("open") ? closeMore() : openMore());
 $("moreMenu").addEventListener("click",ev=>{ if (ev.target.id==="moreMenu" || ev.target.closest(".chan")) closeMore(); });
-$("mZoom").addEventListener("click",()=>{ $("btnZoom").click(); closeMore(); });
+$("mZoom").addEventListener("click",()=>{ closeMore(); if (vz>1.001) vz=1; else vz=TW/Math.max(1,canvas.width); clampView(); updZoomUI(); schedule(); });
+$("zoomChip").addEventListener("click",()=>{ vz=1; vcx=vcy=0.5; updZoomUI(); schedule(); });
+/* pinch to zoom, drag to pan when zoomed (two fingers also pan); runs before the tap / split handlers */
+let gestured=false; const ptrs=new Map(); let pinch=null, panS=null;
+function imgUv(x,y){ const r=canvas.getBoundingClientRect(); const sx=(x-r.left)/r.width, sy=(y-r.top)/r.height; return [vcx+(sx-0.5)/vz, vcy-(sy-0.5)/vz]; }
+function pinchState(){ const [a,b]=[...ptrs.values()]; return {d:Math.hypot(a.x-b.x,a.y-b.y)||1, mx:(a.x+b.x)/2, my:(a.y+b.y)/2}; }
+canvas.addEventListener("pointerdown",ev=>{ if (!isPhone()) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  if (ptrs.size===2){ clearTimeout(holdT); dragging=false; gestured=true; const p=pinchState(); pinch={d0:p.d, z0:vz, uv:imgUv(p.mx,p.my)}; panS=null; }
+  else if (ptrs.size===1){ gestured=false; pinch=null; panS={x:ev.clientX,y:ev.clientY,cx:vcx,cy:vcy,moved:false}; } },{capture:true});
+canvas.addEventListener("pointermove",ev=>{ if (!isPhone() || !ptrs.has(ev.pointerId)) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+  const r=canvas.getBoundingClientRect();
+  if (pinch && ptrs.size>=2){ const p=pinchState(); vz=pinch.z0*p.d/pinch.d0; clampView();
+    vcx=pinch.uv[0]-((p.mx-r.left)/r.width-0.5)/vz; vcy=pinch.uv[1]+((p.my-r.top)/r.height-0.5)/vz; clampView(); updZoomUI(); schedule(); return; }
+  if (panS && !compare && vz>1.001){ const dx=ev.clientX-panS.x, dy=ev.clientY-panS.y;
+    if (!panS.moved && Math.hypot(dx,dy)>6){ panS.moved=true; gestured=true; clearTimeout(holdT); }
+    if (panS.moved){ vcx=panS.cx-dx/(r.width*vz); vcy=panS.cy+dy/(r.height*vz); clampView(); schedule(); } } },{capture:true});
+function ptrEnd(ev){ ptrs.delete(ev.pointerId); if (ptrs.size<2) pinch=null; if (!ptrs.size) panS=null; }
+canvas.addEventListener("pointerup",ptrEnd,{capture:true}); canvas.addEventListener("pointercancel",ptrEnd,{capture:true});
+canvas.addEventListener("gesturestart",ev=>ev.preventDefault());
+new ResizeObserver(()=>{ if (isPhone()) schedule(); }).observe($("view"));
 $("mGuide").addEventListener("click",()=>{ closeMore(); openGuide(); });
 $("mAbout").addEventListener("click",()=>{ closeMore(); $("ver").click(); });
 $("mClear").addEventListener("click",()=>{ const armed=$("btnClear").classList.contains("danger"); $("btnClear").click(); if (armed) closeMore(); });
@@ -1429,7 +1472,7 @@ if (SUPPORT_URL){ $("mSupport").href=SUPPORT_URL; $("mSupport").hidden=false; $(
 document.addEventListener("keydown",ev=>{ if (ev.code==="Escape") closeMore(); });
 /* touch and hold the photo to peek at the original (the phone's Space bar) */
 let held=false, holdT=0;
-canvas.addEventListener("pointerdown",ev=>{ held=false; clearTimeout(holdT); $("hint").classList.add("gone"); if (compare || ev.pointerType==="mouse") return;
+canvas.addEventListener("pointerdown",ev=>{ if (ptrs.size>1) return; held=false; clearTimeout(holdT); $("hint").classList.add("gone"); if (compare || ev.pointerType==="mouse") return;
   holdT=setTimeout(()=>{ held=true; showOrig=true; updateBadge(); schedule(); },300); });
 function endHold(){ clearTimeout(holdT); if (held){ showOrig=clickOrig; updateBadge(); schedule(); } }
 canvas.addEventListener("pointerup",endHold);
