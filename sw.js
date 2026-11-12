@@ -1,7 +1,7 @@
 /* Ernest Lab offline support. Bump CACHE with every release (keep in step with APP_VERSION in index.html).
    The page: network first (so a new release shows up as soon as you're online), cache when offline.
    Icons and manifest: cache first. Images you open never pass through here: they're read locally. */
-const CACHE = "ernestlab-0.4.0";
+const CACHE = "ernestlab-0.4.1";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
