@@ -16,7 +16,7 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 
 **Install it as an app (optional):** in Chrome or Edge use the **Install** button in the address bar; on iPhone or Android use **Share → Add to Home Screen**. Ernest Lab then opens in its own window with its own icon and **works offline**. It updates itself when a new version is published.
 
-**Offline download:** grab `index.html` from the latest release and open it. It's a single self-contained file (fonts included) with no build step and no dependencies.
+**Offline download:** download **Source code (zip)** from the latest release, unzip it and open `index.html`. No build step, no install, no dependencies; fonts included.
 
 Drop images on the window, pick a format and a film look, adjust, and export or share.
 
@@ -72,3 +72,41 @@ Preset names refer to the film stocks that inspired them. Ernest Lab is not affi
 Video I/O in [`video/`](video/README.md) is Mediabunny 1.66 ([MPL-2.0](licenses/Mediabunny-MPL-2.0.txt)), unmodified. The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
 
 If Ernest Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕
+
+## Project structure
+
+Plain files, no build step: GitHub Pages serves them as they are, and you can edit any of them right on GitHub.
+
+```
+index.html            markup only (panel, guide, About); loads the files below in order
+css/fonts.css         IBM Plex, embedded (OFL)
+css/app.css           all styles: desktop first, then the phone layout (body.m)
+js/00-config.js       version, support link, PWA registration, About
+js/01-development.js  per-image development: formats, crop, tone sliders, the Development section
+js/02-profiles.js     profile / tone-curve engine, camera-like fit, camera saturation, histograms
+js/03-params.js       look parameters, B&W films and filters, grain stocks, presets
+js/04-panel.js        DOM helpers, the control panel: sections, sliders, switches, virtual sliders
+js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewer and zoom, scheduling
+js/06-images.js       the source image: upload, loading files, select / remove, the strip, the test still
+js/07-raw.js          RAW decoding (LibRaw in ./raw/)
+js/08-output.js       export, LUT in / out, looks and JSON, share / copy, clear session
+js/09-view.js         viewer interactions, channels, before / after, resizable panel
+js/10-boot.js         panel start-up, install button, guide
+js/11-curve-editor.js profile UI and the curve editor
+js/12-video.js        video preview and MP4 export (Mediabunny in ./video/)
+js/13-help.js         the ? section help cards
+js/14-report.js       Report a problem (pre-filled GitHub issue)
+js/15-phone.js        phone layout, gestures, the ... menu; its last lines start the app
+raw/  video/          third-party decoders, loaded only when needed (see their READMEs)
+sw.js                 offline support: page, scripts and styles network-first, cached for offline
+tools/                regression renders and tests, version bump
+```
+
+The scripts are classic scripts (not ES modules) sharing one global scope, so the app also runs straight from a
+downloaded folder (`file://`). Load order matters: a file can use anything defined in the files before it at load
+time, and anything at all inside functions that run later.
+
+**Releasing:** `python3 tools/bump_version.py X.Y.Z` sets the version in `js/00-config.js`, the service-worker cache
+in `sw.js`, and the `?v=` suffix on every stylesheet and script in `index.html` (so browsers never mix an old script
+with a new page). Before merging, run `tools/regression/render.py` + `compare.py` and
+`tools/regression/curve_change_test.py index.html`.

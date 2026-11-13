@@ -34,3 +34,8 @@ pixel at 3000 px), and the noise hash uses 24 bits (exact in float32 on every GP
 from v0.4.1, so per-pixel diffs are large for looks with grain; Neutral is identical, mean shift is 0.00
 and 16 px block means stay within 1 level for every look. For a 12 MP (3000 px short side) photo the grain
 size and strength match v0.4.1; at 1080 px wide the grain no longer fades on bigger photos.
+
+**Split into files (v0.8.1):** index.html now loads css/ and js/ (classic scripts, in order). The regression scripts
+still take index.html and work the same, over file:// or HTTP. Verified on the split: all 108 renders byte-identical
+to the single-file v0.8.0 (with the test still's caption font loaded in both: the single file drew it in a fallback
+font, which bloom then spread). `curve_change_test.py index.html` passes.
