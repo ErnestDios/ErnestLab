@@ -749,7 +749,8 @@ try { userLooks = JSON.parse(localStorage.getItem("filmlab.looks") || "{}"); } c
 function saveUserLooks(){ try { localStorage.setItem("filmlab.looks", JSON.stringify(userLooks)); } catch(e){} }
 
 let base = Object.assign({}, DEF);      // values chosen in sliders
-let presetName = "Warm Muted";
+const DEFAULT_LOOK = "Neutral (no look)";   /* v0.6: start clean; pick a look on purpose */
+let presetName = DEFAULT_LOOK;
 let lookMix = 1;
 let presetVals = Object.assign({}, DEF);
 let gsName = "";
@@ -1467,7 +1468,7 @@ $("btnSaveLook").addEventListener("click",()=>{
   const n=$("lookName").value.trim(); if(!n){ toast("Type a name for the look first."); $("lookName").focus(); return; }
   userLooks[n]=Object.assign({},base); saveUserLooks(); presetName=n; presetVals=Object.assign({},base); buildPresetSelect(); $("preset").value="u:"+n; $("btnDelLook").disabled=false; $("lookName").value=""; markChanged(); toast(`Saved look "${n}" in this browser.`);
 });
-$("btnDelLook").addEventListener("click",()=>{ const v=$("preset").value; if(!v.startsWith("u:")) return; delete userLooks[v.slice(2)]; saveUserLooks(); buildPresetSelect(); applyPreset("Warm Muted",false); $("preset").value="p:Warm Muted"; toast("Look deleted."); });
+$("btnDelLook").addEventListener("click",()=>{ const v=$("preset").value; if(!v.startsWith("u:")) return; delete userLooks[v.slice(2)]; saveUserLooks(); buildPresetSelect(); applyPreset(DEFAULT_LOOK,false); $("preset").value="p:"+DEFAULT_LOOK; toast("Look deleted."); });
 $("btnJson").addEventListener("click",()=>{ $("jsonText").value=JSON.stringify(lookJSON(),null,2); $("jsonModal").classList.add("open"); });
 $("btnCloseJson").addEventListener("click",()=>$("jsonModal").classList.remove("open"));
 $("btnCloseSave").addEventListener("click",()=>$("saveModal").classList.remove("open"));
@@ -1554,7 +1555,7 @@ async function clearSession(){
   if (lutTex){ gl.deleteTexture(lutTex); lutTex=null; } lut=null; lutSize=2; $("lutNote").textContent=LUT_NOTE0;
   for (const id in bypass) if (bypass[id]) setBypass(id,false);
   compare=false; split=-1; showOrig=false; clickOrig=false; $("btnCompare").classList.remove("on"); view.classList.remove("cmp"); if (viewChan) setChan(viewChan); updateBadge();
-  const d="Warm Muted"; applyPreset(d,false); lookMix=1; buildPresetSelect(); $("preset").value="p:"+d; $("lookName").value="";
+  const d=DEFAULT_LOOK; applyPreset(d,false); lookMix=1; buildPresetSelect(); $("preset").value="p:"+d; $("lookName").value="";
   syncUI(); await makeSample(); schedule();
   toast("Session cleared. Saved looks are still in My looks.");
 }

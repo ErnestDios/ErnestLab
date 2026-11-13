@@ -56,6 +56,8 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Decode CR2/CR3, NEF, ARW, RAF, RW2, ORF, DNG… into the linear working space (camera WB, linear Rec.709, 16-bit → RGBA16F, `uInXfer=1`); base exposure matched to the camera's embedded preview (tested: Sony FX30 ARW, DNG without preview)
 - [x] Profiles in Development: tone curve in stops around mid grey with a curve editor over the histogram; RAW default Camera-like (quantile-matched to the embedded JPEG, soft shoulder above), Flat, Custom; save / export / load profiles as .json
 - [ ] RAW-only controls: custom white balance, highlight recovery modes (currently clip to white), base-exposure override
+- [x] Camera-like also matches the camera's saturation (from the embedded preview)
+- [x] Default look is Neutral (no look) instead of Warm Muted
 - [ ] Colour profiles (per-camera hue/saturation maps, DCP-like)
 - [ ] ~~Proxy preview~~ dropped: with frame-relative grain a reduced-size render shows sub-pixel grain stronger than the export; the viewer stays full-res (phones filter it with mipmaps)
 - [x] Memory: decoder worker per file (memory returned), only the current RAW held (re-developed when revisited), half-size decode above the GPU's max texture size
