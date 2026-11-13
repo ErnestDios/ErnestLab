@@ -579,16 +579,20 @@ function curveTexFor(pts){ const key=JSON.stringify(pts); if (curveCache.key===k
   curveCache.key=key; curveCache.lo=f.lo; curveCache.hi=f.hi; return curveCache; }
 /* camera-like fit: match the tone distribution (quantiles) of the RAW to the camera's preview, where the preview
    is neither crushed nor clipped; below that slope 1, above it a soft shoulder so RAW highlight detail survives. */
-const QN=199, qs=n=>{ const a=n.slice().sort((x,y)=>x-y), o=new Float32Array(QN); for (let i=0;i<QN;i++) o[i]=a[Math.min(a.length-1,Math.floor((i+0.5)/QN*a.length))]; return o; };
+const QP=(()=>{ const a=[]; for (let i=0;i<199;i++) a.push((i+0.5)/199); a.push(0.998,0.999,0.9995,0.9998); return a; })(), QN=QP.length;   /* extra quantiles: the brightest highlights */
+const qs=n=>{ const a=n.slice().sort((x,y)=>x-y), o=new Float32Array(QN); for (let i=0;i<QN;i++) o[i]=a[Math.min(a.length-1,Math.floor(QP[i]*a.length))]; return o; };
 function fitCamCurve(rawQ,refQ){
+  /* both quantile lists are sorted, so the (raw, preview) pairs already form a rising curve: follow it over the whole
+     range the preview resolves (phone previews tone-map highlights hard and rarely clip, so this reaches the top) */
   const pairs=[]; for (let i=0;i<QN;i++){ const r=rawQ[i], j=refQ[i]; if (r>1e-6 && j>0.003 && j<0.9) pairs.push([Math.log2(r/0.18),Math.log2(j/0.18)]); }
   if (pairs.length<20) return null;
-  const pts=[]; for (let k=-8;k<=4;k+=1){ const near=pairs.filter(p=>Math.abs(p[0]-k)<=0.5).map(p=>p[1]).sort((a,b)=>a-b); if (near.length>=2) pts.push([k,near[near.length>>1]]); }
-  if (pts.length<3) return null;
-  for (let i=1;i<pts.length;i++) pts[i][1]=Math.max(pts[i][1],pts[i-1][1]+0.05);   /* strictly rising */
+  const x0=pairs[0][0], x1=pairs[pairs.length-1][0]; if (x1-x0<2) return null;
+  const at=x=>{ let k=0; while (k<pairs.length-2 && pairs[k+1][0]<x) k++; const a=pairs[k], b=pairs[k+1]; return b[0]-a[0]<1e-6 ? (a[1]+b[1])/2 : a[1]+(b[1]-a[1])*Math.min(1,Math.max(0,(x-a[0])/(b[0]-a[0]))); };
+  const n=Math.max(3,Math.ceil((x1-x0)/0.75)), pts=[]; for (let i=0;i<=n;i++){ const x=x0+(x1-x0)*i/n; pts.push([x,at(x)]); }
+  for (let i=1;i<pts.length;i++) pts[i][1]=Math.max(pts[i][1],pts[i-1][1]+0.02);   /* strictly rising */
   const lo=pts[0], hi=pts[pts.length-1];
   pts.unshift([lo[0]-3,lo[1]-3]);                                              /* shadows: slope 1 */
-  let x=hi[0], y=hi[1], sl=Math.min(1,Math.max(0.5,(hi[1]-pts[pts.length-2][1])/(hi[0]-pts[pts.length-2][0])));
+  let x=hi[0], y=hi[1], sl=Math.min(1,Math.max(0.15,(hi[1]-pts[pts.length-2][1])/(hi[0]-pts[pts.length-2][0])));   /* continue the preview's own highlight slope */
   for (let k=0;k<3;k++){ sl*=0.65; x+=1.5; y+=1.5*sl; pts.push([x,+y.toFixed(3)]); }   /* shoulder */
   return pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3)]);
 }
