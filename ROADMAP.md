@@ -49,6 +49,13 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Silver is colourless: halation, lens fringes and grain collapse to grey before the film curve
 - [x] Eight B&W looks incl. selenium and sepia toning
 
+## v0.8 Video ✅ (first version)
+- [x] MP4 / MOV / WebM in: browser <video> feeds the pipeline for preview (play, scrub, K), new grain every frame
+- [x] Export H.264 MP4 at full resolution via WebCodecs + Mediabunny (video/), original audio copied, progress + cancel
+- [ ] Log input transforms (Apple Log, S-Log3, LogC) via the input-transform slot
+- [ ] HDR (HLG / PQ) handling; 10-bit output (HEVC / AV1) where supported
+- [ ] Film motion: gate weave, exposure flicker, frame-rate options; share video on phones
+
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
 - [ ] Channel mixer

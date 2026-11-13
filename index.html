@@ -38,6 +38,19 @@ header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bwinfo{padding:2px 0 6px}
+.vbar{position:absolute;left:12px;right:12px;bottom:12px;z-index:4;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(15,14,13,.82);border:1px solid var(--line)}
+.vbar[hidden],#shareRow[hidden],#fmt[hidden]{display:none!important}
+.vbar input[type=range]{flex:1}
+.vbar .vt{font:12px/1 var(--font-mono);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.vbar .ibtn{width:34px;height:34px}
+#vMute .m{display:none} #vMute.off .m{display:inline} #vMute.off .w{display:none}
+.vexp{position:absolute;inset:0;z-index:6;display:flex;align-items:center;justify-content:center;background:rgba(10,9,8,.72)}
+.vexp[hidden]{display:none}
+.vexp .card{min-width:260px;display:grid;gap:12px;padding:18px;border-radius:12px;background:var(--panel);border:1px solid var(--line);text-align:center}
+.vexp .bar{height:6px;border-radius:3px;background:#2a2622;overflow:hidden} .vexp .bar i{display:block;height:100%;width:0;background:var(--accent)}
+.thumb.vid::after{content:"▶";position:absolute;left:6px;bottom:4px;font-size:11px;color:#fff;text-shadow:0 1px 3px #000}
+body.vidmode .hint{display:none}
+body.m .vbar{left:8px;right:8px;bottom:8px;gap:8px;padding:4px 8px}
 .profbox{display:grid;gap:8px;padding:6px 0 4px}
 .curvewrap canvas{width:100%;height:190px;display:block;border-radius:6px;background:#12100e;border:1px solid var(--line);touch-action:none;cursor:crosshair}
 header #meta{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -278,7 +291,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <button class="ibtn" id="mCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button>
     <button class="ibtn" id="mMore" aria-label="More" title="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </div>
-  <input type="file" id="fileIn" accept="image/*,.dng,.cr2,.cr3,.nef,.nrw,.arw,.sr2,.srf,.raf,.rw2,.rwl,.orf,.pef,.srw,.x3f,.3fr,.iiq,.erf,.mef,.mos,.kdc,.dcr,.mrw" multiple hidden>
+  <input type="file" id="fileIn" accept="image/*,video/*,.mp4,.m4v,.mov,.webm,.mkv,.dng,.cr2,.cr3,.nef,.nrw,.arw,.sr2,.srf,.raf,.rw2,.rwl,.orf,.pef,.srw,.x3f,.3fr,.iiq,.erf,.mef,.mos,.kdc,.dcr,.mrw" multiple hidden>
   <input type="file" id="lookIn" accept=".json,application/json" multiple hidden>
 </header>
 
@@ -287,6 +300,13 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
   <div id="drop">Drop images (or a look .json) to add them</div>
   <div class="badge" id="badge">Film</div>
   <button class="zchip" id="zoomChip" hidden title="Back to the whole image"></button>
+  <div class="vbar" id="vbar" hidden>
+    <button class="ibtn" id="vPlay" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
+    <input type="range" id="vTime" min="0" max="1000" value="0" step="1" aria-label="Position in the clip">
+    <span class="vt" id="vTimeT">0:00 / 0:00</span>
+    <button class="ibtn" id="vMute" aria-label="Sound off" title="Sound"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path class="w" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="m" d="M16 9l5 6M21 9l-5 6"/></svg></button>
+  </div>
+  <div class="vexp" id="vExp" hidden><div class="card"><div id="vExpT">Rendering video…</div><div class="bar"><i id="vExpBar"></i></div><button class="btn" id="vExpCancel">Cancel</button></div></div>
   <div class="hint" id="hint">Click the image to flip original / film · hold Space to peek · R G B L to view a channel · double-click a value to reset it</div>
 </main>
 
@@ -395,6 +415,14 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li>The decoder (about 1.5 MB) loads the first time you open a RAW, then also works offline.</li>
     </ul>
 
+    <h3>Video</h3>
+    <ul>
+      <li>Add <b>MP4, MOV or WebM</b> clips like stills (CG renders and AI video are perfect for this). Everything works the same: Development, looks, black &amp; white, halation, lens and grain.</li>
+      <li>Play and scrub with the bar under the picture (<b>K</b> plays / pauses). Grain is different on every frame, like real film.</li>
+      <li><b>Export video (MP4)</b> renders every frame at full resolution and encodes H.264 with the original sound. It takes a while (it isn't real time); the clip never leaves your device. Export all bundles stills only.</li>
+      <li>The clip has to play in this browser: H.264 MP4 works everywhere; HEVC / ProRes depend on the browser. HDR clips are shown as standard video for now.</li>
+    </ul>
+
     <h3>Black &amp; white</h3>
     <ul>
       <li>Film is one layer of silver, and what it "sees" decides which colours become which greys. Pick a <b>Film</b>: <b>Panchromatic</b> (modern Tri-X / HP5: the whole spectrum, a little more blue than your eye), <b>Orthochromatic</b> (red-blind: dark reds and lips, pale skies, silent-film faces), <b>Blue-sensitive</b> (1800s plates), <b>Extended red</b>, <b>Infrared-like</b> (glowing foliage, black skies) or <b>Digital luminance</b> (a computer's desaturate, matched to the eye).</li>
@@ -474,6 +502,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <p><b>Private by design.</b> Everything runs in your browser with WebGL2. Your images never leave your device: Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites. The page itself is hosted on GitHub Pages.</p>
     <p class="k">Film stock names describe the stocks that inspired each look. Ernest Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
     <p class="k" id="aboutGpu"></p>
+    <p class="k">Video: Mediabunny (MPL-2.0) over your browser's WebCodecs; see <code>video/README.md</code> in the repository.</p>
     <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository.</p>
     <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
   </div>
@@ -497,7 +526,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
 <script>
 "use strict";
-const APP_VERSION="0.7.0";
+const APP_VERSION="0.8.0";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;
@@ -558,6 +587,7 @@ function cropRect(d,w,h){
   const x=(1-cw)*(d.panX+1)/2, y=(1-ch)*(1-d.panY)/2;
   return {x,y,w:cw,h:ch,W:Math.max(1,Math.round(cw*w)),H:Math.max(1,Math.round(ch*h))};
 }
+
 
 /* ---------------- Profiles & tone curve (v0.6) ----------------
    A profile is a tone curve in stops around mid grey (x = scene stops in, y = stops out), applied on luminance
@@ -1199,7 +1229,8 @@ function uploadSource(bmp,isRaw){
   srcTex=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,srcTex);
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
   if (isRaw){ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA16F,bmp.W,bmp.H,0,gl.RGBA,gl.HALF_FLOAT,bmp.data); srcXfer=1; bmp={width:bmp.W,height:bmp.H}; }
-  else { gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,bmp); srcXfer=0; }
+  else { gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,bmp); srcXfer=0;
+    if (bmp.videoWidth) bmp={width:bmp.videoWidth,height:bmp.videoHeight}; else if (bmp.displayWidth) bmp={width:bmp.displayWidth,height:bmp.displayHeight}; }
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
   srcW=bmp.width; srcH=bmp.height; srcMip=false;
@@ -1297,7 +1328,9 @@ async function rawDecode(it){
 /* make item i the GPU source (decodes a RAW first). Returns false if it failed or was superseded. */
 async function ensureSource(i){
   const it=items[i]; if (srcItem===it && srcTex) return true;
-  if (!it.raw){ uploadSource(it.bmp); srcItem=it; return true; }
+  if (it.video){ uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
+  if (!it.raw){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
+  vidAttach(null);
   const badge=$("badge"), old=badge.textContent; badge.textContent="Developing RAW…"; badge.classList.add("busy");
   try{ const r=await rawDecode(it); uploadSource(r,true); srcItem=it; return true; }
   catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
@@ -1336,7 +1369,7 @@ function render(){
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
     gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
-    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed);
+    gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed+grainFrame*101);   /* video: new grain every frame */
     gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
   });
   /* 4-5 film look -> display (back into A) */
@@ -1377,10 +1410,15 @@ let renderClean=false, rafId=0;
 function schedule(){ editStamp++; if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
 
 async function addFiles(files){
-  const list=[...files].filter(f=>RAW_EXT.test(f.name)||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
-  if (!list.length){ toast("Those files are not images Ernest Lab can read. Use JPEG, PNG, WebP or a camera RAW file."); return; }
+  const list=[...files].filter(f=>RAW_EXT.test(f.name)||VID_EXT.test(f.name)||f.type.startsWith("video/")||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
+  if (!list.length){ toast("Ernest Lab reads JPEG, PNG, WebP, camera RAW, and MP4 / MOV / WebM video."); return; }
   let first=-1;
   for (const f of list){
+    if (VID_EXT.test(f.name)||f.type.startsWith("video/")){
+      try{ toast(`Opening ${f.name}…`,1500); items.push(await vidProbe(f)); if (first<0) first=items.length-1; }
+      catch(err){ console.error(err); toast(String(err.message||err),4200); }
+      continue;
+    }
     if (RAW_EXT.test(f.name)){
       try{ toast(`Reading ${f.name}…`,1500); const it=await rawProbe(f); items.push(it); if (first<0) first=items.length-1; }
       catch(err){ console.error(err); toast(`Could not open ${f.name} as RAW.`); }
@@ -1402,7 +1440,7 @@ async function select(i){
   editStamp++; syncDev(); render();
 }
 function removeItem(i){
-  const it=items[i]; if (it.url && !it.sample) URL.revokeObjectURL(it.url);
+  const it=items[i]; if (it.url && !it.sample) URL.revokeObjectURL(it.url); vidRelease(it);
   items.splice(i,1);
   if (!items.length){ makeSample(); return; }
   if (cur>=items.length) cur=items.length-1;
@@ -1410,7 +1448,7 @@ function removeItem(i){
 function buildStrip(){
   const s=$("strip"); s.innerHTML="";
   items.forEach((it,i)=>{
-    const d=document.createElement("div"); d.className="thumb"+(i===cur?" sel":""); d.tabIndex=0; d.setAttribute("role","button"); d.setAttribute("aria-label","Show "+it.name);
+    const d=document.createElement("div"); d.className="thumb"+(i===cur?" sel":"")+(it.video?" vid":""); d.tabIndex=0; d.setAttribute("role","button"); d.setAttribute("aria-label","Show "+it.name);
     d.innerHTML=`${it.url?`<img alt="" src="${it.url}">`:`<span class="rawph">RAW</span>`}<span class="nm"></span><button class="x" aria-label="Remove ${it.name}">✕</button>`;
     d.querySelector(".nm").textContent=it.name;
     d.addEventListener("click",ev=>{ if (ev.target.classList.contains("x")) return; select(i); });
@@ -1418,7 +1456,7 @@ function buildStrip(){
     d.querySelector(".x").addEventListener("click",ev=>{ ev.stopPropagation(); const wasCur=i===cur; removeItem(i); if (items.length){ if (wasCur||cur>=items.length) select(Math.min(i,items.length-1)); else { if (i<cur) cur--; buildStrip(); } } });
     s.appendChild(d);
   });
-  const a=document.createElement("button"); a.className="addtile"; a.textContent="+ Add stills"; a.addEventListener("click",()=>$("fileIn").click()); s.appendChild(a);
+  const a=document.createElement("button"); a.className="addtile"; a.textContent="+ Add stills / clips"; a.addEventListener("click",()=>$("fileIn").click()); s.appendChild(a);
 }
 
 /* Built-in test still so the page opens working */
@@ -1463,14 +1501,14 @@ async function offer(filename, blob){
 function fmtInfo(){ return $("fmt").value==="png" ? ["image/png",undefined,"png"] : ["image/jpeg",0.95,"jpg"]; }
 function slug(s){ return s.replace(/[^\w\-· ]+/g,"").replace(/[\s·]+/g,"_").replace(/_+/g,"_").slice(0,40); }
 $("btnExport").addEventListener("click", async()=>{
-  if (cur<0) return; const [t,q,ext]=fmtInfo();
+  if (cur<0) return; if (items[cur].video){ exportVideo(items[cur]); return; } const [t,q,ext]=fmtInfo();
   const b=await renderToBlob(t,q); await offer(`${items[cur].name}_${slug(presetName)}.${ext}`, b);
 });
 $("btnExportAll").addEventListener("click", async()=>{
-  const real=items.filter(it=>!it.sample); if (!real.length){ toast("Add your stills first."); return; }
+  const real=items.filter(it=>!it.sample && !it.video); if (!real.length){ toast(items.some(it=>it.video)?"Export all bundles stills; export each video on its own.":"Add your stills first."); return; }
   const btn=$("btnExportAll"); btn.disabled=true; const keep=cur; const [t,q,ext]=fmtInfo(); const files=[];
   try{
-    for (let i=0;i<items.length;i++){ if (items[i].sample) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; if (!(await ensureSource(i))) continue; const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
+    for (let i=0;i<items.length;i++){ if (items[i].sample || items[i].video) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; if (!(await ensureSource(i))) continue; const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
     const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && devActive(it.dev)) dv[it.name]=it.dev;
     if (Object.keys(dv).length) lj.development=dv;   /* per-image source prep, for the record (not loaded as part of the look) */
     files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lj,null,2))});
@@ -1640,7 +1678,7 @@ $("btnCopy").addEventListener("click", async()=>{
 /* ---------------- Clear session ---------------- */
 const LUT_NOTE0=$("lutNote").textContent;
 async function clearSession(){
-  for (const it of items.splice(0)){ if (it.url && !it.sample) URL.revokeObjectURL(it.url); try{ it.bmp&&it.bmp.close&&it.bmp.close(); }catch(e){} }
+  for (const it of items.splice(0)){ if (it.url && !it.sample) URL.revokeObjectURL(it.url); vidRelease(it); try{ it.bmp&&it.bmp.close&&it.bmp.close(); }catch(e){} }
   srcItem=null;
   cur=-1;
   if (lutTex){ gl.deleteTexture(lutTex); lutTex=null; } lut=null; lutSize=2; $("lutNote").textContent=LUT_NOTE0;
@@ -1813,6 +1851,93 @@ const endCdrag=()=>{ cdrag=null; }; cv.addEventListener("pointerup",endCdrag); c
 cv.addEventListener("dblclick",ev=>{ const i=nearest(editPts(),ev); if (i>=0) removePoint(i); });
 new ResizeObserver(()=>drawCurve()).observe(cv);
 try{ syncProfile(); }catch(e){}
+
+/* ---------------- Video (v0.8) ----------------
+   Preview: the browser's own <video> feeds frames into the same pipeline (texture re-uploaded each frame), with a new
+   grain pattern every frame. Export: Mediabunny (./video/, loaded on first export) decodes each frame with WebCodecs,
+   Ernest Lab renders it at full resolution, and it's encoded to H.264 MP4; the original audio is copied when possible. */
+const VID_EXT=/\.(mp4|m4v|mov|webm|mkv)$/i;
+let grainFrame=0, vidCur=null, vidRVFC=0;
+const fmtT=t=>{ t=Math.max(0,t||0); const m=Math.floor(t/60), s=Math.floor(t%60); return m+":"+String(s).padStart(2,"0"); };
+async function vidProbe(f){
+  const el=document.createElement("video"); el.muted=true; el.playsInline=true; el.preload="auto"; el.loop=true;
+  const src=URL.createObjectURL(f); el.src=src;
+  try{ await new Promise((res,rej)=>{ el.onloadeddata=res; el.onerror=()=>rej(new Error(`This browser can't play ${f.name}. Try an H.264 MP4.`)); }); }
+  catch(e){ URL.revokeObjectURL(src); throw e; }
+  const W=el.videoWidth, H=el.videoHeight; if (!W||!H){ URL.revokeObjectURL(src); throw new Error(`${f.name} has no video track.`); }
+  await new Promise(r=>{ const t=Math.min(1,(el.duration||0)*0.1); if (!t){ r(); return; } el.onseeked=()=>r(); el.currentTime=t; });
+  const sc=Math.min(1,480/Math.max(W,H)), c=document.createElement("canvas"); c.width=Math.round(W*sc); c.height=Math.round(H*sc); c.getContext("2d").drawImage(el,0,0,c.width,c.height);
+  const url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)));
+  el.currentTime=0;
+  return {name:f.name.replace(/\.[^.]+$/,""), video:true, file:f, el, src, url, w:W, h:H, duration:el.duration};
+}
+function vidRelease(it){ if (!it||!it.video) return; try{ it.el.pause(); it.el.removeAttribute("src"); it.el.load(); }catch(e){} if (it.src) URL.revokeObjectURL(it.src); if (vidCur===it) vidAttach(null); }
+function vidRefresh(){   /* new frame into the source texture (on its own unit: never upload on the active one) */
+  if (!vidCur || !srcTex || srcItem!==vidCur) return; const el=vidCur.el; if (el.readyState<2) return;
+  bindTex(5,srcTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,el); srcMip=false;
+}
+function vidFrame(now,meta){
+  if (!vidCur) return; vidRefresh(); grainFrame = meta&&meta.presentedFrames!=null ? meta.presentedFrames : (grainFrame+1); render(); vidUI();
+  if (!vidCur.el.paused) vidLoop();
+}
+function vidLoop(){ const el=vidCur&&vidCur.el; if (!el) return; if (el.requestVideoFrameCallback) vidRVFC=el.requestVideoFrameCallback(vidFrame); else vidRVFC=requestAnimationFrame(t=>vidFrame(t,null)); }
+function vidUI(){ const it=vidCur; if (!it) return; const el=it.el, d=el.duration||0;
+  if (document.activeElement!==$("vTime")) $("vTime").value=d?Math.round(el.currentTime/d*1000):0;
+  $("vTimeT").textContent=fmtT(el.currentTime)+" / "+fmtT(d);
+  $("vPlay").innerHTML = el.paused ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
+  $("vPlay").setAttribute("aria-label", el.paused?"Play":"Pause"); $("vMute").classList.toggle("off",el.muted); }
+function vidAttach(it){
+  if (vidCur && vidCur!==it){ try{ vidCur.el.pause(); }catch(e){} }
+  vidCur=it; grainFrame=0; document.body.classList.toggle("vidmode",!!it); $("vbar").hidden=!it;
+  $("btnExport").textContent = it ? "Export video (MP4)" : "Export this still";
+  $("fmt").hidden=!!it; $("shareRow").hidden=!!it;
+  $("dlNote").textContent = it ? "Video exports as H.264 MP4 at full resolution, with a new grain pattern every frame and the original sound. It renders frame by frame, so it takes a while; the clip never leaves your device." : DL_NOTE0;
+  if (it){ vidUI(); }
+}
+$("vPlay").addEventListener("click",()=>{ const el=vidCur&&vidCur.el; if (!el) return; if (el.paused){ el.play().then(()=>{ vidLoop(); vidUI(); }).catch(()=>{ el.muted=true; el.play().then(()=>{ vidLoop(); vidUI(); }); }); } else { el.pause(); vidUI(); } });
+$("vMute").addEventListener("click",()=>{ const el=vidCur&&vidCur.el; if (!el) return; el.muted=!el.muted; vidUI(); });
+$("vTime").addEventListener("input",()=>{ const el=vidCur&&vidCur.el; if (!el||!el.duration) return; el.currentTime=$("vTime").value/1000*el.duration; });
+document.addEventListener("seeked",ev=>{ if (vidCur && ev.target===vidCur.el){ vidRefresh(); grainFrame=Math.round(vidCur.el.currentTime*24); render(); vidUI(); } },true);
+document.addEventListener("keydown",ev=>{ if (!vidCur || ev.code!=="KeyK" || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return; ev.preventDefault(); $("vPlay").click(); });
+const DL_NOTE0=$("dlNote").textContent;
+
+let vidMod=null, vidConv=null;
+async function exportVideo(it){
+  if (vidConv) return; const el=it.el; el.pause(); vidUI();
+  const box=$("vExp"), T=$("vExpT"), bar=$("vExpBar"); box.hidden=false; T.textContent="Loading the video encoder…"; bar.style.width="0%";
+  const keepFrame=grainFrame; let n=0, even=null;
+  try{
+    if (!vidMod) vidMod=import("./video/mediabunny.js"); const mb=await vidMod;
+    const c=cropRect(curDev(),srcW,srcH), OW=c.W&~1, OH=c.H&~1;   /* H.264 needs even sizes */
+    const input=new mb.Input({source:new mb.BlobSource(it.file), formats:[mb.MP4,mb.QTFF,mb.WEBM,mb.MATROSKA]});
+    const output=new mb.Output({format:new mb.Mp4OutputFormat({fastStart:"in-memory"}), target:new mb.BufferTarget()});
+    const avc = await mb.canEncodeVideo("avc",{width:OW,height:OH}).catch(()=>false);
+    vidConv=await mb.Conversion.init({input, output, video:{ ...(avc?{codec:"avc"}:{}), quality:mb.QUALITY_VERY_HIGH, forceTranscode:true, processedWidth:OW, processedHeight:OH,
+      process:(sample)=>{
+        let vf=null; try{ vf=sample.toVideoFrame(); }catch(e){}
+        bindTex(5,srcTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+        if (vf){ gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,vf); vf.close(); }
+        else { const oc=new OffscreenCanvas(srcW,srcH), ox=oc.getContext("2d"); sample.draw(ox,0,0,srcW,srcH); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,oc); }
+        srcMip=false; grainFrame=n++; renderClean=true; render(); renderClean=false;
+        let out=canvas; if (canvas.width!==OW||canvas.height!==OH){ if (!even){ even=new OffscreenCanvas(OW,OH); } even.getContext("2d").drawImage(canvas,0,0); out=even; }
+        return new mb.VideoSample(out,{timestamp:sample.timestamp, duration:sample.duration});
+      } } });
+    if (!vidConv.isValid){ const why=(vidConv.discardedTracks||[]).map(d=>`${d.track&&d.track.type||"track"}: ${d.reason}`).join(", "); throw new Error("This clip can't be converted here"+(why?` (${why})`:"")+". Try an H.264 MP4."); }
+    const lostAudio=(vidConv.discardedTracks||[]).some(d=>d.track&&d.track.type==="audio");
+    vidConv.onProgress=p=>{ bar.style.width=Math.round(p*100)+"%"; T.textContent=`Rendering video… ${Math.round(p*100)}%  ·  frame ${n}`; };
+    T.textContent="Rendering video…";
+    await vidConv.execute();
+    const blob=new Blob([output.target.buffer],{type:"video/mp4"});
+    await offer(`${it.name}_${slug(presetName)}.mp4`, blob);
+    if (lostAudio) toast("Exported without sound: this browser can't put the clip's audio in an MP4.",4200);
+  }catch(err){
+    if (err && /cancel/i.test(err.name+err.message)) toast("Video export cancelled.");
+    else { console.error(err); toast(String(err&&err.message||err).slice(0,160),5000); }
+  }finally{
+    vidConv=null; box.hidden=true; grainFrame=keepFrame; renderClean=false; vidRefresh(); render();
+  }
+}
+$("vExpCancel").addEventListener("click",()=>{ if (vidConv) vidConv.cancel(); });
 
 /* ---------------- Phone layout (v0.5) ----------------
    body.m switches the CSS to the phone layout; data-tab picks which controls show. Every phone control
