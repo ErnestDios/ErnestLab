@@ -38,6 +38,17 @@ header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bwinfo{padding:2px 0 6px}
+.qh{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 11px/16px var(--font-mono);padding:0;cursor:pointer;letter-spacing:0;text-transform:none}
+.qh:hover,.qh.on{color:var(--accent);border-color:var(--accent)}
+summary .qh{margin-left:2px}
+.helpcard{margin:0 14px 10px;padding:9px 12px;background:#1b1916;border-left:2px solid var(--accent);border-radius:0;font-size:12.5px;line-height:1.5;color:#cfc7bb;text-transform:none;letter-spacing:0;font-weight:400}
+.helpcard[hidden]{display:none}
+.helpcard p{margin:0 0 5px} .helpcard p:last-child{margin:0}
+.helpcard b{color:var(--accent);font-weight:600;margin-right:4px}
+.lookhead{display:flex;align-items:center;gap:8px}
+.presetbar .helpcard{margin:0;grid-column:1/-1}
+body.m .qh{width:26px;height:26px;font-size:13px;line-height:24px}
+body.m .helpcard{font-size:14px}
 .vbar{position:absolute;left:12px;right:12px;bottom:12px;z-index:4;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:rgba(15,14,13,.82);border:1px solid var(--line)}
 .vbar[hidden],#shareRow[hidden],#fmt[hidden]{display:none!important}
 .vbar input[type=range]{flex:1}
@@ -453,6 +464,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li><b>Before / after</b> splits the view; drag on the image to move the split.</li>
       <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
       <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
+      <li>Every section has a <b>?</b>: what it is on real film, what you'll see, and one thing to try.</li>
       <li><b>Double-click</b> a slider's value to reset it.</li>
       <li><b>Zoom:</b> mouse wheel or trackpad pinch zooms around the cursor, <b>drag</b> to pan, <b>double-click</b> the photo for 100% (again for Fit). Keys <b>0</b> Fit, <b>1</b> 100%, <b>+ / −</b>. In before / after, pan with the middle button or Alt-drag.</li>
       <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>pinch</b> to zoom in and check the grain, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
@@ -1944,6 +1956,52 @@ async function exportVideo(it){
 }
 $("vExpCancel").addEventListener("click",()=>{ if (vidConv) vidConv.cancel(); });
 
+
+/* ---------------- Section help (v0.8): the physical thing, what you'll see, one thing to try ---------------- */
+const HELP={
+  dev:  {t:"Development", film:"Before any look, the lab decides the frame (the camera gate, the crop) and develops the negative so it holds detail in the shadows and the highlights.",
+         see:"Format crops the frame before the lens effects, so vignette and softness follow the new shape. Profile and Shadows / Midtones / Highlights shape the tones of this photo only.",
+         tryit:"2.39 for a cinema frame; Shadows +0.5 on a backlit face."},
+  look: {t:"Film stock", film:"Each film stock is a recipe: its own curve, colours, halation and grain, all decided by its chemistry.",
+         see:"A preset sets every section at once; Look strength blends it with your photo.",
+         tryit:"Start from a stock, adjust it, then save it as your own look."},
+  tone: {t:"Exposure & balance", film:"How much light reaches the film (aperture, shutter speed) and the colour of that light: daylight is bluish, tungsten bulbs are orange.",
+         see:"Exposure works in stops: +1 doubles the light, −1 halves it. Temperature warms or cools; Tint shifts green ↔ magenta.",
+         tryit:"+0.5 to +1 on a dark CG render to open it up; Temperature +0.2 for golden hour."},
+  curve:{t:"Film curve", film:"Film answers light in an S shape: a soft toe in the shadows, a straight middle, and a shoulder that squeezes highlights instead of clipping them.",
+         see:"Contrast steepens the middle. Highlight roll-off lets lamps and skies fade gently. Black lift and White crush give the faded look of a print.",
+         tryit:"Raise Highlight roll-off on a render with hard, clipped lights."},
+  color:{t:"Colour", film:"The dyes of each stock render colour their own way, and printing or grading adds tints, like teal shadows and warm highlights.",
+         see:"Saturation sets colour strength; Shadow and Highlight tint push a hue into the darks and the brights; an external LUT plugs in your own grade.",
+         tryit:"A little teal (≈190°) in the shadows and amber (≈35°) in the highlights: the classic cinema split."},
+  bw:   {t:"Black & white", film:"One layer of silver. Its sensitivity decides which colours become which greys, and a coloured filter on the lens changes that mix.",
+         see:"Red filter: dark skies, pale skin. Orthochromatic: dark reds and lips. The counts show what your grey is made of.",
+         tryit:"Switch the header to R, G or B to predict what a red, green or blue filter will do."},
+  hal:  {t:"Halation & bloom", film:"Strong light goes through the emulsion, bounces off the film base and comes back, exposing the red layer again: a warm halo. Bloom is light scattering in the lens and the air.",
+         see:"Red-orange glows around lamps, neon and bright edges; bloom softens and glows the brightest areas.",
+         tryit:"Night scenes with practical lights: Halation up, Threshold down."},
+  lens: {t:"Lens", film:"Real glass isn't perfect: colours focus at slightly different points, and the corners get softer and darker than the centre.",
+         see:"Colour fringes on high-contrast edges, softer corners and a vignette that draws the eye to the middle.",
+         tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best."},
+  grain:{t:"Grain", film:"The image is made of tiny silver crystals or dye clouds: bigger in faster film, and every colour layer has its own.",
+         see:"An organic texture, strongest in the mid tones. It breaks up banding and the plastic look of CG; on video it changes every frame.",
+         tryit:"Pick a grain stock first, then lower Amount until you only just feel it."},
+};
+function helpCard(key){ const h=HELP[key], c=document.createElement("div"); c.className="helpcard"; c.hidden=true;
+  c.innerHTML=`<p><b>On film</b> ${h.film}</p><p><b>You'll see</b> ${h.see}</p><p><b>Try</b> ${h.tryit}</p>`; return c; }
+function helpBtn(key,card,onOpen){ const b=document.createElement("button"); b.type="button"; b.className="qh"; b.textContent="?";
+  b.setAttribute("aria-label",`What does ${HELP[key].t} do?`); b.setAttribute("aria-expanded","false"); b.title=`What does ${HELP[key].t} do?`;
+  b.addEventListener("click",ev=>{ ev.preventDefault(); ev.stopPropagation(); if (onOpen) onOpen(); card.hidden=!card.hidden; b.setAttribute("aria-expanded",String(!card.hidden)); b.classList.toggle("on",!card.hidden); });
+  return b; }
+function setupHelp(){
+  const inSummary=(key,sum)=>{ if (!sum || sum.querySelector(".qh")) return; const det=sum.parentElement, card=helpCard(key), b=helpBtn(key,card,()=>{ det.open=true; });
+    const sw=sum.querySelector(".byp"); sw ? sum.insertBefore(b,sw) : sum.appendChild(b); sum.after(card); };
+  inSummary("dev", $("tick-dev").parentElement);
+  for (const g of GROUPS) if (HELP[g.id]) inSummary(g.id, $("tick-"+g.id).parentElement);
+  const pb=document.querySelector(".presetbar"), lab=pb.querySelector('label[for="preset"]'), card=helpCard("look");
+  const row=document.createElement("div"); row.className="lookhead"; lab.before(row); row.appendChild(lab); row.appendChild(helpBtn("look",card)); row.after(card);
+}
+
 /* ---------------- Phone layout (v0.5) ----------------
    body.m switches the CSS to the phone layout; data-tab picks which controls show. Every phone control
    drives the same desktop buttons, so there is one code path for state. */
@@ -2029,7 +2087,7 @@ $("rack").addEventListener("click",ev=>{
 phoneMQ.addEventListener ? phoneMQ.addEventListener("change",applyPhone) : phoneMQ.addListener(applyPhone);
 $("toast").addEventListener("click",()=>{ $("toast").style.display="none"; });
 addEventListener("resize",()=>document.body.classList.toggle("land", isPhone() && innerWidth>innerHeight));
-applyPhone();
+applyPhone(); setupHelp();
 { let r=""; try{ const x=gl.getExtension("WEBGL_debug_renderer_info"); r=x?gl.getParameter(x.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER); }catch(e){}
   $("aboutGpu").textContent=`Graphics: ${r||"unknown"} · ${hasFloat?"16-bit float":"8-bit fallback"} pipeline · ${gl.getParameter(gl.MAX_TEXTURE_SIZE)} px max.`; }
 setTimeout(()=>{ if (isPhone()) $("hint").classList.add("gone"); },7000);
