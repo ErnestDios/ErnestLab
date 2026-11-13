@@ -44,6 +44,11 @@ Move the grade from display-referred sRGB to a scene-linear working space. 8-bit
 - [x] Grain relative to the frame (Size 1 = 1 px at a 3000 px short side): same grain on any camera, survives social-media resizing
 - [x] Mali GPUs: `precision highp int` in fragment shaders (grain hash was 16-bit → no grain); About shows the GPU
 
+## v0.7 Black & white lab ✅
+- [x] Film sensitivity (panchromatic, ortho, blue-sensitive, extended red, infrared-like, digital luminance) × lens filter (yellow, orange, red, deep red, yellow-green, green, blue) as normalised RGB weights in scene-linear, after white balance; mid grey preserved; real-camera filter factors explained
+- [x] Silver is colourless: halation, lens fringes and grain collapse to grey before the film curve
+- [x] Eight B&W looks incl. selenium and sepia toning
+
 ## 3. Channel adjustments
 - [ ] Per-channel curves (R / G / B / luma)
 - [ ] Channel mixer

@@ -37,6 +37,7 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:upp
 header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.bwinfo{padding:2px 0 6px}
 .profbox{display:grid;gap:8px;padding:6px 0 4px}
 .curvewrap canvas{width:100%;height:190px;display:block;border-radius:6px;background:#12100e;border:1px solid var(--line);touch-action:none;cursor:crosshair}
 header #meta{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -393,6 +394,14 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li>The decoder (about 1.5 MB) loads the first time you open a RAW, then also works offline.</li>
     </ul>
 
+    <h3>Black &amp; white</h3>
+    <ul>
+      <li>Film is one layer of silver, and what it "sees" decides which colours become which greys. Pick a <b>Film</b>: <b>Panchromatic</b> (modern Tri-X / HP5: the whole spectrum, a little more blue than your eye), <b>Orthochromatic</b> (red-blind: dark reds and lips, pale skies, silent-film faces), <b>Blue-sensitive</b> (1800s plates), <b>Extended red</b>, <b>Infrared-like</b> (glowing foliage, black skies) or <b>Digital luminance</b> (a computer's desaturate, matched to the eye).</li>
+      <li>A <b>Lens filter</b> lightens its own colour and darkens the opposite one: <b>yellow</b> for a slightly darker sky, <b>orange</b> and <b>red</b> for dramatic skies and smooth skin, <b>green</b> for brighter foliage, <b>blue</b> for haze. On a real camera each filter costs light; Ernest Lab compensates, so mid grey stays put.</li>
+      <li>The <b>Red / Green / Blue counts</b> show the mix the film and filter add up to; move them for your own. Look at the <b>R G B</b> channels in the header to predict what a filter will do.</li>
+      <li>Silver has no colour, so in black &amp; white the halation glow, lens fringes and grain are grey too. <b>Toning</b> (selenium, sepia) comes from Shadow / Highlight tint in Colour; see the B&amp;W looks.</li>
+    </ul>
+
     <h3>Profiles &amp; the tone curve</h3>
     <ul>
       <li>The curve in Development works in <b>stops around mid grey</b> (0 = mid grey, +1 = twice as bright), over the photo's histogram. Drag a point; click or tap the curve to add one; double-click or double-tap a point to remove it.</li>
@@ -486,7 +495,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
 <script>
 "use strict";
-const APP_VERSION="0.6.1";
+const APP_VERSION="0.7.0";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;
@@ -672,6 +681,14 @@ const GROUPS = [
     ["hiAmt","Highlight tint",0,0.3,0.001,0,""],
     ["lutMix","External LUT",0,1,0.01,1,""],
   ]},
+  /* Black & white (v0.7): a single silver layer sees colour through its spectral sensitivity and the lens filter.
+     bwR/G/B = how much each colour counts towards the grey (set by the Film and Filter pickers, or by hand). */
+  {id:"bw", title:"Black & white", params:[
+    ["bw","Black & white",0,1,0.01,0,""],
+    ["bwR","Red counts",-1,2,0.01,0.28,""],
+    ["bwG","Green counts",-1,2,0.01,0.5,""],
+    ["bwB","Blue counts",-1,2,0.01,0.22,""],
+  ]},
   {id:"hal", title:"Halation & bloom", params:[
     ["hal","Halation",0,1.5,0.01,0,""],
     ["halThr","Threshold",0.3,0.98,0.01,0.7,""],
@@ -710,7 +727,7 @@ const GROUPS = [
 ];
 const DEF = {};
 for (const g of GROUPS) for (const p of g.params) DEF[p[0]] = p[5];
-const NONMIX = ["seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
+const NONMIX = ["bwR","bwG","bwB","seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
   "gAmtR","gAmtG","gAmtB","gSizeR","gSizeG","gSizeB","gClumpR","gClumpG","gClumpB"];
 const MIXABLE = Object.keys(DEF).filter(k => !NONMIX.includes(k));
 /* Grain stocks: emulations of each stock's grain character (amount, size, dye-cloud colour, clumping, shadow grain)
@@ -730,6 +747,29 @@ const GRAIN_STOCKS = {
   "Reversal · Super 8 (Ektachrome-inspired)":       {grain:1.35,grainSize:3.1, grainCol:0.4, grainResp:0.45,grainRough:0.75,grainShadow:0.5, gAmtR:1.0,gAmtG:0.9,gAmtB:1.2,gSizeR:1.0,gSizeG:0.95,gSizeB:1.15,gClumpR:1.0,gClumpG:0.95,gClumpB:1.1},
 };
 
+/* B&W emulsions as RGB weights: how much each colour record counts towards the grey. Approximations of each
+   emulsion type's spectral sensitivity (RGB can't hold a spectrum), by eye from published curves, not measured. */
+const BW_FILMS = {
+  pan:   {name:"Panchromatic (Tri-X, HP5)", w:[0.28,0.50,0.22], note:"Sees the whole spectrum, a little more blue and less green than your eye: skies a touch lighter, foliage a touch darker."},
+  ortho: {name:"Orthochromatic (red-blind)",       w:[0.02,0.55,0.43], note:"Blue and green only: reds go nearly black, skin darker and textured, skies pale. The silent-film look."},
+  blue:  {name:"Blue-sensitive (1800s)",     w:[0.00,0.12,0.88], note:"Plain silver: blue and UV only. White skies, dark faces and lips, like the earliest portraits."},
+  xred:  {name:"Extended red (SFX)",          w:[0.45,0.40,0.15], note:"Panchromatic with extra red: skin smooth and light, skies darker even without a filter."},
+  ir:    {name:"Infrared-like",        w:[0.10,1.40,-0.50], note:"Foliage glows white and blue skies go black. Real infrared film sees light RGB can't hold, so this imitates the look; it's shot through a deep red filter already."},
+  eye:   {name:"Digital luminance",     w:[0.2126,0.7152,0.0722], note:"The weights a computer uses to desaturate: matched to the eye, not to any film."},
+};
+const BW_FILTERS = {
+  none:  {name:"No filter",              t:[1,1,1],          stops:0},
+  yellow:{name:"Yellow (K2 / #8)",       t:[1,0.92,0.30],    stops:1,   note:"Darkens blue sky a little and lifts clouds: the classic landscape default."},
+  orange:{name:"Orange (#21)",           t:[1,0.55,0.10],    stops:2,   note:"Dramatic skies, smooth skin, haze cut."},
+  red:   {name:"Red (#25)",              t:[1,0.10,0.02],    stops:3,   note:"Near-black skies and bright clouds; foliage darkens; skin goes pale and smooth."},
+  dred:  {name:"Deep red (#29)",         t:[1,0.04,0.01],    stops:4,   note:"The red filter pushed further: skies black, very graphic."},
+  ygreen:{name:"Yellow-green (X1 / #11)",t:[0.55,1,0.35],    stops:2,   note:"Lighter foliage and natural skin under daylight; slightly darker skies."},
+  green: {name:"Green (#58)",            t:[0.20,1,0.15],    stops:2.5, note:"Bright foliage, darker lips and skin tones, more freckles."},
+  blue:  {name:"Blue (#47)",             t:[0.10,0.30,1],    stops:2.5, note:"Emphasises haze and atmosphere; pale skies, dark reds."},
+};
+function bwW(film,filter){ const f=BW_FILMS[film].w, t=film==="ir"?[1,1,1]:BW_FILTERS[filter].t, w=f.map((v,i)=>v*t[i]), s=w[0]+w[1]+w[2];
+  return {bwR:+(w[0]/s).toFixed(3), bwG:+(w[1]/s).toFixed(3), bwB:+(w[2]/s).toFixed(3)}; }
+const BWGRAIN={grainCol:0, gAmtR:1,gAmtG:1,gAmtB:1,gSizeR:1,gSizeG:1,gSizeB:1,gClumpR:1,gClumpG:1,gClumpB:1};   /* silver grain: one layer, no colour */
 const PRESETS = {
   "Neutral (no look)": {},
   "Warm Muted": {temp:0.06,con:0.18,roll:0.45,fade:0.065,crush:0.02,gB:0.02,sat:0.78,shHue:195,shAmt:0.07,hiHue:38,hiAmt:0.08,hal:0.35,halThr:0.72,halR:0.55,halWarm:0.6,bloom:0.1,ca:0.35,soft:0.35,softStart:0.45,vig:0.3,vigSize:0.42,vigFeather:0.75,grain:0.55,grainSize:1.5,grainCol:0.2,grainResp:0.6},
@@ -740,6 +780,14 @@ const PRESETS = {
   "Portrait 400 (Portra 400-inspired)": {temp:0.12,tint:0.03,con:0.18,roll:0.5,fade:0.04,sat:0.86,gB:0.02,shHue:210,shAmt:0.04,hiHue:30,hiAmt:0.08,hal:0.15,halThr:0.75,bloom:0.06,vig:0.18,grain:0.35,grainSize:1.3,grainCol:0.3,gAmtR:0.95,gAmtG:0.8,gAmtB:1.25,gSizeR:1.0,gSizeG:0.9,gSizeB:1.2,gClumpR:1.0,gClumpG:0.85,gClumpB:1.15},
   "Night 800T (CineStill 800T-inspired)": {temp:-0.15,con:0.34,roll:0.38,fade:0.05,crush:0.01,sat:0.95,shHue:195,shAmt:0.08,hiHue:20,hiAmt:0.04,hal:0.95,halThr:0.55,halR:0.65,halWarm:1,bloom:0.16,ca:0.3,soft:0.2,vig:0.25,grain:0.7,grainSize:1.8,grainCol:0.35,gAmtR:1.05,gAmtG:0.85,gAmtB:1.5,gSizeR:1.0,gSizeG:0.92,gSizeB:1.35,gClumpR:1.0,gClumpG:0.95,gClumpB:1.3},
   "Slide 100 (Ektachrome 100-inspired)": {temp:-0.02,con:0.5,roll:0.25,fade:0.01,sat:1.15,gB:-0.01,shHue:220,shAmt:0.07,hiHue:45,hiAmt:0.03,hal:0.1,halThr:0.8,vig:0.2,grain:0.22,grainSize:1.1,grainCol:0.2,gAmtR:0.95,gAmtG:0.9,gAmtB:1.1,gSizeR:1.0,gSizeG:0.95,gSizeB:1.1,gClumpR:1.0,gClumpG:0.95,gClumpB:1.05},
+  "B&W 400 (Tri-X-inspired)": {bw:1,...bwW("pan","none"),con:0.38,roll:0.35,fade:0.03,crush:0.01,hal:0.12,halThr:0.75,ca:0.2,soft:0.25,vig:0.25,...BWGRAIN,grain:0.75,grainSize:1.8,grainResp:0.5,grainRough:0.6,grainShadow:0.6},
+  "B&W 400 pushed +2 (HP5-inspired)": {bw:1,...bwW("pan","yellow"),con:0.62,roll:0.25,fade:0.02,crush:0.02,hal:0.15,halThr:0.72,ca:0.2,soft:0.25,vig:0.3,...BWGRAIN,grain:1.15,grainSize:2.1,grainResp:0.4,grainRough:0.8,grainShadow:0.7},
+  "B&W 100 fine grain (FP4-inspired)": {bw:1,...bwW("pan","none"),con:0.28,roll:0.45,fade:0.02,hal:0.08,vig:0.18,...BWGRAIN,grain:0.3,grainSize:1.1,grainResp:0.55,grainRough:0.3,grainShadow:0.35},
+  "B&W red filter landscape": {bw:1,...bwW("pan","red"),con:0.45,roll:0.35,fade:0.015,crush:0.01,hal:0.1,vig:0.22,...BWGRAIN,grain:0.45,grainSize:1.4,grainResp:0.5,grainRough:0.4,grainShadow:0.45},
+  "B&W orthochromatic (silent-era)": {bw:1,...bwW("ortho","none"),con:0.42,roll:0.3,fade:0.05,crush:0.02,hal:0.3,halThr:0.65,bloom:0.12,ca:0.3,soft:0.4,vig:0.45,vigSize:0.4,...BWGRAIN,grain:0.65,grainSize:1.7,grainResp:0.5,grainRough:0.55,grainShadow:0.5},
+  "B&W infrared-like": {bw:1,...bwW("ir","none"),con:0.45,roll:0.3,fade:0.02,hal:0.6,halThr:0.6,halR:0.7,bloom:0.25,vig:0.3,...BWGRAIN,grain:0.9,grainSize:1.9,grainResp:0.5,grainRough:0.65,grainShadow:0.6},
+  "B&W selenium print": {bw:1,...bwW("pan","yellow"),con:0.4,roll:0.35,fade:0.02,shHue:255,shAmt:0.05,hiHue:40,hiAmt:0.01,vig:0.2,...BWGRAIN,grain:0.5,grainSize:1.5,grainResp:0.5,grainRough:0.45,grainShadow:0.5},
+  "B&W sepia print": {bw:1,...bwW("pan","none"),con:0.3,roll:0.4,fade:0.05,crush:0.03,shHue:28,shAmt:0.12,hiHue:42,hiAmt:0.1,vig:0.3,...BWGRAIN,grain:0.55,grainSize:1.6,grainResp:0.5,grainRough:0.5,grainShadow:0.5},
   "Bleach bypass": {con:0.7,roll:0.2,fade:0.02,sat:0.45,shHue:200,shAmt:0.05,hiHue:45,hiAmt:0.02,hal:0.1,ca:0.2,soft:0.2,vig:0.35,grain:0.5,grainSize:1.5,grainCol:0.1},
 };
 
@@ -764,7 +812,7 @@ const ctlEls = {};
 function buildRack(){
   const host=$("groups");
   GROUPS.forEach((g,gi)=>{
-    const det=document.createElement("details"); det.dataset.tab={tone:"color",curve:"color",color:"color",hal:"fx",lens:"fx",grain:"grain"}[g.id]; if (gi<6) det.open = gi!==0 ? true : true;
+    const det=document.createElement("details"); det.dataset.tab={tone:"color",curve:"color",color:"color",bw:"color",hal:"fx",lens:"fx",grain:"grain"}[g.id]; if (gi<7) det.open = gi!==0 ? true : true;
     const sum=document.createElement("summary"); sum.innerHTML=`<span class="tick" id="tick-${g.id}"></span>${g.title}`; det.appendChild(sum); makeSwitch(g.id, sum, det);
     const box=document.createElement("div"); box.className="ctrls";
     if (g.id==="grain"){
@@ -774,6 +822,18 @@ function buildRack(){
       for (const n in GRAIN_STOCKS){ const o=document.createElement("option"); o.value=n; o.textContent=n; sel.appendChild(o); }
       sel.addEventListener("change",()=>{ const gs=GRAIN_STOCKS[sel.value]; if(!gs) return; Object.assign(base,gs); syncUI(); sel.value=gsName=sel.value; schedule(); });
       box.appendChild(r);
+    }
+    if (g.id==="bw"){
+      const r1=document.createElement("div"); r1.className="grainstock"; r1.innerHTML='<label for="bwFilm">Film</label><select id="bwFilm"></select>';
+      const r2=document.createElement("div"); r2.className="grainstock"; r2.innerHTML='<label for="bwFilter">Lens filter</label><select id="bwFilter"></select>';
+      const info=document.createElement("div"); info.className="note bwinfo"; info.id="bwInfo";
+      const fs=r1.querySelector("select"), ft=r2.querySelector("select");
+      for (const k in BW_FILMS){ const o=document.createElement("option"); o.value=k; o.textContent=BW_FILMS[k].name; fs.appendChild(o); }
+      { const o=document.createElement("option"); o.value=""; o.textContent="Custom mix"; fs.appendChild(o); }
+      for (const k in BW_FILTERS){ const o=document.createElement("option"); o.value=k; o.textContent=BW_FILTERS[k].name; ft.appendChild(o); }
+      const pick=()=>{ const film=fs.value||"pan"; Object.assign(base,bwW(film,film==="ir"?"none":(ft.value||"none"))); if (!(base.bw>0)) base.bw=1; syncUI(); schedule(); };
+      fs.addEventListener("change",pick); ft.addEventListener("change",pick);
+      box.appendChild(r1); box.appendChild(r2); box.appendChild(info);
     }
     let sub=null;
     for (const p of g.params){
@@ -787,7 +847,7 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       ctlEls[k]={inp,out,row,p};
@@ -803,8 +863,20 @@ function markChanged(){
     const t=$("tick-"+g.id); if (t) t.classList.toggle("live", !!live);
   }
 }
+/* show which film × filter the current weights are, what it does, and what it would cost on a real camera */
+function bwSync(){
+  const fs=$("bwFilm"), ft=$("bwFilter"), info=$("bwInfo"); if (!fs) return;
+  const cur=[base.bwR,base.bwG,base.bwB], cs=cur[0]+cur[1]+cur[2]||1, cn=cur.map(v=>v/cs); let hit=null;
+  for (const f in BW_FILMS) for (const t of (f==="ir"?["none"]:Object.keys(BW_FILTERS))){ const w=bwW(f,t); if (Math.abs(w.bwR-cn[0])<0.006&&Math.abs(w.bwG-cn[1])<0.006&&Math.abs(w.bwB-cn[2])<0.006){ hit=[f,t]; break; } if (hit) break; }
+  fs.value=hit?hit[0]:""; ft.value=hit?hit[1]:"none"; ft.disabled=!hit||hit[0]==="ir";
+  const pct=cn.map(v=>Math.round(v*100)), mix=`Grey made of red ${pct[0]}% · green ${pct[1]}% · blue ${pct[2]}%.`;
+  if (!hit){ info.textContent=`Custom mix. ${mix} Mid grey stays mid grey; weights are normalised.`; return; }
+  const F=BW_FILMS[hit[0]], T=BW_FILTERS[hit[1]];
+  info.textContent = `${F.note} ${T.stops?`${T.name}: ${T.note} On a real camera it costs about ${T.stops} stop${T.stops===1?"":"s"} (×${Math.round(Math.pow(2,T.stops))}); here it's compensated, so mid grey stays put. `:""}${mix}`;
+}
 function syncUI(){
   for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); }
+  bwSync();
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
 }
@@ -885,6 +957,7 @@ const float GRAIN_K=1.0;
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
+uniform float uBW; uniform vec3 uBWw;   /* black & white: amount, colour weights (film sensitivity × filter) */
 /* Profile (v0.6): a tone curve in stops around mid grey, stored as a 512-sample LUT over -16..+10 stops,
    extended linearly outside with the curve's end slopes. Applied on luminance first, then the tone sliders. */
 uniform sampler2D uCurve; uniform int uCurveOn; uniform vec2 uCurveSlope; uniform float uProfSat;   /* uProfSat: camera saturation (Camera-like RAW), 1 = none */
@@ -910,10 +983,12 @@ vec3 sceneLinear(vec3 l){
   l *= exp2(uExp);
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
   wb /= dot(wb,W);
-  return max(l*wb, 0.0);
+  l = max(l*wb, 0.0);
+  if (uBW>0.0){ float s=uBWw.r+uBWw.g+uBWw.b; float m=max(dot(l,uBWw)/max(s,0.05),0.0); l=mix(l, vec3(m), uBW); }   /* grey preserved: weights normalised */
+  return l;
 }`;
 const LOOK_FN=`
-uniform sampler3D uLut; uniform float uLutMix, uLutSize;
+uniform sampler3D uLut; uniform float uLutMix, uLutSize; uniform float uBWLook;   /* silver is colourless: lens/halation/grain colour collapses to grey */
 uniform float uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt; uniform vec3 uGam,uShCol,uHiCol;
 vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
@@ -921,6 +996,7 @@ float sc(float x){ const float k=6.0, p=0.45; float a=sg(-k*p), b=sg(k*(1.0-p));
 float curve(float x){ float s=sc(x); return uCon>=0.0 ? mix(x,s,uCon) : max(mix(x,2.0*x-s,-uCon),0.0); }
 float roll(float y){ float kn=1.0-0.6*uRoll; if (y<=kn||uRoll<=0.0) return y; float r=1.0-kn; return kn + r*(1.0-exp(-(y-kn)/r)); }
 vec3 filmLook(vec3 c){
+  if (uBWLook>0.0) c=mix(c, vec3(dot(c,vec3(0.2126,0.7152,0.0722))), uBWLook);
   c = pow(c, vec3(1.0)+uGam);
   c = vec3(curve(c.r),curve(c.g),curve(c.b));
   c = vec3(roll(c.r),roll(c.g),roll(c.b));
@@ -1094,13 +1170,14 @@ const dummyLut=makeLutTex(2,new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0, 0,0,1,
 function hueRGB(h){ h=((h%360)+360)%360/60; const x=1-Math.abs(h%2-1); const c=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; return c; }
 
 function setSceneUniforms(u,e,dv,crv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh);
+  gl.uniform1f(u.uBW,e.bw); gl.uniform3f(u.uBWw,e.bwR,e.bwG,e.bwB);
   gl.uniform1f(u.uProfSat, crv&&crv.sat ? crv.sat : 1.0);
   if (crv && crv.pts) crv=crv.pts;
   if (crv){ const c=curveTexFor(crv); bindTex(6,c.tex); gl.uniform1i(u.uCurve,6); gl.uniform2f(u.uCurveSlope,c.lo,c.hi); gl.uniform1i(u.uCurveOn,1); } else gl.uniform1i(u.uCurveOn,0); }
 function setGradeUniforms(u,e){ setSceneUniforms(u,e); setLookUniforms(u,e); }
 function setLookUniforms(u,e){
   gl.uniform1f(u.uCon,e.con); gl.uniform1f(u.uRoll,e.roll); gl.uniform1f(u.uFade,e.fade); gl.uniform1f(u.uCrush,e.crush);
-  gl.uniform1f(u.uSat,e.sat); gl.uniform3f(u.uGam,e.gR,e.gG,e.gB);
+  gl.uniform1f(u.uSat,e.sat); gl.uniform3f(u.uGam,e.gR,e.gG,e.gB); gl.uniform1f(u.uBWLook,e.bw);
   gl.uniform3fv(u.uShCol,hueRGB(e.shHue)); gl.uniform1f(u.uShAmt,e.shAmt);
   gl.uniform3fv(u.uHiCol,hueRGB(e.hiHue)); gl.uniform1f(u.uHiAmt,e.hiAmt);
   bindTex(1, lutTex||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uLut,1);
