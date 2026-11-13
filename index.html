@@ -1869,7 +1869,9 @@ async function vidProbe(f){
   const sc=Math.min(1,480/Math.max(W,H)), c=document.createElement("canvas"); c.width=Math.round(W*sc); c.height=Math.round(H*sc); c.getContext("2d").drawImage(el,0,0,c.width,c.height);
   const url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)));
   el.currentTime=0;
-  return {name:f.name.replace(/\.[^.]+$/,""), video:true, file:f, el, src, url, w:W, h:H, duration:el.duration};
+  const it={name:f.name.replace(/\.[^.]+$/,""), video:true, file:f, el, src, url, w:W, h:H, duration:el.duration};
+  el.addEventListener("seeked",()=>vidSeeked(it));   /* on the element: media events don't bubble, and it isn't in the page */
+  return it;
 }
 function vidRelease(it){ if (!it||!it.video) return; try{ it.el.pause(); it.el.removeAttribute("src"); it.el.load(); }catch(e){} if (it.src) URL.revokeObjectURL(it.src); if (vidCur===it) vidAttach(null); }
 function vidRefresh(){   /* new frame into the source texture (on its own unit: never upload on the active one) */
@@ -1896,8 +1898,11 @@ function vidAttach(it){
 }
 $("vPlay").addEventListener("click",()=>{ const el=vidCur&&vidCur.el; if (!el) return; if (el.paused){ el.play().then(()=>{ vidLoop(); vidUI(); }).catch(()=>{ el.muted=true; el.play().then(()=>{ vidLoop(); vidUI(); }); }); } else { el.pause(); vidUI(); } });
 $("vMute").addEventListener("click",()=>{ const el=vidCur&&vidCur.el; if (!el) return; el.muted=!el.muted; vidUI(); });
-$("vTime").addEventListener("input",()=>{ const el=vidCur&&vidCur.el; if (!el||!el.duration) return; el.currentTime=$("vTime").value/1000*el.duration; });
-document.addEventListener("seeked",ev=>{ if (vidCur && ev.target===vidCur.el){ vidRefresh(); grainFrame=Math.round(vidCur.el.currentTime*24); render(); vidUI(); } },true);
+/* scrubbing: one seek at a time; while one is running, the latest slider position waits and is applied when it lands */
+let vidPending=null;
+function vidSeek(t){ const el=vidCur&&vidCur.el; if (!el||!el.duration) return; if (el.seeking) vidPending=t; else { vidPending=null; el.currentTime=t; } $("vTimeT").textContent=fmtT(t)+" / "+fmtT(el.duration); }
+function vidSeeked(it){ if (it!==vidCur) return; vidRefresh(); grainFrame=Math.round(it.el.currentTime*24); render(); vidUI(); if (vidPending!=null){ const t=vidPending; vidPending=null; it.el.currentTime=t; } }
+$("vTime").addEventListener("input",()=>{ const el=vidCur&&vidCur.el; if (el&&el.duration) vidSeek($("vTime").value/1000*el.duration); });
 document.addEventListener("keydown",ev=>{ if (!vidCur || ev.code!=="KeyK" || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return; ev.preventDefault(); $("vPlay").click(); });
 const DL_NOTE0=$("dlNote").textContent;
 
