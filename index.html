@@ -41,6 +41,7 @@ header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent
 .ctl output.scrub{cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
 .ctl output.scrub:hover{color:var(--ink)}
 .ctl output.over{color:var(--accent)}
+#moreMenu .mi.report .v{color:var(--muted)}
 .qh{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 11px/16px var(--font-mono);padding:0;cursor:pointer;letter-spacing:0;text-transform:none}
 .qh:hover,.qh.on{color:var(--accent);border-color:var(--accent)}
 summary .qh{margin-left:2px}
@@ -403,6 +404,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <button class="mi" id="mGuide"><span>Guide &amp; install</span><span class="v">?</span></button>
     <button class="mi" id="mAbout"><span>About Ernest Lab</span><span class="v" id="mVer"></span></button>
     <a class="mi" id="mSupport" target="_blank" rel="noopener" hidden><span>☕ Buy me a coffee</span><span class="v">↗</span></a>
+    <a class="mi report" id="mReport" target="_blank" rel="noopener"><span>Report a problem</span><span class="v">↗</span></a>
     <button class="mi" id="mClear"><span>Clear session</span><span class="v">removes stills</span></button>
   </div>
 </div>
@@ -507,7 +509,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <span><kbd>Esc</kbd></span><span>back to colour, close a dialog</span>
       <span><kbd>?</kbd></span><span>this guide</span>
     </div>
-    <div class="row"><span class="spacer"></span><button class="btn primary" id="btnCloseGuide">Got it</button></div>
+    <div class="row"><a class="btn report" id="guideReport" target="_blank" rel="noopener" title="Opens a new issue on GitHub with your app version, browser and graphics filled in">Report a problem</a><span class="spacer"></span><button class="btn primary" id="btnCloseGuide">Got it</button></div>
   </div>
 </div>
 <div class="modal" id="aboutModal" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
@@ -519,7 +521,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <p class="k" id="aboutGpu"></p>
     <p class="k">Video: Mediabunny (MPL-2.0) over your browser's WebCodecs; see <code>video/README.md</code> in the repository.</p>
     <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository.</p>
-    <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
+    <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><a class="btn report" id="aboutReport" target="_blank" rel="noopener" title="Opens a new issue on GitHub with your app version, browser and graphics filled in">Report a problem</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
   </div>
 </div>
 <div class="modal" id="jsonModal" role="dialog" aria-modal="true" aria-labelledby="jsonTitle">
@@ -541,13 +543,15 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
 <script>
 "use strict";
-const APP_VERSION="0.8.0";
+const APP_VERSION="0.8.1";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;
 document.getElementById("ver").textContent="v"+APP_VERSION;
 /* Support link (Buy Me a Coffee). Hidden while empty. */
 const SUPPORT_URL="https://buymeacoffee.com/ernestdios";
+/* Problem reports go to GitHub issues, pre-filled with technical details (never file names or images). */
+const REPO_URL="https://github.com/ErnestDios/ErnestLab";
 /* Installable app + offline (PWA): only when hosted (https or localhost), not as a local file or inside claude.ai. */
 (function pwa(){
   const hosted = location.protocol==="https:" || location.hostname==="localhost" || location.hostname==="127.0.0.1";
@@ -2019,6 +2023,30 @@ function setupHelp(){
   const pb=document.querySelector(".presetbar"), lab=pb.querySelector('label[for="preset"]'), card=helpCard("look");
   const row=document.createElement("div"); row.className="lookhead"; lab.before(row); row.appendChild(lab); row.appendChild(helpBtn("look",card)); row.after(card);
 }
+
+
+/* ---------------- Report a problem (v0.8.1) ----------------
+   Opens a new GitHub issue with what helps debugging: version, browser, graphics, layout and the features in use.
+   No file names, no image data: a photo's name can be private. */
+function reportInfo(){
+  const it=items[cur], n=items.filter(x=>!x.sample).length, kinds=[...new Set(items.filter(x=>!x.sample).map(x=>x.video?"video":x.raw?"RAW":"image"))];
+  const e=(typeof effective==="function")?effective():{};
+  const on=[]; if (e.bw>0) on.push("black & white"); if (curDev && devActive(curDev())) on.push("development"); if (lut) on.push("external LUT"); if (compare) on.push("before/after"); if (viewChan) on.push("channel view");
+  for (const g of ["hal","lens","grain"]) if (bypass[g]) on.push(g+" off");
+  return [
+    `- **Ernest Lab:** v${APP_VERSION} (${location.protocol==="file:"?"local file":location.host||"?"}${window.claude?", inside claude.ai":""}${(window.matchMedia&&matchMedia("(display-mode: standalone)").matches)||navigator.standalone?", installed app":""})`,
+    `- **Browser:** ${navigator.userAgent}`,
+    `- **Graphics:** ${($("aboutGpu").textContent||"unknown").replace(/^Graphics:\s*/,"")}`,
+    `- **Screen:** ${innerWidth}×${innerHeight} @${(window.devicePixelRatio||1).toFixed(2)}x, ${document.body.classList.contains("m")?"phone layout":"desktop layout"}`,
+    `- **Session:** ${n} file${n===1?"":"s"}${kinds.length?" ("+kinds.join(", ")+")":" (test still)"}; showing ${it?(it.video?"a video":it.raw?"a RAW":it.sample?"the test still":"an image")+(it.video||it.raw?"":"")+` ${srcW}×${srcH}`:"nothing"}`,
+    `- **Look:** ${presetName}${lookMix<1?` at ${Math.round(lookMix*100)}%`:""}${on.length?"; "+on.join(", "):""}`,
+  ].join("\n");
+}
+function reportURL(){
+  const body=`### What happened\n\n\n### What you expected\n\n\n### Steps to reproduce\n1. \n\n<!-- A screenshot helps a lot: drag it into this box. -->\n\n---\n<details><summary>Technical details (filled in by Ernest Lab)</summary>\n\n${reportInfo()}\n\n</details>\n`;
+  return `${REPO_URL}/issues/new?labels=bug&title=${encodeURIComponent("Problem: ")}&body=${encodeURIComponent(body)}`;
+}
+for (const id of ["aboutReport","guideReport","mReport"]){ const a=$(id); a.href=REPO_URL+"/issues/new"; a.addEventListener("click",()=>{ a.href=reportURL(); if (id==="mReport") closeMore(); }); }
 
 /* ---------------- Phone layout (v0.5) ----------------
    body.m switches the CSS to the phone layout; data-tab picks which controls show. Every phone control
