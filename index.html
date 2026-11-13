@@ -182,9 +182,10 @@ body.m #view.fit canvas{max-width:calc(100% - 16px);max-height:calc(100% - 16px)
 body.m #view.full canvas{margin:8px}
 body.m canvas#gl{box-shadow:0 4px 22px rgba(0,0,0,.6);-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 body.m canvas#gl{touch-action:none}
-.zchip{display:none}
-body.m .zchip{display:block;position:absolute;right:8px;top:8px;font:500 12px/1 var(--font-mono);padding:8px 10px;border-radius:7px;border:1px solid var(--accent);background:rgba(15,14,13,.85);color:var(--accent);cursor:pointer}
-body.m .zchip[hidden]{display:none}
+.zchip{display:block;position:absolute;right:12px;top:12px;z-index:3;font:500 12px/1 var(--font-mono);padding:8px 10px;border-radius:7px;border:1px solid var(--accent);background:rgba(15,14,13,.85);color:var(--accent);cursor:pointer}
+.zchip[hidden]{display:none}
+body.m .zchip{right:8px;top:8px}
+canvas#gl.zoomed{cursor:grab} canvas#gl.zoomed:active{cursor:grabbing}
 body.m .badge{top:8px;left:8px}
 .badge.busy{background:#2d2822;color:var(--accent);border:1px solid var(--accent);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.55}}
@@ -425,6 +426,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
       <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
       <li><b>Double-click</b> a slider's value to reset it.</li>
+      <li><b>Zoom:</b> mouse wheel or trackpad pinch zooms around the cursor, <b>drag</b> to pan, <b>double-click</b> the photo for 100% (again for Fit). Keys <b>0</b> Fit, <b>1</b> 100%, <b>+ / −</b>. In before / after, pan with the middle button or Alt-drag.</li>
       <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>pinch</b> to zoom in and check the grain, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
     </ul>
 
@@ -1354,9 +1356,9 @@ function render(){
 }
 /* Phone viewer zoom: vz 1 = fit; (vcx,vcy) = view centre in image uv (y up, as in the shader). */
 let vz=1, vcx=0.5, vcy=0.5, viewKey="";
-function screenView(){ return !renderClean && document.body.classList.contains("m") && $("view").classList.contains("fit"); }
+function screenView(){ return !renderClean && $("view").classList.contains("fit"); }   /* v0.7: desktop too */
 function fitDims(outW,outH){
-  const v=$("view"), pad=16, dpr=window.devicePixelRatio||1;
+  const v=$("view"), pad=document.body.classList.contains("m")?16:32, dpr=window.devicePixelRatio||1;
   const sc=Math.min(1,(v.clientWidth-pad)/outW,(v.clientHeight-pad)/outH);
   const cw=Math.max(1,Math.floor(outW*sc)), chh=Math.max(1,Math.floor(outH*sc));
   return {cw, ch:chh, dw:Math.min(outW,Math.round(cw*dpr)), dh:Math.min(outH,Math.round(chh*dpr))};
@@ -1364,7 +1366,13 @@ function fitDims(outW,outH){
 function clampView(){ vz=Math.min(Math.max(vz,1),zoomMax()); const h=0.5/vz; vcx=Math.min(1-h,Math.max(h,vcx)); vcy=Math.min(1-h,Math.max(h,vcy)); }
 function zoomMax(){ return Math.max(1, 4*TW/Math.max(1,canvas.width)); }   /* up to 4 screen pixels per image pixel */
 function zoomPct(){ return Math.round(vz*canvas.width/Math.max(1,TW)*100); }   /* image pixels shown per screen pixel, % */
-function updZoomUI(){ const z=$("zoomChip"); if (!z) return; const on=vz>1.001; z.hidden=!on; if (on) z.textContent=zoomPct()+"%  ·  Fit"; $("mZoomV").textContent = on ? zoomPct()+"%" : "Fit"; }
+function updZoomUI(){ const z=$("zoomChip"); if (!z) return; const on=vz>1.001; z.hidden=!on; if (on) z.textContent=zoomPct()+"%  ·  Fit"; $("mZoomV").textContent = on ? zoomPct()+"%" : "Fit";
+  $("btnZoom").textContent = on ? zoomPct()+"%" : "Fit"; $("btnZoom").title = on ? "Back to Fit (0)" : "Zoom to 100% (1)"; canvas.classList.toggle("zoomed",on); }
+/* zoom about a screen point (default: centre); z in "fit" units */
+function zoomAt(z,cx,cy){ const r=canvas.getBoundingClientRect(); if (cx==null){ cx=r.left+r.width/2; cy=r.top+r.height/2; }
+  const uv=imgUv(cx,cy); vz=z; clampView(); vcx=uv[0]-((cx-r.left)/r.width-0.5)/vz; vcy=uv[1]+((cy-r.top)/r.height-0.5)/vz; clampView(); updZoomUI(); schedule(); }
+const zoom100=()=>TW/Math.max(1,canvas.width);
+function zoomToggle(cx,cy){ if (vz>1.001){ vz=1; vcx=vcy=0.5; updZoomUI(); schedule(); } else zoomAt(zoom100(),cx,cy); }
 let renderClean=false, rafId=0;
 function schedule(){ editStamp++; if (rafId) return; rafId=requestAnimationFrame(()=>{ rafId=0; render(); }); }
 
@@ -1657,7 +1665,7 @@ view.addEventListener("dragover",ev=>{ ev.preventDefault(); view.classList.add("
 view.addEventListener("dragleave",ev=>{ if (ev.target===view) view.classList.remove("dragging"); });
 view.addEventListener("drop",ev=>{ ev.preventDefault(); view.classList.remove("dragging"); handleDropped(ev.dataTransfer.files); });
 document.addEventListener("dragover",ev=>ev.preventDefault()); document.addEventListener("drop",ev=>{ ev.preventDefault(); if(!view.contains(ev.target)) handleDropped(ev.dataTransfer.files); });
-$("btnZoom").addEventListener("click",()=>{ const full=view.classList.toggle("full"); view.classList.toggle("fit",!full); $("btnZoom").textContent=full?"100%":"Fit"; });
+$("btnZoom").addEventListener("click",()=>zoomToggle());
 $("btnCompare").addEventListener("click",()=>{ compare=!compare; if (compare && split<0) split=0.5; if (compare){ clickOrig=false; showOrig=false; } $("btnCompare").classList.toggle("on",compare); view.classList.toggle("cmp",compare); updateBadge(); schedule(); });
 function setSplit(ev){ const r=canvas.getBoundingClientRect(); split=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)); schedule(); }
 let dragging=false;
@@ -1674,7 +1682,7 @@ document.addEventListener("keydown",ev=>{
   const c={KeyR:1,KeyG:2,KeyB:3,KeyL:4}[ev.code]; if (c){ ev.preventDefault(); setChan(c); }
   else if (ev.code==="Escape"){ const m=document.querySelector(".modal.open"); if (m) m.classList.remove("open"); else if (viewChan) setChan(viewChan); }
 });
-canvas.addEventListener("pointerdown",ev=>{ if(!compare) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
+canvas.addEventListener("pointerdown",ev=>{ if(!compare || ev.button===1 || ev.altKey) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
 canvas.addEventListener("pointermove",ev=>{ if(dragging) setSplit(ev); });
 canvas.addEventListener("pointerup",()=>dragging=false);
 canvas.addEventListener("click",()=>{ if (held||gestured){ held=false; gestured=false; return; } if (compare) return; clickOrig=!clickOrig; showOrig=clickOrig; updateBadge(); schedule(); });
@@ -1811,7 +1819,7 @@ try{ syncProfile(); }catch(e){}
    drives the same desktop buttons, so there is one code path for state. */
 const phoneMQ = matchMedia("(max-width: 820px), (pointer: coarse) and (max-height: 520px)");
 function isPhone(){ return document.body.classList.contains("m"); }
-const HINT_DESK=$("hint").textContent, HINT_PHONE="Tap to flip · hold to peek at the original · pinch to zoom";
+const HINT_DESK="Click to flip original / film · hold Space to peek · scroll to zoom, drag to pan, double-click for 100% · R G B L channels", HINT_PHONE="Tap to flip · hold to peek at the original · pinch to zoom";
 function applyPhone(){
   const m=phoneMQ.matches; document.body.classList.toggle("m",m);
   document.body.classList.toggle("land", m && innerWidth>innerHeight);
@@ -1839,26 +1847,36 @@ function openMore(){ $("mMeta").textContent=$("meta").textContent; $("mVer").tex
 function closeMore(){ $("moreMenu").classList.remove("open"); $("mMore").setAttribute("aria-expanded","false"); }
 $("mMore").addEventListener("click",()=> $("moreMenu").classList.contains("open") ? closeMore() : openMore());
 $("moreMenu").addEventListener("click",ev=>{ if (ev.target.id==="moreMenu" || ev.target.closest(".chan")) closeMore(); });
-$("mZoom").addEventListener("click",()=>{ closeMore(); if (vz>1.001) vz=1; else vz=TW/Math.max(1,canvas.width); clampView(); updZoomUI(); schedule(); });
+$("mZoom").addEventListener("click",()=>{ closeMore(); zoomToggle(); });
 $("zoomChip").addEventListener("click",()=>{ vz=1; vcx=vcy=0.5; updZoomUI(); schedule(); });
 /* pinch to zoom, drag to pan when zoomed (two fingers also pan); runs before the tap / split handlers */
 let gestured=false; const ptrs=new Map(); let pinch=null, panS=null;
 function imgUv(x,y){ const r=canvas.getBoundingClientRect(); const sx=(x-r.left)/r.width, sy=(y-r.top)/r.height; return [vcx+(sx-0.5)/vz, vcy-(sy-0.5)/vz]; }
 function pinchState(){ const [a,b]=[...ptrs.values()]; return {d:Math.hypot(a.x-b.x,a.y-b.y)||1, mx:(a.x+b.x)/2, my:(a.y+b.y)/2}; }
-canvas.addEventListener("pointerdown",ev=>{ if (!isPhone()) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+canvas.addEventListener("pointerdown",ev=>{ if (ev.pointerType==="mouse" && ev.button!==0 && ev.button!==1) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   if (ptrs.size===2){ clearTimeout(holdT); dragging=false; gestured=true; const p=pinchState(); pinch={d0:p.d, z0:vz, uv:imgUv(p.mx,p.my)}; panS=null; }
   else if (ptrs.size===1){ gestured=false; pinch=null; panS={x:ev.clientX,y:ev.clientY,cx:vcx,cy:vcy,moved:false}; } },{capture:true});
-canvas.addEventListener("pointermove",ev=>{ if (!isPhone() || !ptrs.has(ev.pointerId)) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
+canvas.addEventListener("pointermove",ev=>{ if (!ptrs.has(ev.pointerId)) return; ptrs.set(ev.pointerId,{x:ev.clientX,y:ev.clientY});
   const r=canvas.getBoundingClientRect();
   if (pinch && ptrs.size>=2){ const p=pinchState(); vz=pinch.z0*p.d/pinch.d0; clampView();
     vcx=pinch.uv[0]-((p.mx-r.left)/r.width-0.5)/vz; vcy=pinch.uv[1]+((p.my-r.top)/r.height-0.5)/vz; clampView(); updZoomUI(); schedule(); return; }
-  if (panS && !compare && vz>1.001){ const dx=ev.clientX-panS.x, dy=ev.clientY-panS.y;
+  if (panS && (!compare || ev.buttons===4 || ev.altKey) && vz>1.001){ const dx=ev.clientX-panS.x, dy=ev.clientY-panS.y;   /* in before/after: pan with the middle button or Alt */
     if (!panS.moved && Math.hypot(dx,dy)>6){ panS.moved=true; gestured=true; clearTimeout(holdT); }
     if (panS.moved){ vcx=panS.cx-dx/(r.width*vz); vcy=panS.cy+dy/(r.height*vz); clampView(); schedule(); } } },{capture:true});
 function ptrEnd(ev){ ptrs.delete(ev.pointerId); if (ptrs.size<2) pinch=null; if (!ptrs.size) panS=null; }
 canvas.addEventListener("pointerup",ptrEnd,{capture:true}); canvas.addEventListener("pointercancel",ptrEnd,{capture:true});
 canvas.addEventListener("gesturestart",ev=>ev.preventDefault());
-new ResizeObserver(()=>{ if (isPhone()) schedule(); }).observe($("view"));
+/* desktop: wheel / trackpad pinch zooms around the cursor, double-click toggles Fit / 100% there */
+$("view").addEventListener("wheel",ev=>{ if (!screenView()) return; ev.preventDefault();
+  const d=ev.deltaY*(ev.deltaMode===1?16:ev.deltaMode===2?400:1), k=Math.exp(-d*(ev.ctrlKey?0.01:0.002)), r=canvas.getBoundingClientRect();
+  zoomAt(vz*k, Math.min(r.right,Math.max(r.left,ev.clientX)), Math.min(r.bottom,Math.max(r.top,ev.clientY))); },{passive:false});
+canvas.addEventListener("dblclick",ev=>{ if (compare) return; zoomToggle(ev.clientX,ev.clientY); });   /* its two clicks flip twice: back where it was */
+document.addEventListener("keydown",ev=>{ if (ev.ctrlKey||ev.metaKey||ev.altKey||document.querySelector(".modal.open")) return; if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.type!=="range") return;
+  if (ev.key==="0"){ ev.preventDefault(); vz=1; vcx=vcy=0.5; updZoomUI(); schedule(); }
+  else if (ev.key==="1"){ ev.preventDefault(); zoomAt(zoom100()); }
+  else if (ev.key==="+"||ev.key==="="){ ev.preventDefault(); zoomAt(vz*1.25); }
+  else if (ev.key==="-"||ev.key==="_"){ ev.preventDefault(); zoomAt(vz/1.25); } });
+new ResizeObserver(()=>schedule()).observe($("view"));
 $("mGuide").addEventListener("click",()=>{ closeMore(); openGuide(); });
 $("mAbout").addEventListener("click",()=>{ closeMore(); $("ver").click(); });
 $("mClear").addEventListener("click",()=>{ const armed=$("btnClear").classList.contains("danger"); $("btnClear").click(); if (armed) closeMore(); });
