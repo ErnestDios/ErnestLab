@@ -486,7 +486,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
 
 <script>
 "use strict";
-const APP_VERSION="0.6.0";
+const APP_VERSION="0.6.1";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;
@@ -575,7 +575,7 @@ const curveCache={key:"",tex:null,lo:1,hi:1};
 function curveTexFor(pts){ const key=JSON.stringify(pts); if (curveCache.key===key && curveCache.tex) return curveCache;
   const f=mcurve(pts), N=512, data=new Float32Array(N); for (let i=0;i<N;i++) data[i]=f(-16+26*i/(N-1));
   if (!curveCache.tex){ curveCache.tex=gl.createTexture(); }
-  gl.bindTexture(gl.TEXTURE_2D,curveCache.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT,4);
+  bindTex(6,curveCache.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT,4);
   gl.texImage2D(gl.TEXTURE_2D,0,gl.R16F,N,1,0,gl.RED,gl.FLOAT,data);
   for (const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D,k,v);
   curveCache.key=key; curveCache.lo=f.lo; curveCache.hi=f.hi; return curveCache; }

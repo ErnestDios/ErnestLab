@@ -2,7 +2,7 @@
    The page: network first (so a new release shows up as soon as you're online), cache when offline.
    Icons and manifest: cache first. The RAW decoder (./raw/, ~1.5 MB) is cached the first time a RAW file is opened,
    so RAW works offline after that. Images you open never pass through here: they're read locally. */
-const CACHE = "ernestlab-0.6.0";
+const CACHE = "ernestlab-0.6.1";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];
 
 self.addEventListener("install", e => {
