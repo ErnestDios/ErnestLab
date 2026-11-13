@@ -831,7 +831,7 @@ function buildRack(){
       for (const k in BW_FILMS){ const o=document.createElement("option"); o.value=k; o.textContent=BW_FILMS[k].name; fs.appendChild(o); }
       { const o=document.createElement("option"); o.value=""; o.textContent="Custom mix"; fs.appendChild(o); }
       for (const k in BW_FILTERS){ const o=document.createElement("option"); o.value=k; o.textContent=BW_FILTERS[k].name; ft.appendChild(o); }
-      const pick=()=>{ const film=fs.value||"pan"; Object.assign(base,bwW(film,film==="ir"?"none":(ft.value||"none"))); if (!(base.bw>0)) base.bw=1; syncUI(); schedule(); };
+      const pick=()=>{ const film=fs.value||"pan"; Object.assign(base,bwW(film,film==="ir"?"none":(ft.value||"none"))); if (!(base.bw>0)) base.bw=1; bypass.bw=false; syncUI(); schedule(); };
       fs.addEventListener("change",pick); ft.addEventListener("change",pick);
       box.appendChild(r1); box.appendChild(r2); box.appendChild(info);
     }
@@ -847,7 +847,7 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       ctlEls[k]={inp,out,row,p};
@@ -876,7 +876,7 @@ function bwSync(){
 }
 function syncUI(){
   for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); }
-  bwSync();
+  bwSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
 }
@@ -896,6 +896,7 @@ function applyPreset(name, isUser){
   presetVals = Object.assign({}, DEF, src||{});
   gsName=""; const gss=document.getElementById("grainStock"); if (gss) gss.value="";
   base = Object.assign({}, presetVals);
+  if (base.bw>0) bypass.bw=false;   /* a B&W look switches B&W on */
   syncUI(); schedule();
   $("btnDelLook").disabled = !isUser;
 }
@@ -913,11 +914,16 @@ function effective(){
 function makeSwitch(id, sum, det){
   const b=document.createElement("button"); b.className="byp"; b.setAttribute("role","switch"); b.setAttribute("aria-checked","true");
   b.title="Turn this section off to compare (also off in exports)"; b.setAttribute("aria-label","Turn section on or off");
-  b.addEventListener("click",ev=>{ ev.preventDefault(); ev.stopPropagation(); setBypass(id,!bypass[id]); });
+  b.addEventListener("click",ev=>{ ev.preventDefault(); ev.stopPropagation(); if (id==="bw") bwToggle(); else setBypass(id,!bypass[id]); });
   sum.classList.add("hasbyp"); sum.appendChild(b); bypassEls[id]={b,det};
 }
 const bypassEls={};
-function setBypass(id,off){ bypass[id]=!!off; const x=bypassEls[id]; if (x){ x.b.setAttribute("aria-checked", off?"false":"true"); x.det.classList.toggle("bypassed",!!off); } schedule(); }
+function setBypass(id,off){ bypass[id]=!!off; const x=bypassEls[id]; if (x){ x.b.setAttribute("aria-checked", off?"false":"true"); x.det.classList.toggle("bypassed",!!off); } bwSwitchSync(); schedule(); }
+/* Black & white's switch means "B&W on": off when the amount is 0 or the section is bypassed. Turning it on from 0
+   sets the amount to 1 (with whatever film and filter are set); turning it off keeps the settings for next time. */
+function bwSwitchSync(){ const x=bypassEls.bw; if (!x) return; const on=!bypass.bw && base.bw>0; x.b.setAttribute("aria-checked",on?"true":"false"); x.det.classList.toggle("bypassed",!on);
+  x.b.title=on?"Black & white is on (also in exports). Click for colour.":"Click to turn black & white on"; }
+function bwToggle(){ const on=!bypass.bw && base.bw>0; if (on){ setBypass("bw",true); return; } if (!(base.bw>0)) base.bw=1; bypass.bw=false; syncUI(); setBypass("bw",false); }
 
 /* ---------------- WebGL ---------------- */
 const canvas=$("gl");
