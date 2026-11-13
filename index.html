@@ -37,6 +37,8 @@ header h1{font-size:15px;font-weight:600;letter-spacing:.08em;text-transform:upp
 header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.profbox{display:grid;gap:8px;padding:6px 0 4px}
+.curvewrap canvas{width:100%;height:190px;display:block;border-radius:6px;background:#12100e;border:1px solid var(--line);touch-action:none;cursor:crosshair}
 header #meta{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 header > .spacer{display:none}   /* #meta takes the free space and truncates long RAW info instead of wrapping the bar */
 .spacer{flex:1}
@@ -227,6 +229,7 @@ body.m .byp[aria-checked="true"]::after{left:21px}
 body.m .seg button{padding:11px 8px;font-size:14px}
 body.m .grainstock{grid-template-columns:112px 1fr;font-size:14px}
 body.m .devhint{padding:2px 0}
+body.m .curvewrap canvas{height:210px}
 body.m .strength{font-size:14px}
 body.m .row.wrap .btn{flex:1 1 auto}
 body.m .exportbox .row .btn{flex:1 1 0}
@@ -297,6 +300,14 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <div class="devhint" id="devHint" title="Based on each platform's published image specs as of Nov 2026; platforms change these often."></div>
     </div>
     <div class="ctrls" id="devCtrls"></div>
+    <div class="profbox" id="profBox">
+      <div class="grainstock"><label for="devProf">Profile</label><select id="devProf"></select></div>
+      <div class="curvewrap"><canvas id="curveCv" aria-label="Tone curve in stops around mid grey. Drag a point; click the curve to add one; double-click a point to remove it."></canvas></div>
+      <div class="note" id="curveNote">Tone curve in stops around mid grey (input across, output up), over this photo's histogram. Drag a point, click or tap the curve to add one, double-click or double-tap a point to remove it. Applied before Shadows / Midtones / Highlights, on luminance, so colours keep their hue.</div>
+      <div class="row"><input type="text" id="profName" placeholder="Name this profile…"><button class="btn" id="btnSaveProf">Save profile</button></div>
+      <div class="row wrap"><button class="btn" id="btnDelProf" disabled>Delete</button><button class="btn" id="btnLoadProf" title="Load a profile .json (you can also drop it on the image)">Load…</button><button class="btn" id="btnExportProf">Export</button><button class="btn" id="btnCurveReset">Reset curve</button></div>
+      <input type="file" id="profIn" accept=".json,application/json" multiple hidden>
+    </div>
     <div class="row devrow"><button class="btn" id="btnDevReset">Reset</button><button class="btn" id="btnDevAll" title="Copy this image's development to every still in the strip">Apply to all stills</button></div>
     <div class="note">Prepares the photo before the film stock. The format crops the frame before the lens, so vignette, edge softness and aberration follow the new frame, as if shot natively on that format. Tones are adjusted in linear light, in stops around mid grey, without shifting colour. Each still keeps its own development; changing the film look doesn't touch it.</div>
   </details>
@@ -368,7 +379,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <h3>1 · Quick start</h3>
     <ul>
       <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG, WebP and <b>camera RAW</b> (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF and more).</li>
-      <li><b>Development</b> prepares the photo first: format / crop, then shadows, midtones and highlights.</li>
+      <li><b>Development</b> prepares the photo first: format / crop, the <b>profile</b> (tone curve), then shadows, midtones and highlights.</li>
       <li><b>Film stock</b> picks the look; <b>Look strength</b> blends it in.</li>
       <li>Fine-tune any section, then <b>Export this still</b> or <b>Export all</b>.</li>
     </ul>
@@ -377,8 +388,17 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
     <ul>
       <li>RAW files are developed in your browser with <b>LibRaw</b>: camera white balance, full sensor range, straight into Ernest Lab's linear working space, so highlights roll off like film instead of clipping like a JPEG.</li>
       <li><b>Base exposure</b> is matched to the camera's own preview in the file, so a RAW opens as bright as the camera saw it (shown next to the file name). Adjust with Exposure, or per image with Development.</li>
+      <li><b>Profile → Camera-like</b> (the default for RAW) gives it the contrast of the camera's own JPEG, measured from the preview inside the file, while keeping the RAW's extra highlight detail. <b>Flat</b> leaves the linear data untouched, for building contrast yourself.</li>
       <li>Opening a RAW takes a few seconds (longer on phones). Only the still you're looking at is held in memory; switching back to a RAW develops it again.</li>
       <li>The decoder (about 1.5 MB) loads the first time you open a RAW, then also works offline.</li>
+    </ul>
+
+    <h3>Profiles &amp; the tone curve</h3>
+    <ul>
+      <li>The curve in Development works in <b>stops around mid grey</b> (0 = mid grey, +1 = twice as bright), over the photo's histogram. Drag a point; click or tap the curve to add one; double-click or double-tap a point to remove it.</li>
+      <li>It changes brightness only (luminance), so colours keep their hue, and it runs before Shadows / Midtones / Highlights and before the film stock.</li>
+      <li><b>Save profile</b> keeps a curve in this browser under My profiles; <b>Export</b> / <b>Load…</b> move it between devices as <code>.json</code> (you can also drop it on the image). Each still keeps its own profile; <b>Apply to all stills</b> copies it.</li>
+      <li>JPEGs already carry the camera's curve, so their default is <b>As shot</b> (no change).</li>
     </ul>
 
     <h3>2 · Batch: one look, individual development</h3>
@@ -514,8 +534,8 @@ function platformHint(W,H){ const r=W/H, fits=PLATFORM_FITS.filter(p=>p[1](r)).m
   return fits.length ? {ok:true,text:fits.join(" · ")+small} : {ok:false,text:"Social feeds will crop or letterbox this ratio"}; }
 const DEV_PARAMS=[["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
   ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
-const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0});
-function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh; }
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null});
+function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh||(d.profile&&d.profile!=="auto"); }
 /* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
    Returns UV rect (top-left origin) and the output size in pixels. */
 function cropRect(d,w,h){
@@ -527,6 +547,57 @@ function cropRect(d,w,h){
   const x=(1-cw)*(d.panX+1)/2, y=(1-ch)*(1-d.panY)/2;
   return {x,y,w:cw,h:ch,W:Math.max(1,Math.round(cw*w)),H:Math.max(1,Math.round(ch*h))};
 }
+
+/* ---------------- Profiles & tone curve (v0.6) ----------------
+   A profile is a tone curve in stops around mid grey (x = scene stops in, y = stops out), applied on luminance
+   before the tone sliders. "auto": RAW → camera-like curve fitted to the file's own JPEG preview; JPEG → none
+   (the camera's curve is already in it). "flat": none. "custom": the points in dev.curve. */
+function mcurve(pts){   /* monotone cubic (Fritsch–Carlson) through sorted points, linear outside */
+  const n=pts.length, xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]), d=[], m=new Array(n);
+  if (n===1) return Object.assign(x=>ys[0]+(x-xs[0]),{lo:1,hi:1});
+  for (let i=0;i<n-1;i++) d[i]=(ys[i+1]-ys[i])/(xs[i+1]-xs[i]);
+  m[0]=d[0]; m[n-1]=d[n-2]; for (let i=1;i<n-1;i++) m[i]=d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2;
+  for (let i=0;i<n-1;i++){ if (d[i]===0){ m[i]=m[i+1]=0; continue; } const a=m[i]/d[i], b=m[i+1]/d[i], h=a*a+b*b; if (h>9){ const t=3/Math.sqrt(h); m[i]=t*a*d[i]; m[i+1]=t*b*d[i]; } }
+  const f=x=>{ if (x<=xs[0]) return ys[0]+(x-xs[0])*m[0]; if (x>=xs[n-1]) return ys[n-1]+(x-xs[n-1])*m[n-1];
+    let i=0; while (x>xs[i+1]) i++; const h=xs[i+1]-xs[i], t=(x-xs[i])/h, t2=t*t, t3=t2*t;
+    return (2*t3-3*t2+1)*ys[i]+(t3-2*t2+t)*h*m[i]+(-2*t3+3*t2)*ys[i+1]+(t3-t2)*h*m[i+1]; };
+  f.lo=Math.max(0,m[0]); f.hi=Math.max(0,m[n-1]); return f;
+}
+/* generic camera-like curve, used when a RAW has no preview to calibrate against (rounded from typical camera JPEG curves) */
+const CAM_GENERIC=[[-8,-8.6],[-5,-5.5],[-3,-3.25],[-1.5,-1.6],[0,0],[1,1.15],[2,2.05],[3,2.6],[4.5,3.15],[7,3.8]];
+function effCurve(it,d){ if (!it) return null; const p=(d&&d.profile)||"auto";
+  if (p==="custom" && d.curve && d.curve.length>=2) return d.curve;
+  if (p==="auto" && it.raw) return it.camCurve||CAM_GENERIC;
+  return null; }
+const curveCache={key:"",tex:null,lo:1,hi:1};
+function curveTexFor(pts){ const key=JSON.stringify(pts); if (curveCache.key===key && curveCache.tex) return curveCache;
+  const f=mcurve(pts), N=512, data=new Float32Array(N); for (let i=0;i<N;i++) data[i]=f(-16+26*i/(N-1));
+  if (!curveCache.tex){ curveCache.tex=gl.createTexture(); }
+  gl.bindTexture(gl.TEXTURE_2D,curveCache.tex); gl.pixelStorei(gl.UNPACK_ALIGNMENT,4);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.R16F,N,1,0,gl.RED,gl.FLOAT,data);
+  for (const [k,v] of [[gl.TEXTURE_MIN_FILTER,gl.LINEAR],[gl.TEXTURE_MAG_FILTER,gl.LINEAR],[gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE],[gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D,k,v);
+  curveCache.key=key; curveCache.lo=f.lo; curveCache.hi=f.hi; return curveCache; }
+/* camera-like fit: match the tone distribution (quantiles) of the RAW to the camera's preview, where the preview
+   is neither crushed nor clipped; below that slope 1, above it a soft shoulder so RAW highlight detail survives. */
+const QN=199, qs=n=>{ const a=n.slice().sort((x,y)=>x-y), o=new Float32Array(QN); for (let i=0;i<QN;i++) o[i]=a[Math.min(a.length-1,Math.floor((i+0.5)/QN*a.length))]; return o; };
+function fitCamCurve(rawQ,refQ){
+  const pairs=[]; for (let i=0;i<QN;i++){ const r=rawQ[i], j=refQ[i]; if (r>1e-6 && j>0.003 && j<0.9) pairs.push([Math.log2(r/0.18),Math.log2(j/0.18)]); }
+  if (pairs.length<20) return null;
+  const pts=[]; for (let k=-8;k<=4;k+=1){ const near=pairs.filter(p=>Math.abs(p[0]-k)<=0.5).map(p=>p[1]).sort((a,b)=>a-b); if (near.length>=2) pts.push([k,near[near.length>>1]]); }
+  if (pts.length<3) return null;
+  for (let i=1;i<pts.length;i++) pts[i][1]=Math.max(pts[i][1],pts[i-1][1]+0.05);   /* strictly rising */
+  const lo=pts[0], hi=pts[pts.length-1];
+  pts.unshift([lo[0]-3,lo[1]-3]);                                              /* shadows: slope 1 */
+  let x=hi[0], y=hi[1], sl=Math.min(1,Math.max(0.5,(hi[1]-pts[pts.length-2][1])/(hi[0]-pts[pts.length-2][0])));
+  for (let k=0;k<3;k++){ sl*=0.65; x+=1.5; y+=1.5*sl; pts.push([x,+y.toFixed(3)]); }   /* shoulder */
+  return pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3)]);
+}
+/* luminance histogram in stops, for the curve editor */
+const HX0=-8, HX1=5, HB=104;
+function histFromLum(get,n){ const h=new Float32Array(HB); for (let i=0;i<n;i++){ const y=get(i); if (!(y>0)) { h[0]++; continue; } const b=Math.floor((Math.log2(y/0.18)-HX0)/(HX1-HX0)*HB); h[Math.min(HB-1,Math.max(0,b))]++; } return h; }
+function histFromBitmap(bmp){ try{ const sc=Math.min(1,256/Math.max(bmp.width,bmp.height)), w=Math.max(1,Math.round(bmp.width*sc)), h=Math.max(1,Math.round(bmp.height*sc));
+  const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d"); x.drawImage(bmp,0,0,w,h); const d=x.getImageData(0,0,w,h).data;
+  return histFromLum(i=>0.2126*srgbDec(d[i*4])+0.7152*srgbDec(d[i*4+1])+0.0722*srgbDec(d[i*4+2]), w*h); }catch(e){ return null; } }
 const devEls={};
 function curDev(){ const it=items[cur]; return (it&&it.dev)||DEV0; }
 function setDev(k,v){ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{[k]:v}); syncDev(); schedule(); }
@@ -539,7 +610,7 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
   document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && !social && (b.dataset.o==="port")===port); b.disabled=!cropped || social || d.fmt==="1:1"; });
   const c=cropRect(d,srcW,srcH), hnt=platformHint(c.W,c.H), he=$("devHint");
   he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
-  $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); }
+  $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
     + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "");
@@ -560,6 +631,7 @@ function buildDevelop(){
     const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
     devEls[k]={inp,out,row}; (p[7]==="frame"?$("devFrame"):box).appendChild(row);
   }
+  $("devCtrls").insertBefore($("profBox"), devEls.dShadows.row);   /* pipeline order: profile curve, then the tone sliders */
   $("btnDevReset").addEventListener("click",()=>{ const it=items[cur]; if(it){ it.dev=Object.assign({},DEV0); syncDev(); schedule(); } });
   $("btnDevAll").addEventListener("click",()=>{ const d=Object.assign({},curDev()); items.forEach(it=>it.dev=Object.assign({},d)); toast(`Development applied to ${items.length} still${items.length===1?"":"s"}.`); });
 }
@@ -800,12 +872,18 @@ const float GRAIN_K=1.0;
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
+/* Profile (v0.6): a tone curve in stops around mid grey, stored as a 512-sample LUT over -16..+10 stops,
+   extended linearly outside with the curve's end slopes. Applied on luminance first, then the tone sliders. */
+uniform sampler2D uCurve; uniform int uCurveOn; uniform vec2 uCurveSlope;
+float profileCurve(float s){ float c=clamp(s,-16.0,10.0); float y=texture(uCurve,vec2(((c+16.0)/26.0*511.0+0.5)/512.0,0.5)).r;
+  return y+(s-c)*(s<c?uCurveSlope.x:uCurveSlope.y); }
 /* Development (source prep, per image): shadows / midtones / highlights in stops around mid grey, on
    luminance so hue is kept. Three operators applied in sequence, each monotonic, so tones never invert. */
 float ssd(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.0,1.0); return t*t*(3.0-2.0*t); }
 vec3 develop(vec3 l){
-  if (uDev==vec3(0.0)) return l;
+  if (uDev==vec3(0.0) && uCurveOn==0) return l;
   float y=max(dot(l,W),1e-7), st=log2(y/0.18), x=st;
+  if (uCurveOn==1) x=profileCurve(x);
   x += uDev.y*(1.0-ssd(0.0,3.0,abs(x)));     /* midtones */
   x += uDev.x*(1.0-ssd(-5.0,-0.5,x));        /* shadows */
   x += uDev.z*ssd(0.5,3.5,x);                /* highlights */
@@ -1000,7 +1078,8 @@ const dummyLut=makeLutTex(2,new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0, 0,0,1,
 
 function hueRGB(h){ h=((h%360)+360)%360/60; const x=1-Math.abs(h%2-1); const c=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; return c; }
 
-function setSceneUniforms(u,e,dv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh); }
+function setSceneUniforms(u,e,dv,crv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh);
+  if (crv){ const c=curveTexFor(crv); bindTex(6,c.tex); gl.uniform1i(u.uCurve,6); gl.uniform2f(u.uCurveSlope,c.lo,c.hi); gl.uniform1i(u.uCurveOn,1); } else gl.uniform1i(u.uCurveOn,0); }
 function setGradeUniforms(u,e){ setSceneUniforms(u,e); setLookUniforms(u,e); }
 function setLookUniforms(u,e){
   gl.uniform1f(u.uCon,e.con); gl.uniform1f(u.uRoll,e.roll); gl.uniform1f(u.uFade,e.fade); gl.uniform1f(u.uCrush,e.crush);
@@ -1057,7 +1136,8 @@ async function rawProbe(f){
         const rot=(it.flip===5||it.flip===6), c=document.createElement("canvas"); c.width=rot?thh:tw; c.height=rot?tw:thh; const x=c.getContext("2d");
         x.translate(c.width/2,c.height/2); x.rotate(it.flip===3?Math.PI: it.flip===6?Math.PI/2: it.flip===5?-Math.PI/2: 0); x.drawImage(bmp,-tw/2,-thh/2,tw,thh); bmp.close&&bmp.close();
         const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data, n=Math.min(20000,d.length>>2), step=Math.max(1,Math.floor((d.length>>2)/n));
-        it.refLum=medianLum(i=>{ const k=i*step*4; return 0.2126*srgbDec(d[k])+0.7152*srgbDec(d[k+1])+0.0722*srgbDec(d[k+2]); }, n);
+        const lum=new Float32Array(n); for (let i=0;i<n;i++){ const k=i*step*4; lum[i]=0.2126*srgbDec(d[k])+0.7152*srgbDec(d[k+1])+0.0722*srgbDec(d[k+2]); }
+        it.refQ=qs(lum); it.refLum=it.refQ[QN>>1];
         it.url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)));
       }
       return it;
@@ -1078,6 +1158,11 @@ async function rawDecode(it){
         const med=medianLum(i=>{ const k=i*step*3; return (0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])/65535; }, n);
         it.baseEV = (it.refLum && med>0) ? Math.min(4,Math.max(-2,Math.log2(it.refLum/med))) : 1;
         it.baseAuto = !!(it.refLum && med>0);
+      }
+      if (!it.hist || it.camCurve===undefined){
+        const n=Math.min(60000,W*H), step=Math.max(1,Math.floor(W*H/n)), k2=Math.pow(2,it.baseEV)/65535, lum=new Float32Array(n);
+        for (let i=0;i<n;i++){ const k=i*step*3; lum[i]=(0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])*k2; }
+        it.hist=histFromLum(i=>lum[i],n); it.camCurve = it.refQ ? fitCamCurve(qs(lum),it.refQ) : null;
       }
       const g=Math.pow(2,it.baseEV)/65535, lut=new Uint16Array(65536); for (let v=0;v<65536;v++) lut[v]=f2h(v*g);
       const out=new Uint16Array(W*H*4), ONE=0x3c00;
@@ -1117,7 +1202,7 @@ function render(){
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev()); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:effCurve(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
   const st=1+e.halR;
@@ -1375,7 +1460,8 @@ async function loadLookFiles(files){
   let last=null, ok=0, bad=[];
   for (const f of files){
     try{
-      const j=migrateLook(JSON.parse(await f.text())); const v=(j&&typeof j.values==="object"&&j.values)||j;
+      const parsed=JSON.parse(await f.text()); if (parsed && parsed.type==="profile"){ const n=importProfile(parsed,f.name); if (n){ toast(`Loaded profile "${n}" and applied it to this still.`); continue; } }
+      const j=migrateLook(parsed); const v=(j&&typeof j.values==="object"&&j.values)||j;
       const vals={}; let hits=0;
       for (const k in DEF) if (typeof v[k]==="number" && isFinite(v[k])){ vals[k]=v[k]; hits++; }
       if (!hits) throw new Error("no values");
@@ -1521,6 +1607,92 @@ $("btnCloseGuide").addEventListener("click",()=>$("guideModal").classList.remove
 $("guideModal").addEventListener("click",ev=>{ if (ev.target.id==="guideModal") ev.currentTarget.classList.remove("open"); });
 (function firstVisit(){ let seen=false; try{ seen=!!localStorage.getItem("filmlab.guideSeen"); }catch(e){}
   if (!seen) setTimeout(()=>toast(isPhone()?"New here? Tap ⋯ → Guide & install for a quick tour.":"New here? Press ? or the ? next to the title for a quick guide.",6000),1200); })();
+
+
+/* ---------------- Profile UI & curve editor ---------------- */
+let userProfiles={}; try{ userProfiles=JSON.parse(localStorage.getItem("filmlab.profiles")||"{}"); }catch(e){ userProfiles={}; }
+const saveUserProfiles=()=>{ try{ localStorage.setItem("filmlab.profiles",JSON.stringify(userProfiles)); }catch(e){} };
+const CX0=-8, CX1=5, IDENT=[[-6,-6],[0,0],[4,4]];
+const cleanPts=a=>{ if (!Array.isArray(a)) return null; let p=a.filter(q=>Array.isArray(q)&&q.length>=2&&isFinite(q[0])&&isFinite(q[1])).map(q=>[+(+q[0]).toFixed(3),+(+q[1]).toFixed(3)]).sort((x,y)=>x[0]-y[0]);
+  p=p.filter((q,i)=>i===0||q[0]-p[i-1][0]>=0.05); for (let i=1;i<p.length;i++) p[i][1]=Math.max(p[i][1],p[i-1][1]); return p.length>=2?p:null; };
+function editPts(){ const it=items[cur], d=curDev(); const c=effCurve(it,d); return (c||IDENT).map(q=>q.slice()); }
+function setCurve(pts,name){ const it=items[cur]; if (!it) return; it.dev=Object.assign({},curDev(),{profile:"custom",curve:pts,curveName:name||null}); syncDev(); schedule(); }
+function buildProfSelect(){
+  const sel=$("devProf"), it=items[cur], raw=!!(it&&it.raw); sel.innerHTML="";
+  const add=(v,t,parent)=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; (parent||sel).appendChild(o); };
+  add("auto", raw ? (it.camCurve?"Camera-like (matched)":"Camera-like (generic)") : "As shot");
+  if (raw) add("flat","Flat (linear)");
+  add("custom","Custom curve");
+  const names=Object.keys(userProfiles).sort(); if (names.length){ const g=document.createElement("optgroup"); g.label="My profiles"; names.forEach(n=>add("p:"+n,n,g)); sel.appendChild(g); }
+}
+function syncProfile(){
+  buildProfSelect(); const d=curDev(), sel=$("devProf"); let v=d.profile||"auto";
+  if (v==="custom" && d.curveName && userProfiles[d.curveName] && JSON.stringify(userProfiles[d.curveName])===JSON.stringify(d.curve)) v="p:"+d.curveName;
+  if (v==="flat" && !(items[cur]&&items[cur].raw)) v="auto";
+  sel.value=v; $("btnDelProf").disabled=!v.startsWith("p:"); if (d.curveName && document.activeElement!==$("profName")) $("profName").value=d.curveName;
+  drawCurve();
+}
+$("devProf").addEventListener("change",()=>{ const v=$("devProf").value, it=items[cur]; if (!it) return;
+  if (v.startsWith("p:")){ const n=v.slice(2); setCurve(userProfiles[n].map(q=>q.slice()),n); return; }
+  if (v==="custom"){ setCurve(editPts()); return; }
+  it.dev=Object.assign({},curDev(),{profile:v,curve:null,curveName:null}); syncDev(); schedule(); });
+$("btnCurveReset").addEventListener("click",()=>{ const it=items[cur]; if (!it) return; it.dev=Object.assign({},curDev(),{profile:"auto",curve:null,curveName:null}); syncDev(); schedule(); });
+$("btnSaveProf").addEventListener("click",()=>{ const it=items[cur]; if (!it) return; const c=effCurve(it,curDev());
+  if (!c){ toast("This profile has no curve to save. Shape the curve first (drag on it)."); return; }
+  const n=($("profName").value||"").trim()||curDev().curveName||"My profile"; userProfiles[n]=c.map(q=>q.slice()); saveUserProfiles(); setCurve(c.map(q=>q.slice()),n); toast(`Saved profile "${n}".`); });
+$("btnDelProf").addEventListener("click",()=>{ const v=$("devProf").value; if (!v.startsWith("p:")) return; const n=v.slice(2); delete userProfiles[n]; saveUserProfiles();
+  const it=items[cur]; if (it && it.dev && it.dev.curveName===n) it.dev=Object.assign({},it.dev,{curveName:null}); syncDev(); toast(`Deleted profile "${n}" (stills that use it keep their curve).`); });
+$("btnExportProf").addEventListener("click",()=>{ const it=items[cur]; if (!it) return; const c=effCurve(it,curDev());
+  if (!c){ toast("Nothing to export: this profile is a straight line."); return; }
+  const n=curDev().curveName||(curDev().profile==="auto"?(it.cam?it.cam+" camera-like":"Camera-like"):"Custom curve");
+  const j={app:"Ernest Lab", appVersion:APP_VERSION, type:"profile", format:1, name:n, space:"tone curve in stops around mid grey (0.18), scene-linear luminance; x = in, y = out", points:c};
+  offer(`ErnestLab_profile_${n.replace(/[^\w\-]+/g,"_")}.json`, new Blob([JSON.stringify(j,null,2)],{type:"application/json"})); });
+function importProfile(j,fname){ const pts=cleanPts(j&&j.points); if (!pts) return false;
+  const n=String(j.name||fname.replace(/\.json$/i,"")).slice(0,60)||"Profile"; userProfiles[n]=pts; saveUserProfiles(); if (items[cur]) setCurve(pts.map(q=>q.slice()),n); else syncProfile(); return n; }
+async function loadProfileFiles(files){ let last=null, bad=[];
+  for (const f of files){ try{ const n=importProfile(JSON.parse(await f.text()),f.name); if (n) last=n; else bad.push(f.name); }catch(e){ bad.push(f.name); } }
+  if (last) toast(`Loaded profile "${last}" into My profiles and applied it to this still.`);
+  if (bad.length) toast(`${bad.join(", ")} ${bad.length===1?"is":"are"} not an Ernest Lab profile.`,4000); }
+$("btnLoadProf").addEventListener("click",()=>$("profIn").click());
+$("profIn").addEventListener("change",ev=>{ loadProfileFiles([...ev.target.files]); ev.target.value=""; });
+
+const cv=$("curveCv"), cvx=cv.getContext("2d");
+function cvSize(){ const r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1; const w=Math.max(1,Math.round(r.width*dpr)), h=Math.max(1,Math.round(r.height*dpr)); if (cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; } return {w,h,dpr,r}; }
+const toPx=(x,y,w,h)=>[(x-CX0)/(CX1-CX0)*w, h-(y-CX0)/(CX1-CX0)*h];
+function drawCurve(){
+  if (!cv.offsetParent) return; const {w,h,dpr}=cvSize(), g=cvx, it=items[cur], d=curDev(); g.clearRect(0,0,w,h);
+  if (it && !it.hist && it.bmp) it.hist=histFromBitmap(it.bmp);
+  if (it && it.hist){ const hh=it.hist; let mx=0; for (const v of hh) mx=Math.max(mx,v); g.fillStyle="rgba(240,230,215,.10)"; g.beginPath(); g.moveTo(0,h);
+    for (let i=0;i<HB;i++){ const x0=(HX0+(HX1-HX0)*i/HB-CX0)/(CX1-CX0)*w, x1=(HX0+(HX1-HX0)*(i+1)/HB-CX0)/(CX1-CX0)*w, y=h-Math.sqrt(hh[i]/(mx||1))*h*0.85; g.lineTo(x0,y); g.lineTo(x1,y); } g.lineTo(w,h); g.fill(); }
+  g.lineWidth=1*dpr; for (let k=Math.ceil(CX0);k<=CX1;k++){ const [px,py]=toPx(k,k,w,h); g.strokeStyle=k===0?"rgba(232,154,60,.35)":"rgba(255,255,255,.06)"; g.beginPath(); g.moveTo(px,0); g.lineTo(px,h); g.moveTo(0,py); g.lineTo(w,py); g.stroke(); }
+  g.fillStyle="rgba(240,230,215,.35)"; g.font=`${10*dpr}px ${getComputedStyle(document.body).getPropertyValue("--font-mono")||"monospace"}`; g.textBaseline="bottom";
+  for (const k of [-6,-4,-2,0,2,4]){ const [px]=toPx(k,0,w,h); g.fillText((k>0?"+":"")+k,px+3*dpr,h-3*dpr); }
+  g.setLineDash([4*dpr,4*dpr]); g.strokeStyle="rgba(255,255,255,.22)"; g.beginPath(); g.moveTo(...toPx(CX0,CX0,w,h)); g.lineTo(...toPx(CX1,CX1,w,h)); g.stroke();
+  const ref = it && it.raw && d.profile==="custom" ? (it.camCurve||CAM_GENERIC) : null;
+  const plot=(pts,style,lw)=>{ const f=mcurve(pts); g.strokeStyle=style; g.lineWidth=lw*dpr; g.beginPath(); for (let i=0;i<=200;i++){ const x=CX0+(CX1-CX0)*i/200, [px,py]=toPx(x,f(x),w,h); i?g.lineTo(px,py):g.moveTo(px,py); } g.stroke(); };
+  if (ref) plot(ref,"rgba(232,154,60,.35)",1.2);
+  g.setLineDash([]); const c=effCurve(it,d);
+  if (c){ plot(c,bypass.dev?"rgba(232,154,60,.35)":"#e89a3c",2); const custom=d.profile==="custom";
+    for (const q of c){ if (q[0]<CX0||q[0]>CX1) continue; const [px,py]=toPx(q[0],q[1],w,h); g.beginPath(); g.arc(px,py,(custom?5:4)*dpr,0,Math.PI*2);
+      if (custom){ g.fillStyle="#e89a3c"; g.fill(); } else { g.strokeStyle="#e89a3c"; g.lineWidth=1.5*dpr; g.stroke(); } } }
+  else { g.strokeStyle="rgba(232,154,60,.8)"; g.lineWidth=1.5*dpr; g.beginPath(); g.moveTo(...toPx(CX0,CX0,w,h)); g.lineTo(...toPx(CX1,CX1,w,h)); g.stroke(); }
+}
+let cdrag=null, lastTap={i:-1,t:0};
+function evStops(ev){ const r=cv.getBoundingClientRect(); return [CX0+(ev.clientX-r.left)/r.width*(CX1-CX0), CX0+(1-(ev.clientY-r.top)/r.height)*(CX1-CX0)]; }
+function nearest(pts,ev){ const r=cv.getBoundingClientRect(); let bi=-1, bd=1e9; pts.forEach((q,i)=>{ const px=r.left+(q[0]-CX0)/(CX1-CX0)*r.width, py=r.top+(1-(q[1]-CX0)/(CX1-CX0))*r.height, dd=Math.hypot(px-ev.clientX,py-ev.clientY); if (dd<bd){ bd=dd; bi=i; } });
+  return bd<=(ev.pointerType==="touch"?22:12)?bi:-1; }
+function removePoint(i){ const pts=editPts(); if (pts.length<=2) return; pts.splice(i,1); setCurve(pts); }
+cv.addEventListener("pointerdown",ev=>{ if (!items[cur]) return; ev.preventDefault(); const pts=editPts(); let i=effCurve(items[cur],curDev())?nearest(pts,ev):-1;   /* straight line: no visible points, so a tap adds one */
+  if (i>=0 && ev.pointerType!=="mouse"){ const t=performance.now(); if (lastTap.i===i && t-lastTap.t<350){ lastTap={i:-1,t:0}; removePoint(i); return; } lastTap={i,t}; }
+  if (i<0){ const [x]=evStops(ev); const y=mcurve(pts)(x); pts.push([+x.toFixed(3),+y.toFixed(3)]); pts.sort((a,b)=>a[0]-b[0]); i=pts.findIndex(q=>q[0]===+x.toFixed(3)); setCurve(cleanPts(pts)||pts); }
+  cdrag={i}; cv.setPointerCapture(ev.pointerId); });
+cv.addEventListener("pointermove",ev=>{ if (!cdrag) return; const pts=editPts(), i=cdrag.i; if (!pts[i]) return; let [x,y]=evStops(ev);
+  const lx=i>0?pts[i-1][0]+0.2:-16, hx=i<pts.length-1?pts[i+1][0]-0.2:10, ly=i>0?pts[i-1][1]:-16, hy=i<pts.length-1?pts[i+1][1]:10;
+  pts[i]=[+Math.min(hx,Math.max(lx,x)).toFixed(3), +Math.min(hy,Math.max(ly,y)).toFixed(3)]; setCurve(pts); });
+const endCdrag=()=>{ cdrag=null; }; cv.addEventListener("pointerup",endCdrag); cv.addEventListener("pointercancel",endCdrag);
+cv.addEventListener("dblclick",ev=>{ const i=nearest(editPts(),ev); if (i>=0) removePoint(i); });
+new ResizeObserver(()=>drawCurve()).observe(cv);
+try{ syncProfile(); }catch(e){}
 
 /* ---------------- Phone layout (v0.5) ----------------
    body.m switches the CSS to the phone layout; data-tab picks which controls show. Every phone control
