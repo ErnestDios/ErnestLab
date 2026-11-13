@@ -38,6 +38,9 @@ header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bwinfo{padding:2px 0 6px}
+.ctl output.scrub{cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
+.ctl output.scrub:hover{color:var(--ink)}
+.ctl output.over{color:var(--accent)}
 .qh{flex:0 0 auto;width:18px;height:18px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--muted);font:600 11px/16px var(--font-mono);padding:0;cursor:pointer;letter-spacing:0;text-transform:none}
 .qh:hover,.qh.on{color:var(--accent);border-color:var(--accent)}
 summary .qh{margin-left:2px}
@@ -465,7 +468,7 @@ body.m.land #tabs button{min-height:44px;font-size:12px}
       <li><b>R G B L</b> show one channel in greyscale (L = luminance); press it again for colour.</li>
       <li>The <b>switch on each section</b> turns it off, to see exactly what it does. Off is also off in exports.</li>
       <li>Every section has a <b>?</b>: what it is on real film, what you'll see, and one thing to try.</li>
-      <li><b>Double-click</b> a slider's value to reset it.</li>
+      <li><b>Double-click</b> a slider's value to reset it. <b>Drag the value</b> left / right to change it (Shift for fine); Exposure, the Development tones and a few others go past the slider's end that way (the number turns orange).</li>
       <li><b>Zoom:</b> mouse wheel or trackpad pinch zooms around the cursor, <b>drag</b> to pan, <b>double-click</b> the photo for 100% (again for Fit). Keys <b>0</b> Fit, <b>1</b> 100%, <b>+ / −</b>. In before / after, pan with the middle button or Alt-drag.</li>
       <li><b>On a phone:</b> tap the photo to flip, <b>touch and hold</b> to peek at the original, <b>pinch</b> to zoom in and check the grain, <b>tap a value</b> to reset it. The tabs at the bottom hold the controls; <b>⋯</b> has channels, zoom and Clear session.</li>
     </ul>
@@ -667,7 +670,7 @@ const devEls={};
 function curDev(){ const it=items[cur]; return (it&&it.dev)||DEV0; }
 function setDev(k,v){ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{[k]:v}); syncDev(); schedule(); }
 function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
-  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); row.classList.toggle("changed",d[p[0]]!==0);
+  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); out.classList.toggle("over",isOver(p,d[p[0]])); row.classList.toggle("changed",d[p[0]]!==0);
     if (p[7]==="frame"){ inp.disabled=!cropped; row.classList.toggle("off",!cropped); } }
   $("devFmt").value=d.fmt;
   const port = d.orient==="port" || (d.orient==="auto" && srcH>srcW);
@@ -680,6 +683,19 @@ function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
     + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "");
   $("meta").title = $("meta").textContent + (it.raw && it.baseEV!=null ? `\n${it.cam||"RAW"}: decoded with LibRaw, camera white balance, linear. Base exposure ${it.baseAuto?"matched to the camera's own preview":"+1 EV (no camera preview in the file)"}; use Exposure and Development to adjust.` : ""); }
+/* Virtual slider on the value: drag left / right on the number (Shift = fine). Some values go past the slider's
+   range (EXT); the number turns orange when it does, and the slider waits at its end. Hues wrap around. */
+const EXT={exp:[-6,6],dShadows:[-6,6],dMid:[-6,6],dHigh:[-6,6],temp:[-2,2],tint:[-2,2],con:[-2,2],sat:[0,3],hal:[0,3],bloom:[0,3],grain:[0,4],grainSize:[0.3,8],ca:[0,4]};
+function scrubOut(out,p,get,set){
+  const [k,,mn,mx,st]=p, lim=EXT[k]||[mn,mx], hue=/Hue$/.test(k); let s=null;
+  out.classList.add("scrub"); out.title=(EXT[k]?`Drag to change, beyond the slider (${lim[0]} to ${lim[1]})`:"Drag to change")+" · Shift for fine · double-click to reset";
+  out.addEventListener("pointerdown",ev=>{ if (ev.pointerType==="mouse" && ev.button!==0) return; s={x:ev.clientX,v:get(),moved:false}; try{ out.setPointerCapture(ev.pointerId); }catch(e){} ev.preventDefault(); });
+  out.addEventListener("pointermove",ev=>{ if (!s) return; const dx=ev.clientX-s.x; if (!s.moved && Math.abs(dx)<3) return; s.moved=true;
+    let v=s.v+dx*(mx-mn)/250*(ev.shiftKey?0.1:1); v=Math.round(v/st)*st; v=hue?((v%360)+360)%360:Math.min(lim[1],Math.max(lim[0],v)); set(+v.toFixed(4)); });
+  const end=()=>{ if (s&&s.moved) out.dataset.dragged=String(Date.now()); s=null; };
+  out.addEventListener("pointerup",end); out.addEventListener("pointercancel",end);
+}
+const isOver=(p,v)=>v<p[2]-1e-9||v>p[3]+1e-9;
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
   makeSwitch("dev", $("develop").querySelector("summary"), $("develop"));
@@ -694,6 +710,7 @@ function buildDevelop(){
     const inp=row.querySelector("input"), out=row.querySelector("output");
     inp.addEventListener("input",()=>setDev(k,+inp.value));
     const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
+    scrubOut(out,p,()=>curDev()[k],v=>setDev(k,v));
     devEls[k]={inp,out,row}; (p[7]==="frame"?$("devFrame"):box).appendChild(row);
   }
   $("devCtrls").insertBefore($("profBox"), devEls.dShadows.row);   /* pipeline order: profile curve, then the tone sliders */
@@ -894,6 +911,7 @@ function buildRack(){
       inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
+      scrubOut(out,p,()=>base[k],v=>{ base[k]=v; if (k==="bw" && v>0) bypass.bw=false; syncUI(); schedule(); });
       ctlEls[k]={inp,out,row,p};
       (p[7]==="layer" ? sub.lastChild : box).appendChild(row);
     }
@@ -919,7 +937,7 @@ function bwSync(){
   info.textContent = `${F.note} ${T.stops?`${T.name}: ${T.note} On a real camera it costs about ${T.stops} stop${T.stops===1?"":"s"} (×${Math.round(Math.pow(2,T.stops))}); here it's compensated, so mid grey stays put. `:""}${mix}`;
 }
 function syncUI(){
-  for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); }
+  for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); out.classList.toggle("over",isOver(p,base[k])); }
   bwSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
@@ -2081,7 +2099,7 @@ canvas.addEventListener("contextmenu",ev=>{ if (isPhone()) ev.preventDefault(); 
 /* tap a value to reset it (double-click is awkward on glass); tap a folded note to read it */
 $("rack").addEventListener("click",ev=>{
   if (!isPhone()) return;
-  const o=ev.target.closest(".ctl output"); if (o){ o.dispatchEvent(new MouseEvent("dblclick",{bubbles:true})); return; }
+  const o=ev.target.closest(".ctl output"); if (o){ if (Date.now()-(+o.dataset.dragged||0)<500) return; o.dispatchEvent(new MouseEvent("dblclick",{bubbles:true})); return; }
   const n=ev.target.closest(".note"); if (n) n.classList.toggle("open");
 });
 phoneMQ.addEventListener ? phoneMQ.addEventListener("change",applyPhone) : phoneMQ.addListener(applyPhone);
