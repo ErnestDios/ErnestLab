@@ -569,6 +569,8 @@ function effCurve(it,d){ if (!it) return null; const p=(d&&d.profile)||"auto";
   if (p==="custom" && d.curve && d.curve.length>=2) return d.curve;
   if (p==="auto" && it.raw) return it.camCurve||CAM_GENERIC;
   return null; }
+/* what the scene pass gets: curve points (or null) + saturation. Camera saturation stays with a RAW unless the profile is Flat. */
+function profileFor(it,d){ const pts=effCurve(it,d), sat=(it&&it.raw&&((d&&d.profile)||"auto")!=="flat"&&it.camSat)||1; return (pts||sat!==1)?{pts,sat}:null; }
 const curveCache={key:"",tex:null,lo:1,hi:1};
 function curveTexFor(pts){ const key=JSON.stringify(pts); if (curveCache.key===key && curveCache.tex) return curveCache;
   const f=mcurve(pts), N=512, data=new Float32Array(N); for (let i=0;i<N;i++) data[i]=f(-16+26*i/(N-1));
@@ -595,6 +597,12 @@ function fitCamCurve(rawQ,refQ){
   let x=hi[0], y=hi[1], sl=Math.min(1,Math.max(0.15,(hi[1]-pts[pts.length-2][1])/(hi[0]-pts[pts.length-2][0])));   /* continue the preview's own highlight slope */
   for (let k=0;k<3;k++){ sl*=0.65; x+=1.5; y+=1.5*sl; pts.push([x,+y.toFixed(3)]); }   /* shoulder */
   return pts.map(p=>[+p[0].toFixed(3),+p[1].toFixed(3)]);
+}
+/* camera saturation: median colourfulness ((max-min)/max, linear) of the preview over that of the raw, mid tones only.
+   Distributions, not pixels, so lens corrections in the preview don't matter. */
+function camSaturation(raw,nr,ref,nj){
+  const sat=(a,n)=>{ const o=[]; for (let i=0;i<n*3;i+=3){ const lu=0.2126*a[i]+0.7152*a[i+1]+0.0722*a[i+2]; if (lu>0.03 && lu<0.8){ const mx=Math.max(a[i],a[i+1],a[i+2]); o.push((mx-Math.min(a[i],a[i+1],a[i+2]))/mx); } } o.sort((p,q)=>p-q); return o.length>200?o[o.length>>1]:null; };
+  const sr=sat(raw,nr), sj=sat(ref,nj); return sr&&sj ? +Math.min(1.8,Math.max(0.85,sj/Math.max(1e-3,sr))).toFixed(3) : 1;
 }
 /* luminance histogram in stops, for the curve editor */
 const HX0=-8, HX1=5, HB=104;
@@ -878,20 +886,22 @@ const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
 /* Profile (v0.6): a tone curve in stops around mid grey, stored as a 512-sample LUT over -16..+10 stops,
    extended linearly outside with the curve's end slopes. Applied on luminance first, then the tone sliders. */
-uniform sampler2D uCurve; uniform int uCurveOn; uniform vec2 uCurveSlope;
+uniform sampler2D uCurve; uniform int uCurveOn; uniform vec2 uCurveSlope; uniform float uProfSat;   /* uProfSat: camera saturation (Camera-like RAW), 1 = none */
 float profileCurve(float s){ float c=clamp(s,-16.0,10.0); float y=texture(uCurve,vec2(((c+16.0)/26.0*511.0+0.5)/512.0,0.5)).r;
   return y+(s-c)*(s<c?uCurveSlope.x:uCurveSlope.y); }
 /* Development (source prep, per image): shadows / midtones / highlights in stops around mid grey, on
    luminance so hue is kept. Three operators applied in sequence, each monotonic, so tones never invert. */
 float ssd(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.0,1.0); return t*t*(3.0-2.0*t); }
 vec3 develop(vec3 l){
-  if (uDev==vec3(0.0) && uCurveOn==0) return l;
+  if (uDev==vec3(0.0) && uCurveOn==0 && uProfSat==1.0) return l;
   float y=max(dot(l,W),1e-7), st=log2(y/0.18), x=st;
   if (uCurveOn==1) x=profileCurve(x);
   x += uDev.y*(1.0-ssd(0.0,3.0,abs(x)));     /* midtones */
   x += uDev.x*(1.0-ssd(-5.0,-0.5,x));        /* shadows */
   x += uDev.z*ssd(0.5,3.5,x);                /* highlights */
-  return l*exp2(x-st);
+  vec3 o=l*exp2(x-st);
+  if (uProfSat!=1.0){ float Y=dot(o,W); o=max(Y+(o-Y)*uProfSat, vec3(0.0)); }
+  return o;
 }
 vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
 vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? c : srgbToLin(c)); }
@@ -1083,6 +1093,8 @@ const dummyLut=makeLutTex(2,new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0, 0,0,1,
 function hueRGB(h){ h=((h%360)+360)%360/60; const x=1-Math.abs(h%2-1); const c=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; return c; }
 
 function setSceneUniforms(u,e,dv,crv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh);
+  gl.uniform1f(u.uProfSat, crv&&crv.sat ? crv.sat : 1.0);
+  if (crv && crv.pts) crv=crv.pts;
   if (crv){ const c=curveTexFor(crv); bindTex(6,c.tex); gl.uniform1i(u.uCurve,6); gl.uniform2f(u.uCurveSlope,c.lo,c.hi); gl.uniform1i(u.uCurveOn,1); } else gl.uniform1i(u.uCurveOn,0); }
 function setGradeUniforms(u,e){ setSceneUniforms(u,e); setLookUniforms(u,e); }
 function setLookUniforms(u,e){
@@ -1142,6 +1154,10 @@ async function rawProbe(f){
         const d=c.getContext("2d").getImageData(0,0,c.width,c.height).data, n=Math.min(20000,d.length>>2), step=Math.max(1,Math.floor((d.length>>2)/n));
         const lum=new Float32Array(n); for (let i=0;i<n;i++){ const k=i*step*4; lum[i]=0.2126*srgbDec(d[k])+0.7152*srgbDec(d[k+1])+0.0722*srgbDec(d[k+2]); }
         it.refQ=qs(lum); it.refLum=it.refQ[QN>>1];
+        { const gw=Math.max(1,Math.round(c.width*Math.min(1,192/Math.max(c.width,c.height)))), gh=Math.max(1,Math.round(c.height*gw/c.width));
+          const g=document.createElement("canvas"); g.width=gw; g.height=gh; const gx=g.getContext("2d"); gx.imageSmoothingQuality="high"; gx.drawImage(c,0,0,gw,gh);
+          const gd=gx.getImageData(0,0,gw,gh).data, rgb=new Float32Array(gw*gh*3); for (let i=0,j=0;i<gd.length;i+=4,j+=3){ rgb[j]=srgbDec(gd[i]); rgb[j+1]=srgbDec(gd[i+1]); rgb[j+2]=srgbDec(gd[i+2]); }
+          it.refGrid={w:gw,h:gh,rgb}; }
         it.url=URL.createObjectURL(await new Promise(r=>c.toBlob(r,"image/jpeg",0.85)));
       }
       return it;
@@ -1166,7 +1182,15 @@ async function rawDecode(it){
       if (!it.hist || it.camCurve===undefined){
         const n=Math.min(60000,W*H), step=Math.max(1,Math.floor(W*H/n)), k2=Math.pow(2,it.baseEV)/65535, lum=new Float32Array(n);
         for (let i=0;i<n;i++){ const k=i*step*3; lum[i]=(0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])*k2; }
-        it.hist=histFromLum(i=>lum[i],n); it.camCurve = it.refQ ? fitCamCurve(qs(lum),it.refQ) : null;
+        it.hist=histFromLum(i=>lum[i],n); it.camCurve=null; it.camSat=1;
+        if (it.refGrid){   /* raw averaged over the same grid cells as the preview */
+          const {w:gw,h:gh}=it.refGrid, rg=new Float32Array(gw*gh*3), S=4;
+          for (let gy=0;gy<gh;gy++) for (let gx=0;gx<gw;gx++){ let r=0,g2=0,b=0;
+            for (let sy=0;sy<S;sy++) for (let sx=0;sx<S;sx++){ const X=Math.min(W-1,Math.floor((gx+(sx+0.5)/S)*W/gw)), Y=Math.min(H-1,Math.floor((gy+(sy+0.5)/S)*H/gh)), k=(Y*W+X)*3; r+=d[k]; g2+=d[k+1]; b+=d[k+2]; }
+            const o=(gy*gw+gx)*3, f=k2/(S*S); rg[o]=r*f; rg[o+1]=g2*f; rg[o+2]=b*f; }
+          it.camSat=camSaturation(rg,gw*gh,it.refGrid.rgb,gw*gh);
+        }
+        if (it.refQ) it.camCurve=fitCamCurve(qs(lum),it.refQ);
       }
       const g=Math.pow(2,it.baseEV)/65535, lut=new Uint16Array(65536); for (let v=0;v<65536;v++) lut[v]=f2h(v*g);
       const out=new Uint16Array(W*H*4), ONE=0x3c00;
@@ -1206,7 +1230,7 @@ function render(){
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:effCurve(items[cur],curDev())); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
   const st=1+e.halR;
