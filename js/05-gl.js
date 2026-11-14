@@ -105,7 +105,11 @@ float gn(vec2 p,float s,float rough){
 /* 1-2: source -> scene-linear (stored) */
 const FS_SCENE=HEAD+SCENE_FN+`
 uniform sampler2D uSrc; uniform vec4 uCrop;   /* format crop: x, y, w, h in source UV (top-left origin) */
-void main(){ o=vec4(stEnc(sceneLinear(inputTransform(texture(uSrc,uCrop.xy+vec2(vUv.x,1.0-vUv.y)*uCrop.zw).rgb))),1.0); }`;
+/* alpha carries where an 8-bit source is clipped (any channel at white): lights there were brighter than the file
+   can say. Only the physical halation / bloom light uses it ("Clipped light"); everything else reads .rgb. */
+void main(){ vec3 s=texture(uSrc,uCrop.xy+vec2(vUv.x,1.0-vUv.y)*uCrop.zw).rgb;
+  float clip = uInXfer==0 ? smoothstep(0.94,1.0,max(s.r,max(s.g,s.b))) : 0.0;
+  o=vec4(stEnc(sceneLinear(inputTransform(s))),clip); }`;
 /* colour only, no optics: used for the .cube export (identity input, not flipped) */
 const FS_GRADE=HEAD+SCENE_FN+LOOK_FN+`
 uniform sampler2D uSrc;
@@ -114,6 +118,10 @@ void main(){ o=vec4(filmLook(linToEnc(sceneLinear(inputTransform(texture(uSrc,vU
 const FS_BRIGHT=HEAD+`
 uniform sampler2D uTex; uniform float uThr;
 void main(){ vec3 l=stDec(texture(uTex,vUv).rgb); float m=smoothstep(uThr,uThr+0.25,dot(l,W)); o=vec4(stEnc(l*m),1.0); }`;
+/* physical halation / bloom light: clipped areas of 8-bit sources restored by uClip stops */
+const FS_EXPAND=HEAD+`
+uniform sampler2D uTex; uniform float uClip;
+void main(){ vec4 c=texture(uTex,vUv); o=vec4(stEnc(stDec(c.rgb)*exp2(uClip*c.a)),1.0); }`;
 const FS_COPY=HEAD+`
 uniform sampler2D uTex; void main(){ o=vec4(texture(uTex,vUv).rgb,1.0); }`;
 const FS_BLUR=HEAD+`
@@ -127,8 +135,10 @@ const FS_OPTICS=HEAD+GRAIN_FN+`
 uniform sampler2D uImg,uSoft,uH2,uH4,uH8;
 uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather;
 uniform vec3 uHalCol;
+uniform float uHalPhys, uHalF, uBloomF; uniform vec3 uHalW;   /* physical halation: reflected fraction, per-layer weights; bloom scatter fraction */
 uniform float uGrain,uGrainSize,uGrainCol,uGrainResp,uGrainRough,uGrainShadow,uSeed;
 uniform vec3 uGAmt,uGSize,uGClump;
+uniform float uGPhys; uniform vec3 uGCurve[11];   /* measured grain: per-layer wobble in stops at -6..+4 stops around mid grey, per pixel */
 /* Emulsion grain. Each colour record (R/G/B layer) has its own grain size, amount and clumping, and its
    grain follows that layer's own exposure. It is added before the film curve, as a fluctuation in a
    log-like encoding (extended sRGB, close to density), so the film curve and roll-off then shape it:
@@ -145,6 +155,14 @@ vec3 emulsionGrain(vec3 lin, vec2 uv){
                 gn(px/uGSize.b+vec2(3.7,29.9), uSeed+23.0, rough.b));
   float k=uGrainCol;
   vec3 n=((1.0-k)*vec3(shared) + k*ind) / sqrt((1.0-k)*(1.0-k)+k*k);
+  if (uGPhys>0.5){
+    /* Measured (v0.9): the datasheet granularity as an exposure wobble, in stops, for each layer's own exposure.
+       uGCurve already holds the per-pixel amplitude (datasheet σ at 48 µm, scaled to this resolution and gauge). */
+    vec3 t=clamp(log2(max(lin,vec3(1e-6))/0.18)+6.0, 0.0, 10.0);
+    ivec3 i=ivec3(min(floor(t),vec3(9.0))); vec3 f=t-vec3(i);
+    vec3 a=vec3(mix(uGCurve[i.r].r,uGCurve[i.r+1].r,f.r), mix(uGCurve[i.g].g,uGCurve[i.g+1].g,f.g), mix(uGCurve[i.b].b,uGCurve[i.b+1].b,f.b));
+    return lin*exp2(n*a);
+  }
   vec3 e=linToEncG(lin);                                   /* per-layer exposure, log-like */
   vec3 x=clamp(e,0.0,1.0);
   vec3 resp=mix(vec3(1.0), 1.0-pow(abs(x*2.0-1.0),vec3(2.0))*0.85, uGrainResp)   /* midtone bias */
@@ -160,9 +178,19 @@ void main(){
   float sm=uSoftAmt*smoothstep(uSoftStart,1.0,r);
   float ca=uCA*0.006*r*r;
   vec3 lin=vec3(img(0.5+d*(1.0+ca),sm).r, img(uv,sm).g, img(0.5+d*(1.0-ca),sm).b);
-  vec3 h=mix(stDec(texture(uH2,uv).rgb), stDec(texture(uH4,uv).rgb), uHalR);
-  lin += uHalCol*dot(h,W)*uHal*2.0;
-  lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
+  if (uHalPhys>0.5){
+    /* Physical (v0.9). Bloom: the lens or a diffusion filter scatters a fraction of all light into a wide glow
+       (energy kept, so blacks lift). Halation: light crossing the film is reflected back at the base and re-exposes
+       the layers nearest it, spread over ~1.8x the base thickness; linear, so only bright sources show it. */
+    lin = mix(lin, stDec(texture(uH8,uv).rgb), uBloomF);
+    /* A stock's measured curves already include what its base reflects over a flat field, so halation only moves
+       light: from bright sources into their darker surroundings. Flat areas stay as they are. */
+    lin = mix(lin, 0.45*stDec(texture(uH2,uv).rgb) + 0.55*stDec(texture(uH4,uv).rgb), uHalW*uHalF);
+  } else {
+    vec3 h=mix(stDec(texture(uH2,uv).rgb), stDec(texture(uH4,uv).rgb), uHalR);
+    lin += uHalCol*dot(h,W)*uHal*2.0;
+    lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
+  }
   lin *= 1.0-uVig*smoothstep(uVigSize, uVigSize+uVigFeather, r);
   if (uGrain>0.0) lin=emulsionGrain(lin,uv);
   o=vec4(stEnc(lin),1.0);
@@ -203,7 +231,7 @@ function compile(fs){
   for(let i=0;i<n;i++){ const inf=gl.getActiveUniform(p,i); u[inf.name.replace(/\[0\]$/,"")]=gl.getUniformLocation(p,inf.name); }
   return {p,u};
 }
-const P={scene:compile(FS_SCENE),grade:compile(FS_GRADE),bright:compile(FS_BRIGHT),copy:compile(FS_COPY),blur:compile(FS_BLUR),optics:compile(FS_OPTICS),look:compile(FS_LOOK),final:compile(FS_FINAL)};
+const P={scene:compile(FS_SCENE),grade:compile(FS_GRADE),bright:compile(FS_BRIGHT),copy:compile(FS_COPY),expand:compile(FS_EXPAND),blur:compile(FS_BLUR),optics:compile(FS_OPTICS),look:compile(FS_LOOK),final:compile(FS_FINAL)};
 gl.bindVertexArray(gl.createVertexArray());
 
 function mkTex(w,h,ifmt=IFMT,fmt=gl.RGBA,type=ITYPE,data=null,filter=gl.LINEAR){
@@ -267,10 +295,77 @@ function setLookUniforms(u,e){
 }
 
 
+/* ---- measured grain: datasheet granularity -> per-pixel amplitude ----
+   The datasheet σ is what a 48 µm spot on the film sees. How many pixels that spot covers depends on the gauge
+   and the image size; how much averaging over it reduces the app's noise was measured (GRAIN_AP). So the
+   per-pixel amplitude is σ_datasheet / σ_noise(aperture): the same grain relative to the frame at any resolution. */
+function grainAp(rough,cell,d){
+  const T=GRAIN_AP, L=Math.log2;
+  const at=(arr,x,log)=>{ const v=log?L(x):x, a=log?arr.map(L):arr; if (v<=a[0]) return [0,0]; for (let i=0;i<a.length-1;i++) if (v<=a[i+1]) return [i,(v-a[i])/(a[i+1]-a[i])]; return [a.length-2,1]; };
+  const [ri,rf]=at(T.rough,Math.min(Math.max(rough,0),1),false);
+  const cl=Math.min(Math.max(cell,T.cell[0]),T.cell[T.cell.length-1]), [ci,cf]=at(T.cell,cl,true);
+  const dd=Math.max(d,1), dm=T.d[T.d.length-1], [di,df]=at(T.d,Math.min(dd,dm),true);
+  let v=0; for (const [a,wa] of [[ri,1-rf],[ri+1,rf]]) for (const [b,wb] of [[ci,1-cf],[ci+1,cf]]) for (const [c,wc] of [[di,1-df],[di+1,df]]) v+=wa*wb*wc*Math.log(T.t[a][b][c]);
+  v=Math.exp(v);
+  return dd>dm ? v*dm/dd : v;   /* beyond the table: Selwyn's law (σ ∝ 1/diameter) */
+}
+function grainPhys(e,outW,outH){
+  const D=GRAIN_DATA[e.gStock]; if (!D||!(e.gGauge>0)) return null;
+  const umpp=e.gGauge*1000/Math.max(outW,outH), d48=48/umpp, cell=e.grainSize*8/umpp;   /* size 1 = 8 µm on film */
+  const sz=[e.gSizeR,e.gSizeG,e.gSizeB], cl=[e.gClumpR,e.gClumpG,e.gClumpB], am=[e.gAmtR,e.gAmtG,e.gAmtB];
+  const k=e.grainCol, mixn=Math.sqrt((1-k)*(1-k)+k*k);
+  const div=[0,1,2].map(c=>{ const r=Math.min(Math.max(e.grainRough*cl[c],0),1);
+    /* the field is a mix of one shared and three independent noises: average their aperture statistics */
+    const a=grainAp(e.grainRough,cell*(sz[0]+sz[1]+sz[2])/3,d48), b=grainAp(r,cell*sz[c],d48);
+    return Math.sqrt((1-k)*(1-k)*a*a+k*k*b*b)/mixn; });   /* independent fields add in quadrature */
+  const curve=new Float32Array(33);
+  for (let j=0;j<11;j++) for (let c=0;c<3;c++) curve[j*3+c]=e.grain*am[c]*D.c[j][c]/div[c];
+  return {cell,curve,d48,umpp};
+}
+/* ---- physical halation and bloom: blurs sized in millimetres on film, so relative to the frame ----
+   Halation: light that crosses the emulsion and base is reflected at the base's back surface (a few % by Fresnel,
+   all of the scattered light beyond the critical angle by total internal reflection) and lands about
+   2·t·tan(θc) away, t = base thickness, θc = asin(1/1.5) ≈ 42°: ≈ 1.8·t, a quarter millimetre on a typical base.
+   Spread sets t (0.06–0.26 mm); Halation sets the fraction reflected back (1 = 10 %, the no-rem-jet case);
+   Red bias sets how much only the bottom, red-sensitive layer catches it (colour negative: red is nearest the
+   base); B&W has one layer, so it stays neutral. Bloom: a fraction of all light scattered over ~1.2 % of the frame. */
+function halPhys(e,outW,outH){
+  if (!(e.halPhys>0)) return null;
+  const long=Math.max(outW,outH), gauge=e.gGauge>0?e.gGauge:36, umpp=gauge*1000/long;
+  const t=0.06+0.2*e.halR, rc=2*t*Math.tan(Math.asin(1/1.5))*1000/umpp;   /* ring radius, px */
+  const w=[1, 1-0.88*e.halWarm, 1-e.halWarm];
+  return {s1:0.6*rc, s2:1.6*rc, sb:0.012*long, frac:0.1*e.hal, w, bloomF:Math.min(0.3*e.bloom,0.9), rc, umpp};
+}
+/* Gaussian blur of the scene at any size: a 2×2-averaged pyramid of the scene-linear image, then the 9-tap blur
+   at the level that keeps tap spacing under ~1.5 texels (extra passes beyond the last level add in quadrature). */
+let PT={};
+function lvlTarget(name,L){
+  const W=Math.max(1,Math.round(TW/L)), H=Math.max(1,Math.round(TH/L)); let t=PT[name];
+  if (!t||t.a.w!==W||t.a.h!==H){ if (t){ freeTarget(t.a); freeTarget(t.b); } t=PT[name]={a:mkTarget(W,H),b:mkTarget(W,H)}; }
+  return t;
+}
+const LEVELS=[2,4,8,16,32];
+let pyrKey="";
+function buildPyramid(clip){
+  let src=T.A;
+  for (const L of LEVELS){ const t=lvlTarget("d"+L,L);
+    if (L===2) pass(P.expand,src,t.a,u=>gl.uniform1f(u.uClip,clip)); else pass(P.copy,src,t.a); src=t.a; }
+}
+function blurAt(sigma,name,clip){
+  if (pyrKey!==renderSerial){ buildPyramid(clip); pyrKey=renderSerial; }
+  let L=LEVELS.find(l=>sigma/(1.69*l)<=1.5) || 32;
+  const pre=0.6*L, need=Math.sqrt(Math.max(sigma*sigma-pre*pre,0))/L;   /* the pyramid already blurs by ~0.6 px per level step */
+  const k=Math.max(1,Math.ceil(Math.pow(need/(1.69*1.5),2))), step=need/(1.69*Math.sqrt(k));
+  const o=lvlTarget(name,L); pass(P.copy,PT["d"+L].a,o.a);
+  if (step>0.05) for (let i=0;i<k;i++) blur2(o.a,o.b,step);
+  return o.a;
+}
+let renderSerial=0;
 /* ---- the render pipeline, the viewer (screen-sized canvas, zoom), scheduling ---- */
 let showOrig=false, split=-1, compare=false, viewChan=0;
 function render(){
   if (!srcTex) return;
+  renderSerial++;
   const e=effective();
   const cr=cropRect(curDev(),srcW,srcH), outW=cr.W, outH=cr.H;
   const scr=screenView(), fd=scr?fitDims(outW,outH):null, cw=scr?fd.dw:outW, ch=scr?fd.dh:outH;
@@ -281,26 +376,35 @@ function render(){
   /* 1-2 scene-linear */
   drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
-  drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
-  const st=1+e.halR;
-  blur2(T.b2a,T.b2b,1.2*st);
-  pass(P.copy,T.b2a,T.b4a); blur2(T.b4a,T.b4b,1.4*st);
-  pass(P.copy,T.b4a,T.b8a); blur2(T.b8a,T.b8b,1.8);
+  const hp=halPhys(e,outW,outH);
+  let tH1=T.b2a, tH2=T.b4a, tB=T.b8a;
+  if (hp && (e.hal>0||e.bloom>0)){ tH1=blurAt(hp.s1,"h1",e.halClip); tH2=blurAt(hp.s2,"h2"); tB=blurAt(hp.sb,"bl"); }
+  else if (!hp){
+    drawTo(T.b2a,P.bright,u=>{ bindTex(0,T.A.tex); gl.uniform1i(u.uTex,0); gl.uniform1f(u.uThr,Math.pow(e.halThr,2.2)); });
+    const st=1+e.halR;
+    blur2(T.b2a,T.b2b,1.2*st);
+    pass(P.copy,T.b2a,T.b4a); blur2(T.b4a,T.b4b,1.4*st);
+    pass(P.copy,T.b4a,T.b8a); blur2(T.b8a,T.b8b,1.8);
+  }
   pass(P.copy,T.A,T.s2); pass(P.copy,T.s2,T.s4a); blur2(T.s4a,T.s4b,1.5);
   /* 3 optics */
   const hc=[1.0, 0.55-0.33*e.halWarm, 0.35-0.27*e.halWarm];
   drawTo(T.B,P.optics,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(1,T.s4a.tex); gl.uniform1i(u.uSoft,1);
-    bindTex(2,T.b2a.tex); gl.uniform1i(u.uH2,2);
-    bindTex(3,T.b4a.tex); gl.uniform1i(u.uH4,3);
-    bindTex(4,T.b8a.tex); gl.uniform1i(u.uH8,4);
+    bindTex(2,tH1.tex); gl.uniform1i(u.uH2,2);
+    bindTex(3,tH2.tex); gl.uniform1i(u.uH4,3);
+    bindTex(4,tB.tex); gl.uniform1i(u.uH8,4);
+    gl.uniform1f(u.uHalPhys,hp?1:0);
+    if (hp){ gl.uniform1f(u.uHalF,hp.frac); gl.uniform3fv(u.uHalW,hp.w); gl.uniform1f(u.uBloomF,hp.bloomF); }
     gl.uniform2f(u.uRes,outW,outH);
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
     gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
     gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed+grainFrame*101);   /* video: new grain every frame */
     gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
+    const gp=grainPhys(e,outW,outH); gl.uniform1f(u.uGPhys,gp?1:0);
+    if (gp){ gl.uniform1f(u.uGrainSize,gp.cell); gl.uniform3fv(u.uGCurve,gp.curve); }
   });
   /* 4-5 film look -> display (back into A) */
   drawTo(T.A,P.look,u=>{ bindTex(0,T.B.tex); gl.uniform1i(u.uTex,0); setLookUniforms(u,e); });

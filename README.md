@@ -28,17 +28,17 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 
 **Video:** MP4 / MOV / WebM clips (made with CG and AI video in mind) get the same look: play and scrub with live grain that changes every frame, then export H.264 MP4 at full resolution with the original sound, rendered frame by frame in the browser via WebCodecs and [Mediabunny](https://mediabunny.dev) (MPL-2.0, `video/`).
 
-**Black & white:** a B&W lab that simulates the real thing: pick the film's sensitivity (panchromatic, orthochromatic, blue-sensitive, extended red, infrared-like or digital luminance) and a lens filter (yellow, orange, red, deep red, yellow-green, green, blue), with the filter factor explained and compensated so mid grey stays put. Silver grain, neutral halation, selenium and sepia toning looks.
+**Black & white:** a B&W lab computed from spectra: the film's measured spectral sensitivity (Kodak Tri-X 400 and Double-X 5222 datasheets; orthochromatic, blue-sensitive and extended red modelled from emulsion chemistry; infrared-like and digital luminance) times a measured Wratten filter (#8, #15, #21, #25, #29, #58, #47), integrated over the spectrum. Each filter's cost in stops comes out of the same sum (Tri-X within ~0.15 stop of Kodak's published factors) and is compensated so mid grey stays put; filters that block everything a film sees are greyed out. Silver grain, neutral halation, selenium and sepia toning looks.
 
 **Looks:** eighteen presets: Neutral (the default: no look until you pick one), eight B&W looks (Tri-X, HP5 pushed, FP4, red-filter landscape, orthochromatic silent-era, infrared-like, selenium and sepia prints), Warm Muted, Cold Muted, Bleach bypass, and six film-stock looks named after the stocks that inspired them (Daylight 250, Tungsten 500, Soft 500, Portrait 400, Night 800T, Slide 100), with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
 
 **Grade** (display-referred, sRGB in): exposure, temperature, tint, S-curve contrast, highlight roll-off, black lift, white crush, per-channel gamma, saturation, shadow/highlight split toning, and an external 3D `.cube` LUT with a mix control.
 
-**Halation & bloom:** threshold, spread, red bias, bloom.
+**Halation & bloom:** physical by default in the film looks: light reflected back by the film base into the bottom (red) layer, sized in millimetres on film (base thickness → halo radius ≈ 1.8 × thickness), as a fraction of light (≈10 % without an anti-halation backing, under 1 % with one), with no threshold; bloom as energy-conserving scatter. 8-bit files clip lights at white, so *Clipped light* restores a chosen number of stops there for halation and bloom. The earlier threshold model stays available (Model: By eye).
 
 **Lens:** radial chromatic aberration, edge softness, vignette (amount, size, feather).
 
-**Grain:** emulsion grain with three layers (the red, green and blue colour records), each with its own amount, size and clumping. Each layer's grain follows that layer's own exposure and sits in the negative, before the film curve, so the curve shapes it. Master controls: amount, size relative to the frame (like film: the same grain on a 12 MP or a 50 MP photo, and it survives resizing for social media; Size 1 = one pixel on a 3000 px short side), colour grain (how independent the layers are), midtone bias, clumping, shadow grain, seed. A grain-stock picker with 12 stocks (own names, each tagged with the stock that inspired it) sets the masters and the layers, independent of the colour look.
+**Grain:** emulsion grain with three layers (the red, green and blue colour records), each with its own amount, size and clumping. Each layer's grain follows that layer's own exposure and sits in the negative, before the film curve, so the curve shapes it. Master controls: amount, size relative to the frame (like film: the same grain on a 12 MP or a 50 MP photo, and it survives resizing for social media; Size 1 = one pixel on a 3000 px short side), colour grain (how independent the layers are), midtone bias, clumping, shadow grain, seed. A grain-stock picker sets the masters and the layers, independent of the colour look. **Measured stocks** (Vision3 50D, 250D, 500T on Super 35 / Super 16, 5219 at EI 800, Ektachrome 100D on 35mm / Super 8, Tri-X, Double-X) take amount, per-layer balance and how grain changes with tone from Kodak's datasheet RMS granularity, and hit it at any resolution on their own gauge (Amount 1 = as measured); change the **Gauge** to move an emulsion to another film format. The rest are set by eye.
 
 **Workflow:** a built-in guide (the ? next to the title, or the ? key); on/off switch on every section (Development, Exposure & balance, Film curve, Colour, Halation & bloom, Lens, Grain) to compare with and without it; what you see is what you export. Batch drag-and-drop, film strip, click to flip original/film, hold Space to peek, channel view (R, G, B, L keys or the header switch; same key again for RGB; works with the before/after split), before/after split, Fit/100%, resizable panel, double-click a value to reset it, Clear session. On phones: photo pinned on top, controls in tabs (Develop, Look, Colour, Effects, Grain, Export), ⋯ menu, tap to flip, hold to peek, pinch to zoom, tap a value to reset.
 
@@ -54,7 +54,7 @@ Single page, WebGL2:
 
 1. **Input transform** to a scene-linear working space (linear Rec.709/sRGB primaries, unbounded). 8-bit images are linearised with the sRGB curve.
 2. **Development, then scene-linear operations:** per-image shadows / midtones / highlights (three monotonic operators on luminance, so tones never invert), then exposure and white balance, with no clipping.
-3. **Optics and emulsion, in scene-linear** (comp order, before the grade): chromatic aberration, edge softness, halation and bloom from a blur pyramid (½, ¼, ⅛), vignette, then per-layer grain added in a log-like encoding (close to density).
+3. **Optics and emulsion, in scene-linear** (comp order, before the grade): chromatic aberration, edge softness, halation and bloom from a blur pyramid (½, ¼, ⅛), vignette, then per-layer grain added in a log-like encoding (close to density), or for measured stocks as an exposure wobble in stops following the datasheet. Physical halation and bloom use their own pyramid sized in millimetres on film.
 4. **Look encoding:** an extended sRGB curve that keeps values above 1.0, so bright highlights reach the film curve and highlight roll-off instead of being clipped.
 5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, split toning, external LUT → display.
 
@@ -84,6 +84,7 @@ css/app.css           all styles: desktop first, then the phone layout (body.m)
 js/00-config.js       version, support link, PWA registration, About
 js/01-development.js  per-image development: formats, crop, tone sliders, the Development section
 js/02-profiles.js     profile / tone-curve engine, camera-like fit, camera saturation, histograms
+js/03-measured.js     GENERATED from datasheets (tools/spectral): B&W weights, grain granularity, noise statistics
 js/03-params.js       look parameters, B&W films and filters, grain stocks, presets
 js/04-panel.js        DOM helpers, the control panel: sections, sliders, switches, virtual sliders
 js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewer and zoom, scheduling
@@ -100,6 +101,7 @@ js/15-phone.js        phone layout, gestures, the ... menu; its last lines start
 raw/  video/          third-party decoders, loaded only when needed (see their READMEs)
 sw.js                 offline support: page, scripts and styles network-first, cached for offline
 tools/                regression renders and tests, version bump
+tools/spectral/       how the measured numbers are made: sources, method, checks (see its README)
 ```
 
 The scripts are classic scripts (not ES modules) sharing one global scope, so the app also runs straight from a
