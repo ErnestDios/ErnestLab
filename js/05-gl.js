@@ -134,8 +134,8 @@ void main(){ float w[5]=float[](0.227027,0.1945946,0.1216216,0.054054,0.016216);
   o=vec4(stEnc(s),1.0); }`;
 /* 3: optics in scene-linear, then the emulsion: per-layer grain as a density fluctuation, before the film curve */
 const FS_OPTICS=HEAD+GRAIN_FN+`
-uniform sampler2D uImg,uSoft,uH2,uH4,uH8;
-uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather,uGlare,uFog;
+uniform sampler2D uImg,uSoft,uH2,uH4,uH8,uS2,uS3,uS4;   /* uSoft,uS2..uS4: lens blur levels at S/8, S/4, S/2, S (physical edge softness) */
+uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather,uGlare,uFog,uSoftPhys;
 uniform sampler2D uAvg;   /* 1×1: the frame's average scene-linear light */
 uniform vec3 uHalCol;
 uniform float uHalPhys, uHalF, uBloomF; uniform vec3 uHalW;   /* physical halation: reflected fraction, per-layer weights; bloom scatter fraction */
@@ -174,13 +174,28 @@ vec3 emulsionGrain(vec3 lin, vec2 uv){
   return encToLin(e);
 }
 vec3 img(vec2 uv,float m){ return mix(stDec(texture(uImg,uv).rgb), stDec(texture(uSoft,uv).rgb), m); }
+/* Physical edge softness (v1.1): the blur RADIUS grows across the field, like field curvature / astigmatism, which defocus
+   roughly with the square of the distance from the centre. s = blur as a fraction of the corner blur S; the four levels are
+   Gaussians at S/8, S/4, S/2, S (sizes relative to the frame); between them the shader blends the two nearest, below S/8 it
+   blends from the sharp image. Each pixel is genuinely blurred: no sharp core + halo, so no glow. */
+vec3 lensImg(vec2 uv,float s){
+  vec3 a=stDec(texture(uImg,uv).rgb);
+  if (s<=0.0) return a;
+  if (s<0.125) return mix(a, stDec(texture(uSoft,uv).rgb), s*8.0);
+  float t=log2(s*8.0);   /* 0..3: S/8 → S */
+  vec3 l1=stDec(texture(uSoft,uv).rgb), l2=stDec(texture(uS2,uv).rgb), l3=stDec(texture(uS3,uv).rgb), l4=stDec(texture(uS4,uv).rgb);
+  return t<1.0 ? mix(l1,l2,t) : t<2.0 ? mix(l2,l3,t-1.0) : mix(l3,l4,min(t-2.0,1.0));
+}
 void main(){
   vec2 uv=vUv; float asp=uRes.x/uRes.y;
   vec2 d=uv-0.5; vec2 da=d*vec2(asp,1.0);
   float r=length(da)/length(vec2(asp,1.0)*0.5);
-  float sm=uSoftAmt*smoothstep(uSoftStart,1.0,r);
   float ca=uCA*0.006*r*r;
-  vec3 lin=vec3(img(0.5+d*(1.0+ca),sm).r, img(uv,sm).g, img(0.5+d*(1.0-ca),sm).b);
+  vec3 lin;
+  if (uSoftPhys>0.5){ float q=clamp((r-uSoftStart)/max(1.0-uSoftStart,1e-3),0.0,1.0), s=q*q;
+    lin=vec3(lensImg(0.5+d*(1.0+ca),s).r, lensImg(uv,s).g, lensImg(0.5+d*(1.0-ca),s).b); }
+  else { float sm=uSoftAmt*smoothstep(uSoftStart,1.0,r);
+    lin=vec3(img(0.5+d*(1.0+ca),sm).r, img(uv,sm).g, img(0.5+d*(1.0-ca),sm).b); }
   if (uHalPhys>0.5){
     /* Physical (v0.9). Bloom: the lens or a diffusion filter scatters a fraction of all light into a wide glow
        (energy kept, so blacks lift). Halation: light crossing the film is reflected back at the base and re-exposes
@@ -353,8 +368,8 @@ function lvlTarget(name,L){
   return t;
 }
 const LEVELS=[2,4,8,16,32];
-let pyrKey="";
-function ensurePyramid(clip){ if (pyrKey!==renderSerial){ buildPyramid(clip); pyrKey=renderSerial; } }
+const pyrKey={};
+function ensurePyramid(clip,pre="d"){ if (pyrKey[pre]!==renderSerial){ buildPyramid(clip,pre); pyrKey[pre]=renderSerial; } }
 /* the frame's average light: keep halving the smallest pyramid level down to 1×1 (glare) */
 let AVG=[];
 function avgTarget(){
@@ -364,17 +379,20 @@ function avgTarget(){
     pass(P.copy,src,t); src=t; i++; }
   return src;
 }
-function buildPyramid(clip){
+function buildPyramid(clip,pre="d"){
   let src=T.A;
-  for (const L of LEVELS){ const t=lvlTarget("d"+L,L);
-    if (L===2) pass(P.expand,src,t.a,u=>gl.uniform1f(u.uClip,clip)); else pass(P.copy,src,t.a); src=t.a; }
+  for (const L of LEVELS){ const t=lvlTarget(pre+L,L);
+    if (L===2&&clip>0) pass(P.expand,src,t.a,u=>gl.uniform1f(u.uClip,clip)); else pass(P.copy,src,t.a); src=t.a; }
 }
-function blurAt(sigma,name,clip){
-  ensurePyramid(clip);
-  let L=LEVELS.find(l=>sigma/(1.69*l)<=1.5) || 32;
-  const pre=0.6*L, need=Math.sqrt(Math.max(sigma*sigma-pre*pre,0))/L;   /* the pyramid already blurs by ~0.6 px per level step */
+function blurAt(sigma,name,clip,pyr="d"){
+  ensurePyramid(clip,pyr);
+  /* "d" (halation, bloom, glare) keeps its v0.9 sizing; "c" (lens softness, v1.1) also blurs at full resolution for small
+     radii and uses the measured softness of the 2×2 pyramid + bilinear upsampling: σ ≈ 0.41 × level size */
+  const fine=pyr==="c", lv=fine?[1,...LEVELS]:LEVELS;
+  let L=lv.find(l=>sigma/(1.69*l)<=1.5) || 32;
+  const pre=(fine?0.41:0.6)*(L>1?L:0), need=Math.sqrt(Math.max(sigma*sigma-pre*pre,0))/L;
   const k=Math.max(1,Math.ceil(Math.pow(need/(1.69*1.5),2))), step=need/(1.69*Math.sqrt(k));
-  const o=lvlTarget(name,L); pass(P.copy,PT["d"+L].a,o.a);
+  const o=lvlTarget(name,L); pass(P.copy,L===1?T.A:PT[pyr+L].a,o.a);
   if (step>0.05) for (let i=0;i<k;i++) blur2(o.a,o.b,step);
   return o.a;
 }
@@ -404,13 +422,20 @@ function render(){
     pass(P.copy,T.b2a,T.b4a); blur2(T.b4a,T.b4b,1.4*st);
     pass(P.copy,T.b4a,T.b8a); blur2(T.b8a,T.b8b,1.8);
   }
-  pass(P.copy,T.A,T.s2); pass(P.copy,T.s2,T.s4a); blur2(T.s4a,T.s4b,1.5);
+  /* lens softness. Physical: four Gaussian levels, corner blur S = 0.5 % of the long side × Edge softness (frame-relative).
+     By eye: one fixed blur, cross-faded in (as before). */
+  const softPhys=e.softPhys>0&&e.soft>0, Smax=0.005*Math.max(outW,outH)*e.soft;
+  let tS1=T.s4a, tS2=T.s4a, tS3=T.s4a, tS4=T.s4a;
+  if (softPhys){ tS1=blurAt(Smax/8,"ls1",0,"c"); tS2=blurAt(Smax/4,"ls2",0,"c"); tS3=blurAt(Smax/2,"ls3",0,"c"); tS4=blurAt(Smax,"ls4",0,"c"); }
+  else { pass(P.copy,T.A,T.s2); pass(P.copy,T.s2,T.s4a); blur2(T.s4a,T.s4b,1.5); tS1=tS2=tS3=tS4=T.s4a; }
   let tAvg=T.A; if (e.glare>0){ ensurePyramid(hp?e.halClip:0); tAvg=avgTarget(); }
   /* 3 optics */
   const hc=[1.0, 0.55-0.33*e.halWarm, 0.35-0.27*e.halWarm];
   drawTo(T.B,P.optics,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
-    bindTex(1,T.s4a.tex); gl.uniform1i(u.uSoft,1);
+    bindTex(1,tS1.tex); gl.uniform1i(u.uSoft,1);
+    bindTex(8,tS2.tex); gl.uniform1i(u.uS2,8); bindTex(9,tS3.tex); gl.uniform1i(u.uS3,9); bindTex(10,tS4.tex); gl.uniform1i(u.uS4,10);
+    gl.uniform1f(u.uSoftPhys,softPhys?1:0);
     bindTex(2,tH1.tex); gl.uniform1i(u.uH2,2);
     bindTex(3,tH2.tex); gl.uniform1i(u.uH4,3);
     bindTex(4,tB.tex); gl.uniform1i(u.uH8,4);

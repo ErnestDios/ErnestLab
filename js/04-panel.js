@@ -29,6 +29,13 @@ function buildRack(){
       const info=document.createElement("div"); info.className="note bwinfo"; info.id="grainInfo";
       box.appendChild(r2); box.appendChild(info);
     }
+    if (g.id==="lens"){
+      const r=document.createElement("div"); r.className="grainstock";
+      r.innerHTML='<label for="lensModel">Softness</label><select id="lensModel"><option value="1">Physical (field curvature)</option><option value="0">By eye (blend)</option></select>';
+      const sel=r.querySelector("select"); sel.addEventListener("change",()=>{ base.softPhys=+sel.value; syncUI(); schedule(); });
+      const info=document.createElement("div"); info.className="note bwinfo"; info.id="lensInfo";
+      box.appendChild(r); box.appendChild(info);
+    }
     if (g.id==="hal"){
       const r=document.createElement("div"); r.className="grainstock";
       r.innerHTML='<label for="halModel">Model</label><select id="halModel"><option value="1">Physical (base reflection)</option><option value="0">By eye (threshold)</option></select>';
@@ -116,9 +123,17 @@ function halSync(){
     `${base.halWarm>0.5?"Mostly the red-sensitive layer, nearest the base, catches it: red-orange halos.":base.halWarm>0.05?"Partly red: the bottom layer catches most of it.":"All layers alike: neutral, like black-and-white film."} No threshold: bright lights glow because they carry far more light. `+
     (base.halClip>0?`An 8-bit file clips every light at white; Clipped light restores ${base.halClip.toFixed(1)} stops there (×${Math.round(Math.pow(2,base.halClip))}) for halation and bloom only.`:`Clipped light is 0: lights clipped at white in an 8-bit file glow no more than white paper would.`);
 }
+/* edge softness model: say what the corners get, in this image's pixels */
+function lensSync(){
+  const sel=$("lensModel"), info=$("lensInfo"); if (!sel) return;
+  const ph=base.softPhys>0; sel.value=ph?"1":"0";
+  if (!ph){ info.textContent="By eye: towards the edges the picture is blended with one fixed blur. Sharp detail keeps a soft halo around it (a glow), and the blur doesn't scale with the image size."; return; }
+  const long=Math.max(srcW||0,srcH||0), S=0.005*long*base.soft;
+  info.textContent=`Physical: real lenses defocus away from the centre (field curvature, astigmatism), roughly with the square of the distance. The blur starts at Soft from and grows to ${(0.5*base.soft).toFixed(2)} % of the frame in the corners`+(long?` (about ${S.toFixed(1)} px on this image)`:"")+`. The radius grows, not the mix, so it reads as focus falling off, not glow.`;
+}
 function syncUI(){
   for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); out.classList.toggle("over",isOver(p,base[k])); }
-  grainSync(); halSync(); bwSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
+  grainSync(); halSync(); lensSync(); bwSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
 }
