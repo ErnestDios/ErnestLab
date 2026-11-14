@@ -28,10 +28,19 @@ Left: the original. Right: Ernest Lab, exported at 2000 px and scaled down for t
 **One portrait, six looks:** original, Portrait 400, Slide 100, Soft 500, B&W Tri-X, Bleach bypass.
 ![Portrait in six looks](docs/examples/ex_portrait_looks.jpg)
 
+**An AI image, six looks:** Ernest Lab was made for CG and AI images; here a generated portrait in Portrait 400, Night 800T, Slide 100, Tungsten 500 and Bleach bypass.
+![AI portrait in six looks](docs/examples/ex_ai_looks.jpg)
+
+**One frame, five films and filters:** black & white computed from spectra. Unfiltered Tri-X; a red filter turns red lips and the red dress pale and smooths the skin; green and blue filters and red-blind orthochromatic film turn the same lips nearly black.
+![AI portrait: Tri-X unfiltered, red, green, blue filters, orthochromatic](docs/examples/ex_ai_bw.jpg)
+
+**Blacks that take grain:** grain follows exposure, so a pure-black background stays clean however strong the grain. Real negatives always get a little: fog from development (*Fog*, Development) and the veil a lens spreads over the frame (*Glare*, Lens). Shown at 1.75×.
+![Black background: grain only, with Fog, with Glare](docs/examples/ex_ai_blacks.jpg)
+
 **Black & white from spectra:** the same CG frame on Tri-X, unfiltered (Tri-X sees blue strongly, so the sky goes pale) and through a red #25 filter (blue sky darkens, clouds stand out), computed from Kodak's measured sensitivity and filter curves.
 ![Big Buck Bunny, original vs Tri-X vs Tri-X with red filter](docs/examples/ex_bw_filters.jpg)
 
-<sub>Images from Wikimedia Commons: *Tears of Steel* frames 00 1c, 05 6a and 04 3e, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([1](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg), [2](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_05_6a.jpg), [3](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_04_3e.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). Modified: film looks applied, cropped, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
+<sub>Images from Wikimedia Commons: *Tears of Steel* frames 00 1c, 05 6a and 04 3e, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([1](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg), [2](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_05_6a.jpg), [3](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_04_3e.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). AI-generated portrait: Ernest Dios Viaplana. Modified: film looks applied, cropped, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
 
 ## Use it
 

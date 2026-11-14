@@ -22,13 +22,13 @@ const HELP={
          see:"Unfiltered Tri-X counts blue strongly: pale skies. Red filter: dark skies, pale skin. Orthochromatic: dark reds and lips. The info line shows what each filter costs in stops.",
          tryit:"Switch the header to R, G or B to predict what a red, green or blue filter will do."},
   hal:  {t:"Halation & bloom", film:"Light crosses the emulsion and the film base, reflects off the back of the base and comes back about a quarter of a millimetre away, re-exposing the bottom (red) layer: a warm halo. An anti-halation backing absorbs most of it; CineStill removes that backing. Bloom is light scattered by the lens or a diffusion filter.",
-         see:"Physical model: halos only around really bright lights, sized to the film frame. 8-bit files clip lights at white, so Clipped light tells it how much brighter they were.",
+         see:"Physical model: halos only around really bright lights, sized to the film frame. 8-bit files clip lights at white, so Clipped light tells it how much brighter they were; EXR renders keep their real brightness, no guess needed.",
          tryit:"Night scene with practical lights: Halation 1 (no backing), Clipped light 4. Want every bright edge to glow? Model: By eye."},
   lens: {t:"Lens", film:"Real glass isn't perfect: colours focus at slightly different points, and the corners get softer and darker than the centre.",
          see:"Colour fringes on high-contrast edges, softer corners and a vignette that draws the eye to the middle.",
          tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best. Glare adds the veil a real lens spreads over the frame: a % of the frame's average light, so bright scenes veil more and pure-black CG blacks take grain like film."},
   grain:{t:"Grain", film:"The image is made of tiny silver crystals or dye clouds: bigger in faster film, and every colour layer has its own. Datasheets measure it as RMS granularity: how much density flickers under a 48 µm spot.",
-         see:"Measured stocks use that number per colour layer, on their own gauge: Super 16 shows twice the grain of Super 35 because the frame is half as wide. Shadows grain more, as underexposed film does.",
+         see:"Measured stocks use that number per colour layer, on their own gauge: Super 16 shows twice the grain of Super 35 because the frame is half as wide. Shadows grain more, as underexposed film does, but pure black has no exposure to grain: real negatives always get a little (fog, lens glare), so add Fog (Development) or Glare (Lens).",
          tryit:"Pick a measured stock, then change Gauge: the same emulsion from 35mm still to Super 8."},
 };
 function helpCard(key){ const h=HELP[key], c=document.createElement("div"); c.className="helpcard"; c.hidden=true;

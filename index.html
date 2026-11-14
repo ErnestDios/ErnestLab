@@ -138,10 +138,18 @@
 
     <h3>1 · Quick start</h3>
     <ul>
-      <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG, WebP and <b>camera RAW</b> (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF and more).</li>
+      <li><b>Drop your photos</b> anywhere on the window, or use <b>Add images</b>. JPEG, PNG, WebP, <b>OpenEXR</b> renders and <b>camera RAW</b> (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF and more).</li>
       <li><b>Development</b> prepares the photo first: format / crop, the <b>profile</b> (tone curve), then shadows, midtones and highlights.</li>
       <li><b>Film stock</b> picks the look; <b>Look strength</b> blends it in.</li>
       <li>Fine-tune any section, then <b>Export this still</b> or <b>Export all</b>.</li>
+    </ul>
+
+    <h3>EXR renders</h3>
+    <ul>
+      <li>OpenEXR files from Blender, Nuke, Houdini or Maya open straight into the linear working space: half or float, scanline or tiled, any common compression. Nothing is clipped, so a lamp 8 stops over white keeps its brightness for halation and glare.</li>
+      <li><b>Input colour</b> (Development) says what the numbers mean: read from the file when it says, otherwise <b>Linear Rec.709 / sRGB</b> (Blender's default). Pick <b>ACEScg</b> or <b>ACES2065-1</b> for ACES renders (Nuke usually doesn't write it into the file).</li>
+      <li>Multi-layer files open on the beauty layer (Blender <i>Combined</i>); <b>Layer</b> switches to the others. Alpha is ignored: EXR colour is already over black, so nothing is divided by alpha.</li>
+      <li>The default profile, <b>Scene (soft shoulder)</b>, holds about +6.5 stops over mid grey before white, like Filmic / AgX. The decoder loads the first time you open an EXR, then also works offline.</li>
     </ul>
 
     <h3>RAW files</h3>
@@ -163,8 +171,8 @@
 
     <h3>Black &amp; white</h3>
     <ul>
-      <li>Film is one layer of silver, and what it "sees" decides which colours become which greys. Pick a <b>Film</b>: <b>Panchromatic</b> (modern Tri-X / HP5: the whole spectrum, a little more blue than your eye), <b>Orthochromatic</b> (red-blind: dark reds and lips, pale skies, silent-film faces), <b>Blue-sensitive</b> (1800s plates), <b>Extended red</b>, <b>Infrared-like</b> (glowing foliage, black skies) or <b>Digital luminance</b> (a computer's desaturate, matched to the eye).</li>
-      <li>A <b>Lens filter</b> lightens its own colour and darkens the opposite one: <b>yellow</b> for a slightly darker sky, <b>orange</b> and <b>red</b> for dramatic skies and smooth skin, <b>green</b> for brighter foliage, <b>blue</b> for haze. On a real camera each filter costs light; Ernest Lab compensates, so mid grey stays put.</li>
+      <li>Film is one layer of silver, and what it "sees" decides which colours become which greys. Ernest Lab computes it from spectra: Kodak's measured sensitivity curves and real filter transmissions, added up over the whole spectrum. Pick a <b>Film</b>: <b>Panchromatic · Tri-X data</b> (the whole spectrum, strong in blue: pale unfiltered skies), <b>Panchromatic cine · Double-X data</b>, <b>Orthochromatic</b> (red-blind: dark reds and lips, pale skies, silent-film faces), <b>Blue-sensitive</b> (1800s plates), <b>Extended red</b>, <b>Infrared-like</b> (glowing foliage, black skies) or <b>Digital luminance</b> (a computer's desaturate, matched to the eye).</li>
+      <li>A <b>Lens filter</b> lightens its own colour and darkens the opposite one: <b>yellow</b> (#8) and <b>deep yellow</b> (#15) for a darker sky, <b>orange</b> and <b>red</b> for dramatic skies and smooth skin, <b>green</b> for brighter foliage and darker lips, <b>blue</b> for haze. On a real camera each filter costs light, computed for each film (Tri-X + red: about 3 stops, as Kodak's table says); Ernest Lab compensates, so mid grey stays put. Filters that block everything a film can see are greyed out.</li>
       <li>The <b>Red / Green / Blue counts</b> show the mix the film and filter add up to; move them for your own. Look at the <b>R G B</b> channels in the header to predict what a filter will do.</li>
       <li>Silver has no colour, so in black &amp; white the halation glow, lens fringes and grain are grey too. <b>Toning</b> (selenium, sepia) comes from Shadow / Highlight tint in Colour; see the B&amp;W looks.</li>
     </ul>
@@ -201,7 +209,9 @@
     <ul>
       <li><b>Save look</b> keeps it in this browser under My looks.</li>
       <li>To move looks between devices: <b>Settings JSON</b>, <b>Load look…</b>, or drop a <code>.json</code> on the image.</li>
-      <li><b>Grain stock</b> changes only the grain, independent of the colour look. Emulsion layers fine-tune the red, green and blue grain.</li>
+      <li><b>Grain stock</b> changes only the grain, independent of the colour look. <b>Measured</b> stocks take their grain from Kodak's datasheets (RMS granularity per colour layer) and hold it at any resolution; <b>Gauge</b> moves the emulsion to another film format. Emulsion layers fine-tune the red, green and blue grain.</li>
+      <li><b>Halation</b> is physical in the film looks: light reflected back by the film base, only around bright lights. On 8-bit files, <b>Clipped light</b> says how much brighter the clipped lamps really were. <b>Model: By eye</b> brings back glow on every bright edge.</li>
+      <li><b>Blacks and grain:</b> grain follows exposure, so a pure-black render stays grainless however high Amount goes. <b>Fog</b> (Development, per image) adds the density every developed negative has; <b>Glare</b> (Lens) adds the veil a lens spreads over the frame, more in bright scenes. Either one gives blacks the grain of real film.</li>
     </ul>
 
     <h3>5 · Output</h3>
