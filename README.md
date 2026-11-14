@@ -8,7 +8,23 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 
 > Status: working app for JPEG, PNG, WebP, camera RAW (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…) and MP4 / MOV / WebM video, on desktop and phones.
 
-<!-- TODO: before/after images -->
+## Examples
+
+Left: the original. Right: Ernest Lab's built-in looks as they ship, untouched, exported at 2000 px and scaled down for this page.
+
+**CG, Vision3 500T-style:** measured 500T grain on Super 35, physical halation around the light source.
+![Tears of Steel CG city, original vs Tungsten 500](docs/examples/ex_cg_city.jpg)
+
+**Night, CineStill-style:** halation from the film base (no anti-halation backing), only around lights; *Clipped light* tells it how much brighter the neon really was than the 8-bit file can show.
+![Hong Kong night street, original vs Night 800T](docs/examples/ex_night.jpg)
+
+**Portrait 400:** soft contrast, warm skin, gentle roll-off.
+![Portrait, original vs Portrait 400](docs/examples/ex_portrait.jpg)
+
+**Black & white from spectra:** the same CG frame on Tri-X, unfiltered (Tri-X sees blue strongly, so the sky goes pale) and through a red #25 filter (blue sky darkens, clouds stand out), computed from Kodak's measured sensitivity and filter curves.
+![Big Buck Bunny, original vs Tri-X vs Tri-X with red filter](docs/examples/ex_bw_filters.jpg)
+
+<sub>Images from Wikimedia Commons: *Tears of Steel* frame 00 1c, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). Modified: film looks applied, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
 
 ## Use it
 
