@@ -5,7 +5,7 @@
 const HELP={
   dev:  {t:"Development", film:"Before any look, the lab decides the frame (the camera gate, the crop) and develops the negative so it holds detail in the shadows and the highlights.",
          see:"Format crops the frame before the lens effects, so vignette and softness follow the new shape. Profile and Shadows / Midtones / Highlights shape the tones of this photo only. An EXR render also shows its input colour space (Rec.709, ACEScg, ACES…) and, for multi-layer files, which layer.",
-         tryit:"2.39 for a cinema frame; Shadows +0.5 on a backlit face."},
+         tryit:"2.39 for a cinema frame; Shadows +0.5 on a backlit face. Fog 1–2 % gives pure-black renders the grainy, lifted black of a developed negative (Shadows multiplies, so it can't lift true black; Fog adds)."},
   look: {t:"Film stock", film:"Each film stock is a recipe: its own curve, colours, halation and grain, all decided by its chemistry.",
          see:"A preset sets every section at once; Look strength blends it with your photo.",
          tryit:"Start from a stock, adjust it, then save it as your own look."},
@@ -26,7 +26,7 @@ const HELP={
          tryit:"Night scene with practical lights: Halation 1 (no backing), Clipped light 4. Want every bright edge to glow? Model: By eye."},
   lens: {t:"Lens", film:"Real glass isn't perfect: colours focus at slightly different points, and the corners get softer and darker than the centre.",
          see:"Colour fringes on high-contrast edges, softer corners and a vignette that draws the eye to the middle.",
-         tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best. Flare floor adds the faint veil of light a real lens spreads over the frame, so pure-black CG blacks take grain like film."},
+         tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best. Glare adds the veil a real lens spreads over the frame: a % of the frame's average light, so bright scenes veil more and pure-black CG blacks take grain like film."},
   grain:{t:"Grain", film:"The image is made of tiny silver crystals or dye clouds: bigger in faster film, and every colour layer has its own. Datasheets measure it as RMS granularity: how much density flickers under a 48 µm spot.",
          see:"Measured stocks use that number per colour layer, on their own gauge: Super 16 shows twice the grain of Super 35 because the frame is half as wide. Shadows grain more, as underexposed film does.",
          tryit:"Pick a measured stock, then change Gauge: the same emulsion from 35mm still to Super 8."},

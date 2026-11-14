@@ -135,7 +135,8 @@ void main(){ float w[5]=float[](0.227027,0.1945946,0.1216216,0.054054,0.016216);
 /* 3: optics in scene-linear, then the emulsion: per-layer grain as a density fluctuation, before the film curve */
 const FS_OPTICS=HEAD+GRAIN_FN+`
 uniform sampler2D uImg,uSoft,uH2,uH4,uH8;
-uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather,uFlare;
+uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather,uGlare,uFog;
+uniform sampler2D uAvg;   /* 1×1: the frame's average scene-linear light */
 uniform vec3 uHalCol;
 uniform float uHalPhys, uHalF, uBloomF; uniform vec3 uHalW;   /* physical halation: reflected fraction, per-layer weights; bloom scatter fraction */
 uniform float uGrain,uGrainSize,uGrainCol,uGrainResp,uGrainRough,uGrainShadow,uSeed;
@@ -194,9 +195,11 @@ void main(){
     lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
   }
   lin *= 1.0-uVig*smoothstep(uVigSize, uVigSize+uVigFeather, r);
-  /* Flare floor (v0.10): lenses and cameras scatter a few % of the scene's light evenly over the frame (veiling glare),
-     and film adds fog, so no part of a negative gets zero exposure. Added before the emulsion, so grain lives in it. */
-  lin += vec3(uFlare*0.0018);
+  /* v0.10, two offsets before the emulsion, so no part of a negative gets zero exposure and blacks carry grain:
+     Glare (Lens): the lens and camera body scatter a fraction of all incoming light evenly over the frame, so it scales
+     with the frame's average light and takes its colour. Fog (Development): density the developer makes with no light
+     at all; neutral, the same in any scene. Both after the vignette: glare comes from inside the lens, fog from the film. */
+  lin += stDec(texture(uAvg,vec2(0.5)).rgb)*(uGlare*0.01) + vec3(uFog*0.0018);
   if (uGrain>0.0) lin=emulsionGrain(lin,uv);
   o=vec4(stEnc(lin),1.0);
 }`;
@@ -351,13 +354,23 @@ function lvlTarget(name,L){
 }
 const LEVELS=[2,4,8,16,32];
 let pyrKey="";
+function ensurePyramid(clip){ if (pyrKey!==renderSerial){ buildPyramid(clip); pyrKey=renderSerial; } }
+/* the frame's average light: keep halving the smallest pyramid level down to 1×1 (glare) */
+let AVG=[];
+function avgTarget(){
+  let src=PT.d32.a, w=src.w, h=src.h, i=0;
+  while (w>1||h>1){ w=Math.max(1,Math.ceil(w/2)); h=Math.max(1,Math.ceil(h/2));
+    let t=AVG[i]; if (!t||t.w!==w||t.h!==h){ if (t) freeTarget(t); t=AVG[i]=mkTarget(w,h); }
+    pass(P.copy,src,t); src=t; i++; }
+  return src;
+}
 function buildPyramid(clip){
   let src=T.A;
   for (const L of LEVELS){ const t=lvlTarget("d"+L,L);
     if (L===2) pass(P.expand,src,t.a,u=>gl.uniform1f(u.uClip,clip)); else pass(P.copy,src,t.a); src=t.a; }
 }
 function blurAt(sigma,name,clip){
-  if (pyrKey!==renderSerial){ buildPyramid(clip); pyrKey=renderSerial; }
+  ensurePyramid(clip);
   let L=LEVELS.find(l=>sigma/(1.69*l)<=1.5) || 32;
   const pre=0.6*L, need=Math.sqrt(Math.max(sigma*sigma-pre*pre,0))/L;   /* the pyramid already blurs by ~0.6 px per level step */
   const k=Math.max(1,Math.ceil(Math.pow(need/(1.69*1.5),2))), step=need/(1.69*Math.sqrt(k));
@@ -392,6 +405,7 @@ function render(){
     pass(P.copy,T.b4a,T.b8a); blur2(T.b8a,T.b8b,1.8);
   }
   pass(P.copy,T.A,T.s2); pass(P.copy,T.s2,T.s4a); blur2(T.s4a,T.s4b,1.5);
+  let tAvg=T.A; if (e.glare>0){ ensurePyramid(hp?e.halClip:0); tAvg=avgTarget(); }
   /* 3 optics */
   const hc=[1.0, 0.55-0.33*e.halWarm, 0.35-0.27*e.halWarm];
   drawTo(T.B,P.optics,u=>{
@@ -405,7 +419,8 @@ function render(){
     gl.uniform2f(u.uRes,outW,outH);
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
-    gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather); gl.uniform1f(u.uFlare,e.flare);
+    gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
+    bindTex(7,tAvg.tex); gl.uniform1i(u.uAvg,7); gl.uniform1f(u.uGlare,e.glare); gl.uniform1f(u.uFog,bypass.dev?0:(curDev().dFog||0));
     gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed+grainFrame*101);   /* video: new grain every frame */
     gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
     const gp=grainPhys(e,outW,outH); gl.uniform1f(u.uGPhys,gp?1:0);

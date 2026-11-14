@@ -1,4 +1,5 @@
 /* Layout: grading-suite split — image viewer left (with film strip below), control rack right. Single dark theme by choice. */
+[hidden]{display:none!important}   /* v0.10: the hidden attribute always wins (rows like .grainstock set their own display) */
 :root{
   --bg:#0f0e0d;
   --panel:#171513;
