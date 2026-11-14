@@ -27,7 +27,8 @@ const float GRAIN_K=1.0;
 `;
 /* Colour pipeline (v0.2), in comp order:
    1. Input transform   source -> scene-linear working space (linear Rec.709/sRGB primaries, unbounded).
-                        8-bit images are sRGB-encoded; RAW (later) arrives already linear (uInXfer=1).
+                        8-bit images are sRGB-encoded; RAW and EXR arrive linear (uInXfer=1), EXR through a
+                        3×3 matrix from its own primaries (uInMat).
    1b. Development      per-image source prep: shadows / midtones / highlights (tone equaliser on luminance).
    2. Scene-linear      exposure, white balance. Nothing is clipped.
    3. Optics            chromatic aberration, edge softness, halation, bloom, vignette, all in scene-linear,
@@ -39,6 +40,7 @@ const float GRAIN_K=1.0;
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
+uniform mat3 uInMat;   /* linear sources: the file's primaries → working space (identity for RAW; EXR: from its colour space) */
 uniform float uBW; uniform vec3 uBWw;   /* black & white: amount, colour weights (film sensitivity × filter) */
 /* Profile (v0.6): a tone curve in stops around mid grey, stored as a 512-sample LUT over -16..+10 stops,
    extended linearly outside with the curve's end slopes. Applied on luminance first, then the tone sliders. */
@@ -60,7 +62,7 @@ vec3 develop(vec3 l){
   return o;
 }
 vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
-vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? c : srgbToLin(c)); }
+vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? uInMat*c : srgbToLin(c)); }
 vec3 sceneLinear(vec3 l){
   l *= exp2(uExp);
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
@@ -374,7 +376,7 @@ function render(){
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
+  drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniformMatrix3fv(u.uInMat,true,srcInMat()); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   const hp=halPhys(e,outW,outH);
   let tH1=T.b2a, tH2=T.b4a, tB=T.b8a;

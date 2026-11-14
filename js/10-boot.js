@@ -2,7 +2,7 @@
    Classic script (not a module): files load in order from index.html and share one global scope. */
 "use strict";
 /* ---------------- Boot ---------------- */
-buildDevelop(); buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
+buildDevelop(); buildExrRows(); buildRack(); buildPresetSelect(); applyPreset(presetName,false); $("preset").value="p:"+presetName;
 /* Install: a real Install button where the browser offers one (Chromium: beforeinstallprompt);
    otherwise the per-platform steps in the guide. Shows when already running as the installed app. */
 let installEvt=null;

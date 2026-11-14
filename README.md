@@ -6,7 +6,7 @@ A browser app that gives digital stills a cinematographic film look: film-stock 
 
 Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
 
-> Status: working app for JPEG, PNG, WebP, camera RAW (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…) and MP4 / MOV / WebM video, on desktop and phones.
+> Status: working app for JPEG, PNG, WebP, OpenEXR, camera RAW (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…) and MP4 / MOV / WebM video, on desktop and phones.
 
 ## Examples
 
@@ -44,6 +44,8 @@ Left: the original. Right: Ernest Lab, exported at 2000 px and scaled down for t
 Drop images on the window, pick a format and a film look, adjust, and export or share.
 
 ## Features
+
+**OpenEXR:** CG renders straight from Blender, Nuke, Houdini or Maya, decoded in the browser with the three.js EXR loader (loaded only when you open an EXR): half and float, scanline and tiled, every common compression (ZIP, ZIPS, PIZ, PXR24, RLE, B44/B44A, DWAA/DWAB). The **input colour space** comes from the file (`chromaticities`, or the ACES container flag) or you pick it: Linear Rec.709 / sRGB (Blender's default, assumed when the file says nothing), ACEScg, ACES2065-1, Linear P3-D65, Linear Rec.2020; a 3×3 matrix on the GPU brings it into the working space, nothing clipped. **Multi-layer** files (Blender `ViewLayer.Combined`, Nuke layers) open on the beauty layer, with a Layer menu for the others. Alpha is ignored on purpose: EXR colour is premultiplied, already over black, so nothing is divided by alpha (the reason Resolve can blow out EXR highlights when Alpha Mode is wrong). Renders keep their real headroom: a lamp at +8 stops drives physical halation by its true brightness, no *Clipped light* guess needed. Default profile **Scene (soft shoulder)** holds about +6.5 stops over mid grey before white; NaN / Inf pixels are zeroed.
 
 **RAW:** camera RAW files are developed in the browser with [LibRaw](https://www.libraw.org) (WebAssembly, loaded only when you open a RAW): camera white balance, linear Rec.709/sRGB primaries, 16-bit, straight into the scene-linear working space. Base exposure is matched to the camera's own embedded preview, so a RAW opens as bright as the camera rendered it. Highlights above the old 8-bit ceiling roll off through the film curve.
 
@@ -113,6 +115,7 @@ js/04-panel.js        DOM helpers, the control panel: sections, sliders, switche
 js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewer and zoom, scheduling
 js/06-images.js       the source image: upload, loading files, select / remove, the strip, the test still
 js/07-raw.js          RAW decoding (LibRaw in ./raw/)
+js/07-exr.js          OpenEXR: decoding (three.js EXRLoader in ./exr/), input colour spaces, layers
 js/08-output.js       export, LUT in / out, looks and JSON, share / copy, clear session
 js/09-view.js         viewer interactions, channels, before / after, resizable panel
 js/10-boot.js         panel start-up, install button, guide
@@ -121,7 +124,7 @@ js/12-video.js        video preview and MP4 export (Mediabunny in ./video/)
 js/13-help.js         the ? section help cards
 js/14-report.js       Report a problem (pre-filled GitHub issue)
 js/15-phone.js        phone layout, gestures, the ... menu; its last lines start the app
-raw/  video/          third-party decoders, loaded only when needed (see their READMEs)
+raw/  exr/  video/    third-party decoders, loaded only when needed (see their READMEs)
 sw.js                 offline support: page, scripts and styles network-first, cached for offline
 tools/                regression renders and tests, version bump
 tools/spectral/       how the measured numbers are made: sources, method, checks (see its README)

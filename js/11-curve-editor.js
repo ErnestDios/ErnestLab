@@ -10,9 +10,9 @@ const cleanPts=a=>{ if (!Array.isArray(a)) return null; let p=a.filter(q=>Array.
 function editPts(){ const it=items[cur], d=curDev(); const c=effCurve(it,d); return (c||IDENT).map(q=>q.slice()); }
 function setCurve(pts,name){ const it=items[cur]; if (!it) return; it.dev=Object.assign({},curDev(),{profile:"custom",curve:pts,curveName:name||null}); syncDev(); schedule(); }
 function buildProfSelect(){
-  const sel=$("devProf"), it=items[cur], raw=!!(it&&it.raw); sel.innerHTML="";
+  const sel=$("devProf"), it=items[cur], raw=!!(it&&(it.raw||it.exr)); sel.innerHTML="";
   const add=(v,t,parent)=>{ const o=document.createElement("option"); o.value=v; o.textContent=t; (parent||sel).appendChild(o); };
-  add("auto", raw ? (it.camCurve?"Camera-like (matched)":"Camera-like (generic)") : "As shot");
+  add("auto", it&&it.exr ? "Scene (soft shoulder)" : raw ? (it.camCurve?"Camera-like (matched)":"Camera-like (generic)") : "As shot");
   if (raw) add("flat","Flat (linear)");
   add("custom","Custom curve");
   const names=Object.keys(userProfiles).sort(); if (names.length){ const g=document.createElement("optgroup"); g.label="My profiles"; names.forEach(n=>add("p:"+n,n,g)); sel.appendChild(g); }
@@ -20,7 +20,7 @@ function buildProfSelect(){
 function syncProfile(){
   buildProfSelect(); const d=curDev(), sel=$("devProf"); let v=d.profile||"auto";
   if (v==="custom" && d.curveName && userProfiles[d.curveName] && JSON.stringify(userProfiles[d.curveName])===JSON.stringify(d.curve)) v="p:"+d.curveName;
-  if (v==="flat" && !(items[cur]&&items[cur].raw)) v="auto";
+  if (v==="flat" && !(items[cur]&&(items[cur].raw||items[cur].exr))) v="auto";
   sel.value=v; $("btnDelProf").disabled=!v.startsWith("p:"); if (d.curveName && document.activeElement!==$("profName")) $("profName").value=d.curveName;
   drawCurve();
 }
@@ -60,7 +60,7 @@ function drawCurve(){
   g.fillStyle="rgba(240,230,215,.35)"; g.font=`${10*dpr}px ${getComputedStyle(document.body).getPropertyValue("--font-mono")||"monospace"}`; g.textBaseline="bottom";
   for (const k of [-6,-4,-2,0,2,4]){ const [px]=toPx(k,0,w,h); g.fillText((k>0?"+":"")+k,px+3*dpr,h-3*dpr); }
   g.setLineDash([4*dpr,4*dpr]); g.strokeStyle="rgba(255,255,255,.22)"; g.beginPath(); g.moveTo(...toPx(CX0,CX0,w,h)); g.lineTo(...toPx(CX1,CX1,w,h)); g.stroke();
-  const ref = it && it.raw && d.profile==="custom" ? (it.camCurve||CAM_GENERIC) : null;
+  const ref = it && (it.raw||it.exr) && d.profile==="custom" ? (it.exr?EXR_SCENE:(it.camCurve||CAM_GENERIC)) : null;
   const plot=(pts,style,lw)=>{ const f=mcurve(pts); g.strokeStyle=style; g.lineWidth=lw*dpr; g.beginPath(); for (let i=0;i<=200;i++){ const x=CX0+(CX1-CX0)*i/200, [px,py]=toPx(x,f(x),w,h); i?g.lineTo(px,py):g.moveTo(px,py); } g.stroke(); };
   if (ref) plot(ref,"rgba(232,154,60,.35)",1.2);
   g.setLineDash([]); const c=effCurve(it,d);

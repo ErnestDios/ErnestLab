@@ -20,8 +20,12 @@ function uploadSource(bmp,isRaw){
 async function ensureSource(i){
   const it=items[i]; if (srcItem===it && srcTex) return true;
   if (it.video){ uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
-  if (!it.raw){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
+  if (!it.raw && !it.exr){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
   vidAttach(null);
+  if (it.exr){ const badge=$("badge"); badge.textContent="Reading EXR…"; badge.classList.add("busy");
+    try{ const r=await exrDecode(it); uploadSource(r,true); srcItem=it; return true; }
+    catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
+    finally{ badge.classList.remove("busy"); updateBadge(); } }
   const badge=$("badge"), old=badge.textContent; badge.textContent="Developing RAW…"; badge.classList.add("busy");
   try{ const r=await rawDecode(it); uploadSource(r,true); srcItem=it; return true; }
   catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
@@ -30,13 +34,18 @@ async function ensureSource(i){
 
 
 async function addFiles(files){
-  const list=[...files].filter(f=>RAW_EXT.test(f.name)||VID_EXT.test(f.name)||f.type.startsWith("video/")||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
-  if (!list.length){ toast("Ernest Lab reads JPEG, PNG, WebP, camera RAW, and MP4 / MOV / WebM video."); return; }
+  const list=[...files].filter(f=>EXR_EXT.test(f.name)||RAW_EXT.test(f.name)||VID_EXT.test(f.name)||f.type.startsWith("video/")||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
+  if (!list.length){ toast("Ernest Lab reads JPEG, PNG, WebP, OpenEXR, camera RAW, and MP4 / MOV / WebM video."); return; }
   let first=-1;
   for (const f of list){
     if (VID_EXT.test(f.name)||f.type.startsWith("video/")){
       try{ toast(`Opening ${f.name}…`,1500); items.push(await vidProbe(f)); if (first<0) first=items.length-1; }
       catch(err){ console.error(err); toast(String(err.message||err),4200); }
+      continue;
+    }
+    if (EXR_EXT.test(f.name)){
+      try{ toast(`Reading ${f.name}…`,1500); const it=await exrProbe(f); items.push(it); if (first<0) first=items.length-1; }
+      catch(err){ console.error(err); toast(`Could not open ${f.name} as EXR: ${String(err.message||err).slice(0,90)}`,4200); }
       continue;
     }
     if (RAW_EXT.test(f.name)){

@@ -1,7 +1,7 @@
 /* Ernest Lab · js/00-config.js · version, support link, PWA registration, About.
    Classic script (not a module): files load in order from index.html and share one global scope. */
 "use strict";
-const APP_VERSION="0.9.0";
+const APP_VERSION="0.10.0";
 /* Grain size is relative to the frame, like film: Size 1 = one pixel on a frame whose short side is GRAIN_REF px
    (a 12 MP 4:3 photo), and scales with the frame so any camera / export size gets the same grain. */
 const GRAIN_REF=3000;

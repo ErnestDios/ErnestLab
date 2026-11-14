@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
-<link rel="stylesheet" href="css/fonts.css?v=0.9.0">
-<link rel="stylesheet" href="css/app.css?v=0.9.0">
+<link rel="stylesheet" href="css/fonts.css?v=0.10.0">
+<link rel="stylesheet" href="css/app.css?v=0.10.0">
 </head>
 <body>
 <header>
@@ -25,7 +25,7 @@
     <button class="ibtn" id="mCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button>
     <button class="ibtn" id="mMore" aria-label="More" title="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </div>
-  <input type="file" id="fileIn" accept="image/*,video/*,.mp4,.m4v,.mov,.webm,.mkv,.dng,.cr2,.cr3,.nef,.nrw,.arw,.sr2,.srf,.raf,.rw2,.rwl,.orf,.pef,.srw,.x3f,.3fr,.iiq,.erf,.mef,.mos,.kdc,.dcr,.mrw" multiple hidden>
+  <input type="file" id="fileIn" accept="image/*,video/*,.exr,.mp4,.m4v,.mov,.webm,.mkv,.dng,.cr2,.cr3,.nef,.nrw,.arw,.sr2,.srf,.raf,.rw2,.rwl,.orf,.pef,.srw,.x3f,.3fr,.iiq,.erf,.mef,.mos,.kdc,.dcr,.mrw" multiple hidden>
   <input type="file" id="lookIn" accept=".json,application/json" multiple hidden>
 </header>
 
@@ -57,6 +57,9 @@
     </div>
     <div class="ctrls" id="devCtrls"></div>
     <div class="profbox" id="profBox">
+      <div class="grainstock" id="inCsRow" hidden><label for="devInCS">Input colour</label><select id="devInCS"></select></div>
+      <div class="note" id="inCsNote" hidden></div>
+      <div class="grainstock" id="layerRow" hidden><label for="devLayer">Layer</label><select id="devLayer"></select></div>
       <div class="grainstock"><label for="devProf">Profile</label><select id="devProf"></select></div>
       <div class="curvewrap"><canvas id="curveCv" aria-label="Tone curve in stops around mid grey. Drag a point; click the curve to add one; double-click a point to remove it."></canvas></div>
       <div class="note" id="curveNote">Tone curve in stops around mid grey (input across, output up), over this photo's histogram. Drag a point, click or tap the curve to add one, double-click or double-tap a point to remove it. Applied before Shadows / Midtones / Highlights, on luminance, so colours keep their hue.</div>
@@ -239,7 +242,7 @@
     <p class="k">Film stock names describe the stocks that inspired each look. Ernest Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
     <p class="k" id="aboutGpu"></p>
     <p class="k">Video: Mediabunny (MPL-2.0) over your browser's WebCodecs; see <code>video/README.md</code> in the repository.</p>
-    <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository.</p>
+    <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository. OpenEXR decoding: the three.js EXRLoader (MIT, © three.js authors) with fflate (MIT); see <code>exr/README.md</code>.</p>
     <div class="row"><a class="btn primary" id="aboutSupport" target="_blank" rel="noopener" hidden>☕ Buy me a coffee</a><a class="btn report" id="aboutReport" target="_blank" rel="noopener" title="Opens a new issue on GitHub with your app version, browser and graphics filled in">Report a problem</a><span class="spacer"></span><button class="btn" id="btnCloseAbout">Close</button></div>
   </div>
 </div>
@@ -260,22 +263,23 @@
   </div>
 </div>
 
-<script src="js/00-config.js?v=0.9.0"></script>
-<script src="js/01-development.js?v=0.9.0"></script>
-<script src="js/02-profiles.js?v=0.9.0"></script>
-<script src="js/03-measured.js?v=0.9.0"></script>
-<script src="js/03-params.js?v=0.9.0"></script>
-<script src="js/04-panel.js?v=0.9.0"></script>
-<script src="js/05-gl.js?v=0.9.0"></script>
-<script src="js/06-images.js?v=0.9.0"></script>
-<script src="js/07-raw.js?v=0.9.0"></script>
-<script src="js/08-output.js?v=0.9.0"></script>
-<script src="js/09-view.js?v=0.9.0"></script>
-<script src="js/10-boot.js?v=0.9.0"></script>
-<script src="js/11-curve-editor.js?v=0.9.0"></script>
-<script src="js/12-video.js?v=0.9.0"></script>
-<script src="js/13-help.js?v=0.9.0"></script>
-<script src="js/14-report.js?v=0.9.0"></script>
-<script src="js/15-phone.js?v=0.9.0"></script>
+<script src="js/00-config.js?v=0.10.0"></script>
+<script src="js/01-development.js?v=0.10.0"></script>
+<script src="js/02-profiles.js?v=0.10.0"></script>
+<script src="js/03-measured.js?v=0.10.0"></script>
+<script src="js/03-params.js?v=0.10.0"></script>
+<script src="js/04-panel.js?v=0.10.0"></script>
+<script src="js/05-gl.js?v=0.10.0"></script>
+<script src="js/06-images.js?v=0.10.0"></script>
+<script src="js/07-raw.js?v=0.10.0"></script>
+<script src="js/07-exr.js?v=0.10.0"></script>
+<script src="js/08-output.js?v=0.10.0"></script>
+<script src="js/09-view.js?v=0.10.0"></script>
+<script src="js/10-boot.js?v=0.10.0"></script>
+<script src="js/11-curve-editor.js?v=0.10.0"></script>
+<script src="js/12-video.js?v=0.10.0"></script>
+<script src="js/13-help.js?v=0.10.0"></script>
+<script src="js/14-report.js?v=0.10.0"></script>
+<script src="js/15-phone.js?v=0.10.0"></script>
 </body>
 </html>

@@ -18,8 +18,12 @@ function mcurve(pts){   /* monotone cubic (Fritsch–Carlson) through sorted poi
 }
 /* generic camera-like curve, used when a RAW has no preview to calibrate against (rounded from typical camera JPEG curves) */
 const CAM_GENERIC=[[-8,-8.6],[-5,-5.5],[-3,-3.25],[-1.5,-1.6],[0,0],[1,1.15],[2,2.05],[3,2.6],[4.5,3.15],[7,3.8]];
+/* scene curve for EXR renders (v0.10): slope ~1 through the mids, then a long shoulder that reaches white around
+   +6.5 to +8 stops over mid grey, the range Blender's Filmic / AgX cover; CAM_GENERIC clips near +2.5 like a camera JPEG */
+const EXR_SCENE=[[-10,-10.3],[-6,-6.15],[-3,-3.05],[-1,-1],[0,0],[1,0.93],[2,1.62],[3,2.02],[4.5,2.28],[6.5,2.43],[10,2.52]];
 function effCurve(it,d){ if (!it) return null; const p=(d&&d.profile)||"auto";
   if (p==="custom" && d.curve && d.curve.length>=2) return d.curve;
+  if (p==="auto" && it.exr) return EXR_SCENE;
   if (p==="auto" && it.raw) return it.camCurve||CAM_GENERIC;
   return null; }
 /* what the scene pass gets: curve points (or null) + saturation. Camera saturation stays with a RAW unless the profile is Flat. */

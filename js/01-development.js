@@ -28,8 +28,8 @@ function platformHint(W,H){ const r=W/H, fits=PLATFORM_FITS.filter(p=>p[1](r)).m
   return fits.length ? {ok:true,text:fits.join(" · ")+small} : {ok:false,text:"Social feeds will crop or letterbox this ratio"}; }
 const DEV_PARAMS=[["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
   ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"]];
-const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null});
-function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh||(d.profile&&d.profile!=="auto"); }
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto"});
+function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
 /* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
    Returns UV rect (top-left origin) and the output size in pixels. */
 function cropRect(d,w,h){
@@ -57,10 +57,11 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
   document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && !social && (b.dataset.o==="port")===port); b.disabled=!cropped || social || d.fmt==="1:1"; });
   const c=cropRect(d,srcW,srcH), hnt=platformHint(c.W,c.H), he=$("devHint");
   he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
-  $("tick-dev").classList.toggle("live",!!devActive(d)); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
+  $("tick-dev").classList.toggle("live",!!devActive(d)); if (typeof exrSync==="function") exrSync(); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
-    + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "");
+    + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "")
+    + (it.exr && it.info ? ` · EXR · ${it.info.pixelType===2?"32-bit float":"16-bit half"} · ${exrSpace(it,curDev()).name}${it.layer?" · "+it.layer:""}` : "");
   $("meta").title = $("meta").textContent + (it.raw && it.baseEV!=null ? `\n${it.cam||"RAW"}: decoded with LibRaw, camera white balance, linear. Base exposure ${it.baseAuto?"matched to the camera's own preview":"+1 EV (no camera preview in the file)"}; use Exposure and Development to adjust.` : ""); }
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
