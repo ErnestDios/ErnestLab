@@ -10,21 +10,28 @@ Everything runs locally in your browser with WebGL2. **Your images never leave y
 
 ## Examples
 
-Left: the original. Right: Ernest Lab's built-in looks as they ship, untouched, exported at 2000 px and scaled down for this page.
+Left: the original. Right: Ernest Lab, exported at 2000 px and scaled down for this page. Built-in looks as they ship, unless the label says otherwise.
 
-**CG, Vision3 500T-style:** measured 500T grain on Super 35, physical halation around the light source.
+**CG, Tungsten 500:** measured Vision3 500T grain on Super 35, physical halation around the light source.
 ![Tears of Steel CG city, original vs Tungsten 500](docs/examples/ex_cg_city.jpg)
 
-**Night, CineStill-style:** halation from the film base (no anti-halation backing), only around lights; *Clipped light* tells it how much brighter the neon really was than the 8-bit file can show.
-![Hong Kong night street, original vs Night 800T](docs/examples/ex_night.jpg)
+**Live action + CG, Daylight 250:** the same grain on the plate and the CG robot, so they sit together.
+![Tears of Steel robot, original vs Daylight 250](docs/examples/ex_robot.jpg)
 
-**Portrait 400:** soft contrast, warm skin, gentle roll-off.
-![Portrait, original vs Portrait 400](docs/examples/ex_portrait.jpg)
+**Interior, Tungsten 500:**
+![Tears of Steel interior, original vs Tungsten 500](docs/examples/ex_interior.jpg)
+
+**Night, CineStill-style:** halation from the film base (no anti-halation backing), only around lights. Here pushed (Halation 1.5, Clipped light 6): an 8-bit file clips every neon tube at white, and *Clipped light* tells Ernest Lab how much brighter they really were. At 1:1, the red halos bleed over the blue tubes:
+![Hong Kong night street, original vs Night 800T pushed](docs/examples/ex_night.jpg)
+![Detail at 1:1, original vs Night 800T pushed](docs/examples/ex_night_detail.jpg)
+
+**One portrait, six looks:** original, Portrait 400, Slide 100, Soft 500, B&W Tri-X, Bleach bypass.
+![Portrait in six looks](docs/examples/ex_portrait_looks.jpg)
 
 **Black & white from spectra:** the same CG frame on Tri-X, unfiltered (Tri-X sees blue strongly, so the sky goes pale) and through a red #25 filter (blue sky darkens, clouds stand out), computed from Kodak's measured sensitivity and filter curves.
 ![Big Buck Bunny, original vs Tri-X vs Tri-X with red filter](docs/examples/ex_bw_filters.jpg)
 
-<sub>Images from Wikimedia Commons: *Tears of Steel* frame 00 1c, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). Modified: film looks applied, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
+<sub>Images from Wikimedia Commons: *Tears of Steel* frames 00 1c, 05 6a and 04 3e, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([1](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg), [2](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_05_6a.jpg), [3](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_04_3e.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). Modified: film looks applied, cropped, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
 
 ## Use it
 
