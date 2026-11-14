@@ -26,7 +26,7 @@ const HELP={
          tryit:"Night scene with practical lights: Halation 1 (no backing), Clipped light 4. Want every bright edge to glow? Model: By eye."},
   lens: {t:"Lens", film:"Real glass isn't perfect: colours focus at slightly different points, and the corners get softer and darker than the centre.",
          see:"Colour fringes on high-contrast edges, softer corners and a vignette that draws the eye to the middle.",
-         tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best."},
+         tryit:"For CG, a little aberration and edge softness hide the too-perfect render. Subtle is best. Flare floor adds the faint veil of light a real lens spreads over the frame, so pure-black CG blacks take grain like film."},
   grain:{t:"Grain", film:"The image is made of tiny silver crystals or dye clouds: bigger in faster film, and every colour layer has its own. Datasheets measure it as RMS granularity: how much density flickers under a 48 µm spot.",
          see:"Measured stocks use that number per colour layer, on their own gauge: Super 16 shows twice the grain of Super 35 because the frame is half as wide. Shadows grain more, as underexposed film does.",
          tryit:"Pick a measured stock, then change Gauge: the same emulsion from 35mm still to Super 8."},

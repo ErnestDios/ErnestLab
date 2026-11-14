@@ -135,7 +135,7 @@ void main(){ float w[5]=float[](0.227027,0.1945946,0.1216216,0.054054,0.016216);
 /* 3: optics in scene-linear, then the emulsion: per-layer grain as a density fluctuation, before the film curve */
 const FS_OPTICS=HEAD+GRAIN_FN+`
 uniform sampler2D uImg,uSoft,uH2,uH4,uH8;
-uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather;
+uniform vec2 uRes; uniform float uCA,uSoftAmt,uSoftStart,uHal,uHalR,uBloom,uVig,uVigSize,uVigFeather,uFlare;
 uniform vec3 uHalCol;
 uniform float uHalPhys, uHalF, uBloomF; uniform vec3 uHalW;   /* physical halation: reflected fraction, per-layer weights; bloom scatter fraction */
 uniform float uGrain,uGrainSize,uGrainCol,uGrainResp,uGrainRough,uGrainShadow,uSeed;
@@ -194,6 +194,9 @@ void main(){
     lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
   }
   lin *= 1.0-uVig*smoothstep(uVigSize, uVigSize+uVigFeather, r);
+  /* Flare floor (v0.10): lenses and cameras scatter a few % of the scene's light evenly over the frame (veiling glare),
+     and film adds fog, so no part of a negative gets zero exposure. Added before the emulsion, so grain lives in it. */
+  lin += vec3(uFlare*0.0018);
   if (uGrain>0.0) lin=emulsionGrain(lin,uv);
   o=vec4(stEnc(lin),1.0);
 }`;
@@ -402,7 +405,7 @@ function render(){
     gl.uniform2f(u.uRes,outW,outH);
     gl.uniform1f(u.uCA,e.ca); gl.uniform1f(u.uSoftAmt,e.soft); gl.uniform1f(u.uSoftStart,e.softStart);
     gl.uniform1f(u.uHal,e.hal); gl.uniform1f(u.uHalR,e.halR); gl.uniform3fv(u.uHalCol,hc); gl.uniform1f(u.uBloom,e.bloom);
-    gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather);
+    gl.uniform1f(u.uVig,e.vig); gl.uniform1f(u.uVigSize,e.vigSize); gl.uniform1f(u.uVigFeather,e.vigFeather); gl.uniform1f(u.uFlare,e.flare);
     gl.uniform1f(u.uGrain,e.grain); gl.uniform1f(u.uGrainSize,e.grainSize*Math.min(outW,outH)/GRAIN_REF); gl.uniform1f(u.uGrainCol,e.grainCol); gl.uniform1f(u.uGrainResp,e.grainResp); gl.uniform1f(u.uGrainRough,e.grainRough); gl.uniform1f(u.uGrainShadow,e.grainShadow); gl.uniform1f(u.uSeed,e.seed+grainFrame*101);   /* video: new grain every frame */
     gl.uniform3f(u.uGAmt,e.gAmtR,e.gAmtG,e.gAmtB); gl.uniform3f(u.uGSize,e.gSizeR,e.gSizeG,e.gSizeB); gl.uniform3f(u.uGClump,e.gClumpR,e.gClumpG,e.gClumpB);
     const gp=grainPhys(e,outW,outH); gl.uniform1f(u.uGPhys,gp?1:0);

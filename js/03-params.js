@@ -48,6 +48,8 @@ const GROUPS = [
     ["vig","Vignette",0,1,0.01,0,""],
     ["vigSize","Vignette size",0.1,1,0.01,0.45,""],
     ["vigFeather","Vignette feather",0.1,1.2,0.01,0.7,""],
+    /* v0.10: veiling glare / fog: an even floor of light, in % of mid grey, added before grain (so blacks carry grain, as on film) */
+    ["flare","Flare floor",0,5,0.01,0,"%"],
   ]},
   {id:"grain", title:"Grain", params:[
     ["grain","Amount",0,2,0.01,0,""],
