@@ -1,7 +1,7 @@
 /* Ernest Lab · js/07-exr.js · OpenEXR stills (decoder in ./exr/).
    Classic script (not a module): files load in order from index.html and share one global scope. */
 "use strict";
-/* ---------------- EXR (v0.10) ----------------
+/* ---------------- EXR (v1.0) ----------------
    CG renders arrive scene-linear, often brighter than white, in the renderer's own primaries. The file is decoded
    in a worker (three.js EXRLoader, patched to pick a layer in multi-layer files) to RGBA half floats and enters the
    pipeline like a RAW (uInXfer=1), with a 3×3 matrix from the file's primaries to the working space (linear Rec.709,

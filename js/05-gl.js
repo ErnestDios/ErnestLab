@@ -195,7 +195,7 @@ void main(){
     lin += (stDec(texture(uH8,uv).rgb)*0.6+stDec(texture(uH4,uv).rgb)*0.4)*uBloom*1.5;
   }
   lin *= 1.0-uVig*smoothstep(uVigSize, uVigSize+uVigFeather, r);
-  /* v0.10, two offsets before the emulsion, so no part of a negative gets zero exposure and blacks carry grain:
+  /* v1.0, two offsets before the emulsion, so no part of a negative gets zero exposure and blacks carry grain:
      Glare (Lens): the lens and camera body scatter a fraction of all incoming light evenly over the frame, so it scales
      with the frame's average light and takes its colour. Fog (Development): density the developer makes with no light
      at all; neutral, the same in any scene. Both after the vignette: glare comes from inside the lens, fog from the film. */
