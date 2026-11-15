@@ -347,7 +347,7 @@ function setLookUniforms(u,e){
   gl.uniform1f(u.uLutMix, lutTex ? e.lutMix*lookMix : 0); gl.uniform1f(u.uLutSize, lutTex?lutSize:2);
   const st=stockFor(e.stock); bindTex(2, st||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);
 }
-/* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.lut.gz, uint16, r fastest), kept for the session ---- */
+/* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.json: gzip, base64; uint16, r fastest), kept for the session ---- */
 const stockTexs={}, stockJobs={};
 function stockFor(key){ if (!key || !STOCK_LIB[key]) return null; if (stockTexs[key]) return stockTexs[key]; loadStock(key); return null; }
 function loadStock(key){
@@ -355,9 +355,9 @@ function loadStock(key){
   const badge=$("badge"); if (badge){ badge.textContent=`Loading ${STOCK_LIB[key].label}…`; badge.classList.add("busy"); }
   return stockJobs[key]=(async()=>{
     try{
-      const res=await fetch(new URL(`stocks/${key}.lut.gz`,document.baseURI).href); if (!res.ok) throw new Error(res.status+" "+res.statusText);
-      let buf=await res.arrayBuffer(); const b0=new Uint8Array(buf,0,2);
-      if (b0[0]===0x1f && b0[1]===0x8b) buf=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();   /* unless the server already un-gzipped it */
+      const res=await fetch(new URL(`stocks/${key}.json`,document.baseURI).href); if (!res.ok) throw new Error(res.status+" "+res.statusText);
+      const j=await res.json(), bin=Uint8Array.from(atob(j.data),c=>c.charCodeAt(0));   /* gzip in base64: a file type every host serves */
+      const buf=await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
       const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N; if (q.length!==n*3) throw new Error("bad stock file");
       const f=new Float32Array(n*3); for (let i=0;i<n*3;i++) f[i]=q[i]/65535;
       stockTexs[key]=makeLutTex(STOCK_N,f); schedule();

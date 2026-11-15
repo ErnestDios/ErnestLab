@@ -15,13 +15,13 @@ The input here is CIE XYZ made from Ernest Lab's scene-linear Rec.709 (the tool 
 The LUT is indexed by scene-linear Rec.709 through a log shaper: s = (log2(x / 0.18) − LO) / (HI − LO) per channel,
 LO = −9, HI = +7 stops, 33³ points (0.5 stop apart). Against the direct model on 20 000 random colours from −8 to +6
 stops (GPU-style trilinear): mean error ≈ 0.3–0.5 of an 8-bit code, 99 % under 3–4 codes. Stored as uint16, r fastest
-(the order of a WebGL 3D texture), gzipped: stocks/<key>.lut.gz.
+(the order of a WebGL 3D texture), gzipped, base64 in stocks/<key>.json.
 
 Grain: each layer's datasheet RMS granularity (σ_D at 48 µm against density) over its local contrast γ = dD/dlogH,
 σ_stops = σ_D / (0.301·γ), at −6…+4 stops around the tool's own mid-grey exposure (12.5 / ISO lux·s), so the grain sits
 where the LUT puts the tones. Same form as GRAIN_DATA in js/03-measured.js.
 """
-import sys, os, json, gzip, time, math, argparse
+import sys, os, json, gzip, time, math, argparse, base64
 import numpy as np, colour
 sys.path.insert(0, os.environ.get("SFL", "/tmp/sfl/src"))
 from spectral_film_lut import FILM_STOCKS
@@ -139,7 +139,8 @@ if __name__ == "__main__":
         neg = load(negn); pr = load(prn, neg) if prn else None
         T = bake(neg, pr)
         q = np.round(T * 65535).astype("<u2")
-        open(os.path.join(ROOT, "stocks", f"{k}.lut.gz"), "wb").write(gzip.compress(q.tobytes(), compresslevel=9, mtime=0))
+        gz = gzip.compress(q.tobytes(), compresslevel=9, mtime=0)   # JSON + base64: a file type every host serves (the claude.ai preview refuses .gz)
+        json.dump({"key": k, "n": N, "enc": "uint16le-rgb-rfastest-gzip-base64", "data": base64.b64encode(gz).decode()}, open(os.path.join(ROOT, "stocks", f"{k}.json"), "w"))
         fd = neg._fd; g = grain(neg)
         mid = np.clip(model(np.array([[0.18] * 3]), neg, pr), 0, 1)[0]
         e = check(T, neg, pr) if a.check else None

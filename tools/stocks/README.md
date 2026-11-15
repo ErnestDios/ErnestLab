@@ -1,7 +1,7 @@
 # Measured film stocks
 
 `build_stocks.py` bakes negative + print pairs from [spectral_film_lut](https://github.com/JanLohse/spectral_film_lut)
-(Jan Lohse, MIT; datasheets digitised from Kodak, Fujifilm, Agfa and Ilford) into `stocks/<key>.lut.gz`, and records each
+(Jan Lohse, MIT; datasheets digitised from Kodak, Fujifilm, Agfa and Ilford) into `stocks/<key>.json`, and records each
 stock's grain in `stocks.json`. `build_js.py` turns that into `js/03-stocks.js` (stock table, measured grain, presets).
 
     git clone https://github.com/JanLohse/spectral_film_lut /tmp/sfl
