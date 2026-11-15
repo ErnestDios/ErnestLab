@@ -356,7 +356,8 @@ function loadStock(key){
   return stockJobs[key]=(async()=>{
     try{
       const res=await fetch(new URL(`stocks/${key}.lut.gz`,document.baseURI).href); if (!res.ok) throw new Error(res.status+" "+res.statusText);
-      const buf=await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+      let buf=await res.arrayBuffer(); const b0=new Uint8Array(buf,0,2);
+      if (b0[0]===0x1f && b0[1]===0x8b) buf=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();   /* unless the server already un-gzipped it */
       const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N; if (q.length!==n*3) throw new Error("bad stock file");
       const f=new Float32Array(n*3); for (let i=0;i<n*3;i++) f[i]=q[i]/65535;
       stockTexs[key]=makeLutTex(STOCK_N,f); schedule();
