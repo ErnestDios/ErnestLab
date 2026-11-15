@@ -13,7 +13,7 @@ const HELP={
          see:"Exposure works in stops: +1 doubles the light, −1 halves it. Temperature warms or cools; Tint shifts green ↔ magenta.",
          tryit:"+0.5 to +1 on a dark CG render to open it up; Temperature +0.2 for golden hour."},
   curve:{t:"Film curve", film:"Film answers light in an S shape: a soft toe in the shadows, a straight middle, and a shoulder that squeezes highlights instead of clipping them.",
-         see:"Contrast steepens the middle. Highlight roll-off lets lamps and skies fade gently. Black lift and White crush give the faded look of a print. Film stock swaps the sliders for a real film computed from its datasheets: negative, print and dyes, so tone and colour change together as they do on film.",
+         see:"Contrast steepens the middle. Highlight roll-off lets lamps and skies fade gently. Black lift and White crush give the faded look of a print. Film stock swaps the sliders for a real film computed from its datasheets: negative, print and dyes, so tone and colour change together as they do on film. The sliders then tweak that film's curve instead of replacing it.",
          tryit:"Raise Highlight roll-off on a render with hard, clipped lights."},
   color:{t:"Colour", film:"The dyes of each stock render colour their own way, and printing or grading adds tints, like teal shadows and warm highlights.",
          see:"Saturation sets colour strength; Shadow and Highlight tint push a hue into the darks and the brights; an external LUT plugs in your own grade.",

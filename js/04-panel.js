@@ -39,7 +39,9 @@ function buildRack(){
       for (const k in STOCK_LIB){ const L=STOCK_LIB[k], gl2=STOCK_PRESET_GROUP[L.label]||"Measured";
         if (!groups[gl2]){ groups[gl2]=document.createElement("optgroup"); groups[gl2].label=gl2.replace(/^Measured · /,""); sel.appendChild(groups[gl2]); }
         const o=document.createElement("option"); o.value=k; o.textContent=L.label; groups[gl2].appendChild(o); }
-      sel.addEventListener("change",()=>{ base.stock=sel.value; syncUI(); schedule(); });
+      sel.addEventListener("change",()=>{ const from=base.stock; base.stock=sel.value;
+        if (!from && sel.value) for (const k of STOCK_TUNE) base[k]=DEF[k];   /* from the by-eye curve: start from the measured stock; stock to stock keeps your tweaks */
+        syncUI(); schedule(); });
       const info=document.createElement("div"); info.className="note bwinfo"; info.id="stockInfo";
       box.appendChild(r); box.appendChild(info);
     }
@@ -75,7 +77,7 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)) stockSync(); markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       scrubOut(out,p,()=>base[k],v=>{ base[k]=v; if (k==="bw" && v>0) bypass.bw=false; syncUI(); schedule(); });
@@ -85,7 +87,17 @@ function buildRack(){
     det.appendChild(box); host.appendChild(det);
   });
 }
+function lookEdited(){
+  if (Math.abs(lookMix-1)>1e-9) return true;
+  for (const k in DEF){ const a=base[k], b=presetVals[k]; if (typeof DEF[k]==="string" ? String(a||"")!==String(b||"") : Math.abs(a-b)>1e-9) return true; }
+  return false;
+}
+function presetLabelSync(){
+  const sel=$("preset"); if (!sel) return; const ed=lookEdited();
+  for (const o of sel.options){ if (!o.dataset.name) o.dataset.name=o.textContent; o.textContent=o.dataset.name+(o.selected&&ed?" (edited)":""); }
+}
 function markChanged(){
+  presetLabelSync();
   for (const k in ctlEls){ ctlEls[k].row.classList.toggle("changed", Math.abs(base[k]-presetVals[k])>1e-9); }
   for (const g of GROUPS){
     const live = g.params.some(p=>{ const k=p[0]; if (NONMIX.includes(k)) return false; return Math.abs(base[k]-DEF[k])>1e-9; }) || (g.id==="color" && lut);
@@ -118,15 +130,19 @@ function grainSync(){
     (own?`Shot on its own gauge.`:`Moved to a ${ratio>1?"smaller":"larger"} gauge: the frame is ${base.gGauge} mm wide instead of ${D.g}, so each grain is ${ratio>1?ratio.toFixed(1)+"× bigger":(1/ratio).toFixed(1)+"× smaller"} relative to the picture.`);
 }
 /* measured stock: what it is, and which film-curve sliders it replaces */
+const STOCK_TUNE=["con","roll","gR","gG","gB"];
 function stockSync(){
   const sel=$("filmStock"), info=$("stockInfo"); if (!sel) return;
   const L=STOCK_LIB[base.stock]; sel.value=L?base.stock:"";
-  for (const k of ["con","roll","gR","gG","gB"]) if (ctlEls[k]){ ctlEls[k].inp.disabled=!!L; ctlEls[k].row.classList.toggle("off",!!L); }
   if (!L){ info.textContent="By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above."; return; }
-  const k=base.stock, state = typeof stockTexs!=="undefined" && stockTexs[k] ? ["ok","● Measured LUT active."] : (typeof stockErr!=="undefined" && stockErr[k]) ? ["bad",`● LUT failed to load (${stockErr[k]}): showing the preset without the film model.`] : ["wait","● Loading the measured LUT…"];
+  const k=base.stock, tuned=STOCK_TUNE.filter(t=>Math.abs(base[t]-DEF[t])>1e-9), names={con:"Contrast",roll:"Roll-off",gR:"Red gamma",gG:"Green gamma",gB:"Blue gamma"};
+  const state = !(typeof stockTexs!=="undefined" && stockTexs[k]) ? ((typeof stockErr!=="undefined" && stockErr[k]) ? ["bad",`● LUT failed to load (${stockErr[k]}): showing the preset without the film model.`] : ["wait","● Loading the measured LUT…"])
+    : tuned.length ? ["tuned",`● Measured, tuned: ${tuned.map(t=>names[t]).join(", ")}.`] : ["ok","● Measured LUT active."];
   info.innerHTML=""; const st=document.createElement("b"); st.className="stk-"+state[0]; st.textContent=state[1]+" "; info.appendChild(st);
-  info.appendChild(document.createTextNode(`Measured: ${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
-    `It sets tone and colour from scene light, so Contrast, Roll-off and the gammas are off; Black lift, White crush, Colour and a LUT still apply on top. Exposure moves you along the film's real curve.`));
+  if (tuned.length && state[0]==="tuned"){ const bt=document.createElement("button"); bt.type="button"; bt.className="linkbtn"; bt.textContent="Back to measured";
+    bt.addEventListener("click",()=>{ for (const t of STOCK_TUNE) base[t]=DEF[t]; syncUI(); schedule(); }); info.appendChild(bt); info.appendChild(document.createTextNode(" ")); }
+  info.appendChild(document.createTextNode(`${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
+    `Exposure moves you along the film's real curve. Contrast, Roll-off and the gammas tweak the stock's own curve (at zero it's exactly the measured film); Black lift, White crush, Colour and a LUT apply on top.`));
 }
 /* halation model: physical numbers in plain words */
 function halSync(){

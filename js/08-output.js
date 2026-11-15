@@ -114,7 +114,7 @@ function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This lo
 const okStr=(k,v)=>typeof DEF[k]==="string" && typeof v==="string" && (k!=="stock" || v==="" || !!STOCK_LIB[v]);
 function lookJSON(){ return {app:"Ernest Lab", appVersion:APP_VERSION, format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k, typeof DEF[k]==="string" ? String(base[k]||"") : +(+base[k]).toFixed(4)]))}; }
 $("preset").addEventListener("change",ev=>{ const v=ev.target.value; applyPreset(v.slice(2), v.startsWith("u:")); });
-$("mix").addEventListener("input",ev=>{ lookMix=+ev.target.value; $("mixOut").textContent=Math.round(lookMix*100)+"%"; schedule(); });
+$("mix").addEventListener("input",ev=>{ lookMix=+ev.target.value; $("mixOut").textContent=Math.round(lookMix*100)+"%"; presetLabelSync(); schedule(); });
 $("btnReset").addEventListener("click",()=>{ base=Object.assign({},presetVals); lookMix=1; syncUI(); schedule(); });
 $("btnSaveLook").addEventListener("click",()=>{
   const n=$("lookName").value.trim(); if(!n){ toast("Type a name for the look first."); $("lookName").focus(); return; }

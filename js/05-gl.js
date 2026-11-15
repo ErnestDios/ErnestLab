@@ -124,9 +124,10 @@ vec3 filmPost(vec3 c){
 vec3 filmLook(vec3 c){ return filmPost(filmPre(c)); }
 vec3 stockLUT(vec3 lin){ vec3 s=clamp((log2(max(lin,vec3(1e-9))/0.18)-(${STOCK_LO.toFixed(1)}))/${(STOCK_HI-STOCK_LO).toFixed(1)},0.0,1.0);
   return texture(uStock, s*${((STOCK_N-1)/STOCK_N).toFixed(8)}+${(0.5/STOCK_N).toFixed(8)}).rgb; }
-/* the look from scene-linear: the curve-and-colour film (as before), or a measured stock (its LUT, then Black lift /
-   White crush, Colour and a LUT on top); the look's Mix blends the two */
-vec3 lookOut(vec3 lin){ vec3 a=filmLook(linToEnc(lin)); if (uStockMix<=0.0) return a; return mix(a, filmPost(stockLUT(lin)), uStockMix); }`;
+/* the look from scene-linear: the curve-and-colour film (as before), or a measured stock: its LUT, then the curve
+   sliders as tweaks on its output (all identity at their defaults, so untouched = the measured stock), then Black lift /
+   White crush, Colour and a LUT; the look's Mix blends the two */
+vec3 lookOut(vec3 lin){ vec3 a=filmLook(linToEnc(lin)); if (uStockMix<=0.0) return a; return mix(a, filmLook(stockLUT(lin)), uStockMix); }`;
 /* Procedural grain noise: hashed value noise, a finer octave and a coarse clumping octave. */
 const GRAIN_FN=`
 uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
