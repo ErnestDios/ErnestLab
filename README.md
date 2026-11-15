@@ -60,7 +60,7 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 
 **Development** (per image, before the film): format crop (film & photo: Original, 1:1, 5:4, 4:3, 3:2, 1.66, 16:9, 1.85, 2:1, 2.20, 2.39, landscape/portrait; social: 1:1, 4:5, 3:4, 9:16, 16:9, 1.91, 2:3; reframe; a hint shows which platforms will show the export without further cropping) applied before the lens, so vignette, edge softness and aberration follow the new frame; a **profile**: a tone curve in stops around mid grey, drawn over the photo's histogram (RAW default: *Camera-like*, matched to the contrast of the camera's own embedded JPEG; *Flat*; or your own curve, saved and moved between devices as `.json`); then shadows, midtones and highlights in stops around mid grey. All in linear light and on luminance so colours don't shift. Prepares each photo (pull hot highlights, open crushed shadows) before the film stock; changing the look doesn't touch it, and "Apply to all stills" copies it across a batch.
 
-**Video:** MP4 / MOV / WebM clips (made with CG and AI video in mind) get the same look: play and scrub with live grain that changes every frame, then export H.264 MP4 at full resolution with the original sound, rendered frame by frame in the browser via WebCodecs and [Mediabunny](https://mediabunny.dev) (MPL-2.0, `video/`).
+**Video:** MP4 / MOV / WebM clips (made with CG and AI video in mind) get the same look: play and scrub with live grain that changes every frame, then export H.264 MP4 at full resolution with the original sound, rendered frame by frame in the browser via WebCodecs and [Mediabunny](https://mediabunny.dev) (MPL-2.0, `video/`). **ProRes** (422 Proxy to 4444 XQ, with alpha) is decoded in the browser by Mediabunny's ProRes decoder (TurboRes, WebAssembly). **10-bit and HDR** clips (HEVC Main 10, iPhone HLG, VP9 / AV1 10-bit, ProRes) are decoded frame by frame so every bit reaches the film, and HLG / PQ become scene light from the file's tags. **Log** footage (Apple Log, Sony S-Log3, ARRI LogC3 / LogC4) is linearised with the manufacturers' published curves and gamuts, chosen in Development → Input colour. Plain 8-bit clips keep the browser's own player.
 
 **Black & white:** a B&W lab computed from spectra: the film's measured spectral sensitivity (Kodak Tri-X 400 and Double-X 5222 datasheets; orthochromatic, blue-sensitive and extended red modelled from emulsion chemistry; infrared-like and digital luminance) times a measured Wratten filter (#8, #15, #21, #25, #29, #58, #47), integrated over the spectrum. Each filter's cost in stops comes out of the same sum (Tri-X within ~0.15 stop of Kodak's published factors) and is compensated so mid grey stays put; filters that block everything a film sees are greyed out. Silver grain, neutral halation, selenium and sepia toning looks.
 
@@ -103,7 +103,7 @@ Preset names refer to the film stocks that inspired them. Ernest Lab is not affi
 
 [MIT](LICENSE) © 2026 Ernest Dios Viaplana. Interface fonts: IBM Plex, [SIL Open Font License 1.1](licenses/IBM-Plex-OFL.txt).
 
-Video I/O in [`video/`](video/README.md) is Mediabunny 1.66 ([MPL-2.0](licenses/Mediabunny-MPL-2.0.txt)), unmodified. The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
+Video I/O in [`video/`](video/README.md) is Mediabunny 1.66 ([MPL-2.0](licenses/Mediabunny-MPL-2.0.txt)) and its ProRes decoder with TurboRes ([MPL-2.0](licenses/TurboRes-MPL-2.0.txt)), unmodified. The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
 
 If Ernest Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕
 
@@ -130,6 +130,7 @@ js/09-view.js         viewer interactions, channels, before / after, resizable p
 js/10-boot.js         panel start-up, install button, guide
 js/11-curve-editor.js profile UI and the curve editor
 js/12-video.js        video preview and MP4 export (Mediabunny in ./video/)
+js/12-vdec.js         ProRes, 10-bit, HDR and log video: decoding, Y'CbCr → R'G'B', input colour
 js/13-help.js         the ? section help cards
 js/14-report.js       Report a problem (pre-filled GitHub issue)
 js/15-phone.js        phone layout, gestures, the ... menu; its last lines start the app

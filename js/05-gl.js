@@ -62,7 +62,29 @@ vec3 develop(vec3 l){
   return o;
 }
 vec3 srgbToLin(vec3 c){ return mix(c/12.92, pow((c+0.055)/1.055, vec3(2.4)), step(vec3(0.04045),c)); }
-vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? uInMat*c : srgbToLin(c)); }
+/* v1.2 video transfers → scene-linear (18 % grey = 0.18), then uInMat to the working space. c = R'G'B' 0..1 of the
+   video's own range (video-range codes already expanded). Checked against colour-science 0.4.7 (tools/regression/video_samples.py + video_check.py: greys within ~0.05 stop). */
+vec3 xferToLin(vec3 c){
+  if (uInXfer==2){ /* HLG (BT.2100) inverse OETF; reference white (75 %) → 1.0 */
+    vec3 e=mix(c*c/3.0, (exp((c-0.55991073)/0.17883277)+0.28466892)/12.0, step(vec3(0.5),c)); return e/0.26496; }
+  if (uInXfer==3){ /* PQ (ST 2084) → nits; 203 nits (BT.2408 reference white) → 1.0 */
+    vec3 p=pow(max(c,0.0),vec3(1.0/78.84375)); return 10000.0/203.0*pow(max(p-0.8359375,0.0)/(18.8515625-18.6875*p),vec3(1.0/0.1593017578125)); }
+  if (uInXfer==4){ /* Apple Log */
+    const float R0=-0.05641088, Rt=0.01, sg=47.28711236, be=0.00964052, ga=0.08550479, de=0.69336945;
+    float Pt=sg*(Rt-R0)*(Rt-R0);
+    return mix(mix(vec3(R0), sqrt(max(c,0.0)/sg)+R0, step(vec3(0.0),c)), exp2((c-de)/ga)-be, step(vec3(Pt),c)); }
+  if (uInXfer==5){ /* Sony S-Log3: the curve is defined on the stored (video-range) code value */
+    vec3 y=(64.0+876.0*c)/1023.0;
+    return mix((y*1023.0-95.0)*0.01125/(171.2102946929-95.0), pow(vec3(10.0),(y*1023.0-420.0)/261.5)*0.19-0.01, step(vec3(171.2102946929/1023.0),y)); }
+  if (uInXfer==6){ /* ARRI LogC3, EI 800 */
+    const float cut=0.010591, a=5.555556, b=0.052272, cc=0.247190, d=0.385537, e=5.367655, f=0.092809;
+    return mix((c-f)/e, (pow(vec3(10.0),(c-d)/cc)-b)/a, step(vec3(e*cut+f),c)); }
+  if (uInXfer==7){ /* ARRI LogC4 */
+    const float a=(262144.0-16.0)/117.45, b=(1023.0-95.0)/1023.0, cc=95.0/1023.0;
+    float s=(7.0*log(2.0)*exp2(7.0-14.0*cc/b))/(a*b), t=(exp2(14.0*(-cc/b)+6.0)-64.0)/a;
+    return mix(c*s+t, (exp2(14.0*(c-cc)/b+6.0)-64.0)/a, step(vec3(0.0),c)); }
+  return c; }
+vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? uInMat*c : uInXfer>=2 ? uInMat*xferToLin(c) : srgbToLin(c)); }
 vec3 sceneLinear(vec3 l){
   l *= exp2(uExp);
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
@@ -406,6 +428,7 @@ function render(){
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
+  if (srcItem && srcItem.video) srcXfer=vidSpace(srcItem,srcItem.dev||DEV0).xfer;   /* v1.2: a clip's transfer (0 = video as sRGB, as before) */
   drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniformMatrix3fv(u.uInMat,true,srcInMat()); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   const hp=halPhys(e,outW,outH);
@@ -455,7 +478,7 @@ function render(){
   drawTo(null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(5,srcTex); gl.uniform1i(u.uSrc,5); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h);
-    gl.uniform2f(u.uRes,cw,ch); gl.uniform1i(u.uSrcLin,srcXfer); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
+    gl.uniform2f(u.uRes,cw,ch); gl.uniform1i(u.uSrcLin,srcXfer===1?1:0); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0); gl.uniform1i(u.uChan, renderClean?0:viewChan);
   });
   if (scr){ bindTex(0,T.A.tex); mipOn(false); bindTex(5,srcTex); mipOn(false); }

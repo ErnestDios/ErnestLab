@@ -4,8 +4,8 @@
 /* ---------------- Section help (v0.8): the physical thing, what you'll see, one thing to try ---------------- */
 const HELP={
   dev:  {t:"Development", film:"Before any look, the lab decides the frame (the camera gate, the crop) and develops the negative so it holds detail in the shadows and the highlights.",
-         see:"Format crops the frame before the lens effects, so vignette and softness follow the new shape. Profile and Shadows / Midtones / Highlights shape the tones of this photo only. An EXR render also shows its input colour space (Rec.709, ACEScg, ACES…) and, for multi-layer files, which layer.",
-         tryit:"2.39 for a cinema frame; Shadows +0.5 on a backlit face. Fog 1–2 % gives pure-black renders the grainy, lifted black of a developed negative (Shadows multiplies, so it can't lift true black; Fog adds)."},
+         see:"Format crops the frame before the lens effects, so vignette and softness follow the new shape. Profile and Shadows / Midtones / Highlights shape the tones of this photo only. An EXR render also shows its input colour space (Rec.709, ACEScg, ACES…) and, for multi-layer files, which layer. A video shows how it's read: Rec.709, HLG / PQ from its tags, or the log curve you pick (Apple Log, S-Log3, LogC).",
+         tryit:"2.39 for a cinema frame; Shadows +0.5 on a backlit face. Fog 1–2 % gives pure-black renders the grainy, lifted black of a developed negative (Shadows multiplies, so it can't lift true black; Fog adds). Log footage looking flat and grey? Set Input colour to the camera's log."},
   look: {t:"Film stock", film:"Each film stock is a recipe: its own curve, colours, halation and grain, all decided by its chemistry.",
          see:"A preset sets every section at once; Look strength blends it with your photo.",
          tryit:"Start from a stock, adjust it, then save it as your own look."},

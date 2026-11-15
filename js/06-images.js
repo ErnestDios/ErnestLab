@@ -19,7 +19,7 @@ function uploadSource(bmp,isRaw){
 /* make item i the GPU source (decodes a RAW first). Returns false if it failed or was superseded. */
 async function ensureSource(i){
   const it=items[i]; if (srcItem===it && srcTex) return true;
-  if (it.video){ uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
+  if (it.video){ if (it.dec){ if (!(await decSource(it))) return false; } else uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
   if (!it.raw && !it.exr){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
   vidAttach(null);
   if (it.exr){ const badge=$("badge"); badge.textContent="Reading EXR…"; badge.classList.add("busy");

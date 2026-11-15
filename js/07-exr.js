@@ -39,7 +39,7 @@ function exrSpace(it,d){
   return {key:"rec709", name:EXR_CS.rec709.name, from:"assumed (no colour metadata in the file)", mat:IDENT3};
 }
 /* the matrix the scene pass uses for the current source (identity for RAW, which LibRaw already gives in Rec.709) */
-function srcInMat(){ const it=srcItem; return it&&it.exr ? exrSpace(it,it.dev||DEV0).mat : IDENT3; }
+function srcInMat(){ const it=srcItem; return it&&it.exr ? exrSpace(it,it.dev||DEV0).mat : it&&it.video ? vidSpace(it,it.dev||DEV0).mat : IDENT3; }
 
 let exrQueue=Promise.resolve(), exrCache=null;   /* one decode at a time; the last decoded still stays in memory */
 function exrJob(fn){ const r=exrQueue.then(fn,fn); exrQueue=r.then(()=>{},()=>{}); return r; }
@@ -89,17 +89,28 @@ async function exrDecode(it){
 /* Development rows for EXRs: input colour space and (multi-layer files) which layer */
 function exrSync(){
   const it=items[cur], row=$("inCsRow"), lrow=$("layerRow"); if (!row) return;
-  const on=!!(it&&it.exr); row.hidden=!on; $("inCsNote").hidden=!on; lrow.hidden=!(on&&it.info&&it.info.layers&&it.info.layers.length>1);
+  const vid=!!(it&&it.video), on=!!(it&&(it.exr||vid)); row.hidden=!on; $("inCsNote").hidden=!on; lrow.hidden=!(it&&it.exr&&it.info&&it.info.layers&&it.info.layers.length>1);
   if (!on) return;
-  const d=curDev(), sp=exrSpace(it,d), sel=$("devInCS");
+  const sel=$("devInCS"), kind=vid?"video":"exr", d=curDev();
+  if (sel.dataset.kind!==kind){ sel.dataset.kind=kind; const T=vid?VCS:EXR_CS;
+    sel.innerHTML='<option value="auto">Auto</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}" title="${v.hint}">${v.name}</option>`).join(""); }
+  if (vid){ const sp=vidSpace(it,d), m=it.vmeta||{};
+    sel.options[0].textContent=`Auto: ${vidSpace(it,Object.assign({},d,{inCS:"auto"})).name}`;
+    sel.value=VCS[d.inCS]?d.inCS:"auto";
+    $("inCsNote").textContent=`Reading it as ${sp.name}, ${sp.from}.`
+      + (sp.xfer>=2 ? ` Converted to scene-linear light (18 % grey = 0.18) and the working space (linear Rec.709); highlights above white are kept, and the profile rolls them off.` : ` Display-referred video, read like a JPEG (sRGB).`)
+      + (it.dec ? (it.path==="rgb" ? ` This browser hands over its frames as 8-bit RGB, so the extra bits are lost here.` : ` Decoded here at ${m.bits||8} bits${m.alpha?(sp.xfer===0?"; alpha composited over black":"; alpha ignored"):""}.`)
+                : (m.bits>8||m.hdr ? ` Previewed through the browser's player (8-bit).` : ""))
+      + (sp.xfer>=4 ? ` Log footage: pick the camera's curve here if Auto didn't (files rarely say).` : "");
+    return; }
+  const sp=exrSpace(it,d);
   sel.options[0].textContent=`Auto: ${sp.from.startsWith("chosen")?exrSpace(it,Object.assign({},d,{inCS:"auto"})).name:sp.name}`;
-  sel.value=d.inCS||"auto";
+  sel.value=EXR_CS[d.inCS]?d.inCS:"auto";
   $("inCsNote").textContent=`Reading it as ${sp.name}, ${sp.from}. Converted to the working space (linear Rec.709) with a 3×3 matrix; nothing is clipped. Alpha is ignored: EXR colour is already premultiplied (over black).`;
   if (!lrow.hidden){ const ls=$("devLayer"); ls.innerHTML=""; for (const l of it.info.layers){ const o=document.createElement("option"); o.value=l; o.textContent=l||"(main RGB)"; ls.appendChild(o); } ls.value=it.layer??""; }
 }
 function buildExrRows(){
   const sel=$("devInCS"); if (!sel) return;
-  sel.innerHTML='<option value="auto">Auto</option>'+Object.entries(EXR_CS).map(([k,v])=>`<option value="${k}" title="${v.hint}">${v.name}</option>`).join("");
   sel.addEventListener("change",()=>{ setDev("inCS",sel.value); const it=items[cur]; if (it&&it.exr&&exrCache&&exrCache.it===it) exrPrepare(it,exrCache.r).then(buildStrip); });
   $("devLayer").addEventListener("change",async()=>{ const it=items[cur]; if (!it) return; it.layer=$("devLayer").value; srcItem=null;
     if (await ensureSource(cur)){ await exrPrepare(it,exrCache.r); buildStrip(); syncDev(); schedule(); } });

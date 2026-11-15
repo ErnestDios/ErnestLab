@@ -64,7 +64,8 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
     + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "")
-    + (it.exr && it.info ? ` · EXR · ${it.info.pixelType===2?"32-bit float":"16-bit half"} · ${exrSpace(it,curDev()).name}${it.layer?" · "+it.layer:""}` : "");
+    + (it.exr && it.info ? ` · EXR · ${it.info.pixelType===2?"32-bit float":"16-bit half"} · ${exrSpace(it,curDev()).name}${it.layer?" · "+it.layer:""}` : "")
+    + (it.video && it.vmeta ? ` · ${it.vmeta.name}${it.vmeta.bits>8?" · "+it.vmeta.bits+"-bit":""}${it.vmeta.alpha?" + alpha":""} · ${vidSpace(it,curDev()).name}${it.dec&&it.path==="rgb"?" · 8-bit (browser frames)":""}` : "");
   $("meta").title = $("meta").textContent + (it.raw && it.baseEV!=null ? `\n${it.cam||"RAW"}: decoded with LibRaw, camera white balance, linear. Base exposure ${it.baseAuto?"matched to the camera's own preview":"+1 EV (no camera preview in the file)"}; use Exposure and Development to adjust.` : ""); }
 function buildDevelop(){
   const box=$("devCtrls"), fs=$("devFmt");
