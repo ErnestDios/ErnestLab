@@ -23,7 +23,7 @@ const CAM_GENERIC=[[-8,-8.6],[-5,-5.5],[-3,-3.25],[-1.5,-1.6],[0,0],[1,1.15],[2,
 const EXR_SCENE=[[-10,-10.3],[-6,-6.15],[-3,-3.05],[-1,-1],[0,0],[1,0.93],[2,1.62],[3,2.02],[4.5,2.28],[6.5,2.43],[10,2.52]];
 function effCurve(it,d){ if (!it) return null; const p=(d&&d.profile)||"auto";
   if (p==="custom" && d.curve && d.curve.length>=2) return d.curve;
-  if (p==="auto" && (it.exr || (typeof vidSceneRef==="function" && vidSceneRef(it,d)))) return EXR_SCENE;   /* v1.2: HDR and log video are scene-referred too */
+  if (p==="auto" && (it.exr || ((it.video||it.dpx) && typeof srcSpaceOf==="function" && srcSpaceOf(it,d).xfer>=1))) return EXR_SCENE;   /* v1.2/1.3: HDR / log video, scans and EXR sequences are scene-referred too */
   if (p==="auto" && it.raw) return it.camCurve||CAM_GENERIC;
   return null; }
 /* what the scene pass gets: curve points (or null) + saturation. Camera saturation stays with a RAW unless the profile is Flat. */

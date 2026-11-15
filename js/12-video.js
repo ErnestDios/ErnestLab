@@ -34,23 +34,24 @@ async function vidProbeNative(f){
   el.addEventListener("seeked",()=>vidSeeked(it));   /* on the element: media events don't bubble, and it isn't in the page */
   return it;
 }
-function vidRelease(it){ if (!it||!it.video) return; if (it.dec){ it.el.close(); if (vidCur===it) vidAttach(null); return; } try{ it.el.pause(); it.el.removeAttribute("src"); it.el.load(); }catch(e){} if (it.src) URL.revokeObjectURL(it.src); if (vidCur===it) vidAttach(null); }
+function vidRelease(it){ if (!it||!it.video) return; if (it.seq){ it.el.close(); if (vidCur===it) vidAttach(null); return; } if (it.dec){ it.el.close(); if (vidCur===it) vidAttach(null); return; } try{ it.el.pause(); it.el.removeAttribute("src"); it.el.load(); }catch(e){} if (it.src) URL.revokeObjectURL(it.src); if (vidCur===it) vidAttach(null); }
 function vidRefresh(){   /* new frame into the source texture (on its own unit: never upload on the active one) */
   if (!vidCur || !srcTex || srcItem!==vidCur) return; const el=vidCur.el; if (el.readyState<2) return;
-  if (vidCur.dec){ vidDecFrame(vidCur); return; }   /* decoded clips upload asynchronously, then render */
+  if (vidCur.dec){ vidDecFrame(vidCur); return; }
+  if (vidCur.seq){ seqRefresh(vidCur); return; }   /* decoded clips upload asynchronously, then render */
   bindTex(5,srcTex); gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false); gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,el); srcMip=false;
 }
 function vidFrame(now,meta){
   if (!vidCur) return; vidRefresh(); grainFrame = meta&&meta.presentedFrames!=null ? meta.presentedFrames : (grainFrame+1); render(); vidUI();
   if (!vidCur.el.paused) vidLoop();
 }
-function vidLoop(){ const el=vidCur&&vidCur.el; if (!el || vidCur.dec) return;   /* the decoded player drives itself */ if (el.requestVideoFrameCallback) vidRVFC=el.requestVideoFrameCallback(vidFrame); else vidRVFC=requestAnimationFrame(t=>vidFrame(t,null)); }
+function vidLoop(){ const el=vidCur&&vidCur.el; if (!el || vidCur.dec || vidCur.seq) return;   /* the decoded player drives itself */ if (el.requestVideoFrameCallback) vidRVFC=el.requestVideoFrameCallback(vidFrame); else vidRVFC=requestAnimationFrame(t=>vidFrame(t,null)); }
 function vidUI(){ const it=vidCur; if (!it) return; const el=it.el, d=el.duration||0;
   if (document.activeElement!==$("vTime")) $("vTime").value=d?Math.round(el.currentTime/d*1000):0;
-  $("vTimeT").textContent=fmtT(el.currentTime)+" / "+fmtT(d);
+  $("vTimeT").textContent= it.seq ? `frame ${it.nums[el.idx]}  ·  ${el.idx+1} / ${it.frames.length}` : fmtT(el.currentTime)+" / "+fmtT(d);
   $("vPlay").innerHTML = el.paused ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>' : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>';
   $("vPlay").setAttribute("aria-label", el.paused?"Play":"Pause"); $("vMute").classList.toggle("off",el.muted);
-  $("vMute").disabled=!!it.dec; $("vMute").title=it.dec?"This clip's preview is silent; the export keeps its sound":"Sound on / off"; }
+  $("vMute").disabled=!!(it.dec||it.seq); $("vMute").title=it.seq?"Image sequences have no sound":it.dec?"This clip's preview is silent; the export keeps its sound":"Sound on / off"; }
 function vidAttach(it){
   if (vidCur && vidCur!==it){ try{ vidCur.el.pause(); }catch(e){} }
   vidCur=it; grainFrame=0; document.body.classList.toggle("vidmode",!!it); $("vbar").hidden=!it;
@@ -65,6 +66,7 @@ $("vMute").addEventListener("click",()=>{ const el=vidCur&&vidCur.el; if (!el) r
 let vidPending=null;
 function vidSeek(t){ const el=vidCur&&vidCur.el; if (!el||!el.duration) return; if (el.seeking) vidPending=t; else { vidPending=null; el.currentTime=t; } $("vTimeT").textContent=fmtT(t)+" / "+fmtT(el.duration); }
 function vidSeeked(it){ if (it!==vidCur) return;
+  if (it.seq){ grainFrame=it.el.idx; render(); vidUI(); if (vidPending!=null){ const t=vidPending; vidPending=null; it.el.currentTime=t; } return; }
   if (it.dec){ it.frameNo=Math.round(it.el.currentTime*24); vidDecFrame(it).then(()=>{ if (vidPending!=null){ const t=vidPending; vidPending=null; it.el.currentTime=t; } }); return; }
   vidRefresh(); grainFrame=Math.round(it.el.currentTime*24); render(); vidUI(); if (vidPending!=null){ const t=vidPending; vidPending=null; it.el.currentTime=t; } }
 $("vTime").addEventListener("input",()=>{ const el=vidCur&&vidCur.el; if (el&&el.duration) vidSeek($("vTime").value/1000*el.duration); });
@@ -73,6 +75,7 @@ const DL_NOTE0=$("dlNote").textContent;
 
 let vidMod=null, vidConv=null;   /* vidMod: Mediabunny, loaded on first use (js/12-vdec.js vidLib) */
 async function exportVideo(it){
+  if (it.seq) return exportSeq(it);
   if (vidConv) return; const el=it.el; el.pause(); vidUI();
   const box=$("vExp"), T=$("vExpT"), bar=$("vExpBar"); box.hidden=false; T.textContent="Loading the video encoder…"; bar.style.width="0%";
   const keepFrame=grainFrame; let n=0, even=null;

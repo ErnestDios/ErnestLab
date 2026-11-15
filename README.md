@@ -6,7 +6,7 @@ A browser app that gives digital stills a cinematographic film look: film-stock 
 
 Everything runs locally in your browser with WebGL2. **Your images never leave your machine.** Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites (fonts are embedded). The page is hosted on GitHub Pages.
 
-> Status: working app for JPEG, PNG, WebP, OpenEXR, camera RAW (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…) and MP4 / MOV / WebM video, on desktop and phones.
+> Status: working app for JPEG, PNG, WebP, OpenEXR, DPX, Cineon, camera RAW (DNG, CR2/CR3, NEF, ARW, RAF, RW2, ORF, PEF…), MP4 / MOV / WebM video (incl. ProRes, HEVC 10-bit, HDR, log) and image sequences, on desktop and phones.
 
 ## Examples
 
@@ -55,6 +55,8 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 ## Features
 
 **OpenEXR:** CG renders straight from Blender, Nuke, Houdini or Maya, decoded in the browser with the three.js EXR loader (loaded only when you open an EXR): half and float, scanline and tiled, every common compression (ZIP, ZIPS, PIZ, PXR24, RLE, B44/B44A, DWAA/DWAB). The **input colour space** comes from the file (`chromaticities`, or the ACES container flag) or you pick it: Linear Rec.709 / sRGB (Blender's default, assumed when the file says nothing), ACEScg, ACES2065-1, Linear P3-D65, Linear Rec.2020; a 3×3 matrix on the GPU brings it into the working space, nothing clipped. **Multi-layer** files (Blender `ViewLayer.Combined`, Nuke layers) open on the beauty layer, with a Layer menu for the others. Alpha is ignored on purpose: EXR colour is premultiplied, already over black, so nothing is divided by alpha (the reason Resolve can blow out EXR highlights when Alpha Mode is wrong). Renders keep their real headroom: a lamp at +8 stops drives physical halation by its true brightness, no *Clipped light* guess needed. Default profile **Scene (soft shoulder)** holds about +6.5 stops over mid grey before white; NaN / Inf pixels are zeroed.
+
+**DPX, Cineon and image sequences:** film scans and VFX plates in DPX (8 / 10 / 12 / 16-bit and float, both byte orders, filled or packed) and Cineon are read by Ernest Lab's own reader (`dpx/`) and linearised on the GPU: Cineon printing density for log scans (Kodak's black 95 / white 685, as in Nuke), linear or video from the header, or a camera log curve. Numbered frames (EXR, DPX, Cineon, PNG), added together or dropped as a folder, become one clip that plays, scrubs and exports to MP4 with per-frame grain.
 
 **RAW:** camera RAW files are developed in the browser with [LibRaw](https://www.libraw.org) (WebAssembly, loaded only when you open a RAW): camera white balance, linear Rec.709/sRGB primaries, 16-bit, straight into the scene-linear working space. Base exposure is matched to the camera's own embedded preview, so a RAW opens as bright as the camera rendered it. Highlights above the old 8-bit ceiling roll off through the film curve.
 
@@ -125,16 +127,19 @@ js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewe
 js/06-images.js       the source image: upload, loading files, select / remove, the strip, the test still
 js/07-raw.js          RAW decoding (LibRaw in ./raw/)
 js/07-exr.js          OpenEXR: decoding (three.js EXRLoader in ./exr/), input colour spaces, layers
+js/07-dpx.js          DPX / Cineon stills (reader in ./dpx/), scan input colour, decoder worker pool
 js/08-output.js       export, LUT in / out, looks and JSON, share / copy, clear session
 js/09-view.js         viewer interactions, channels, before / after, resizable panel
 js/10-boot.js         panel start-up, install button, guide
 js/11-curve-editor.js profile UI and the curve editor
 js/12-video.js        video preview and MP4 export (Mediabunny in ./video/)
 js/12-vdec.js         ProRes, 10-bit, HDR and log video: decoding, Y'CbCr → R'G'B', input colour
+js/12-seq.js          image sequences (EXR / DPX / Cineon / PNG) as clips: grouping, player, MP4 export, folder drop
 js/13-help.js         the ? section help cards
 js/14-report.js       Report a problem (pre-filled GitHub issue)
 js/15-phone.js        phone layout, gestures, the ... menu; its last lines start the app
 raw/  exr/  video/    third-party decoders, loaded only when needed (see their READMEs)
+dpx/                  Ernest Lab's own DPX / Cineon reader (worker), loaded only when needed
 sw.js                 offline support: page, scripts and styles network-first, cached for offline
 tools/                regression renders and tests, version bump
 tools/spectral/       how the measured numbers are made: sources, method, checks (see its README)

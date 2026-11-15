@@ -60,11 +60,13 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
   document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && !social && (b.dataset.o==="port")===port); b.disabled=!cropped || social || d.fmt==="1:1"; });
   const c=cropRect(d,srcW,srcH), hnt=platformHint(c.W,c.H), he=$("devHint");
   he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
-  $("tick-dev").classList.toggle("live",!!devActive(d)); if (typeof exrSync==="function") exrSync(); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
+  $("tick-dev").classList.toggle("live",!!devActive(d)); if (typeof exrSync==="function") exrSync(); if (typeof seqSync==="function") seqSync(); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
     + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "")
     + (it.exr && it.info ? ` · EXR · ${it.info.pixelType===2?"32-bit float":"16-bit half"} · ${exrSpace(it,curDev()).name}${it.layer?" · "+it.layer:""}` : "")
+    + (it.dpx && it.info ? ` · ${dpxMeta(it)}` : "")
+    + (it.seq ? ` · ${it.frames.length} frames (${it.nums[0]}–${it.nums[it.nums.length-1]}) · ${+(it.fps).toFixed(3)} fps · ${it.kind==="dpx"?dpxMeta(it):it.kind==="exr"&&it.info?`EXR · ${exrSpace(it,curDev()).name}`:"8-bit"}` : "")
     + (it.video && it.vmeta ? ` · ${it.vmeta.name}${it.vmeta.bits>8?" · "+it.vmeta.bits+"-bit":""}${it.vmeta.alpha?" + alpha":""} · ${vidSpace(it,curDev()).name}${it.dec&&it.path==="rgb"?" · 8-bit (browser frames)":""}` : "");
   $("meta").title = $("meta").textContent + (it.raw && it.baseEV!=null ? `\n${it.cam||"RAW"}: decoded with LibRaw, camera white balance, linear. Base exposure ${it.baseAuto?"matched to the camera's own preview":"+1 EV (no camera preview in the file)"}; use Exposure and Development to adjust.` : ""); }
 function buildDevelop(){

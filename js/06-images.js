@@ -19,9 +19,13 @@ function uploadSource(bmp,isRaw){
 /* make item i the GPU source (decodes a RAW first). Returns false if it failed or was superseded. */
 async function ensureSource(i){
   const it=items[i]; if (srcItem===it && srcTex) return true;
-  if (it.video){ if (it.dec){ if (!(await decSource(it))) return false; } else uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
-  if (!it.raw && !it.exr){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
+  if (it.video){ if (it.seq){ if (!(await seqSource(it))) return false; } else if (it.dec){ if (!(await decSource(it))) return false; } else uploadSource(it.el); srcItem=it; vidAttach(it); return true; }
+  if (!it.raw && !it.exr && !it.dpx){ uploadSource(it.bmp); srcItem=it; vidAttach(null); return true; }
   vidAttach(null);
+  if (it.dpx){ const badge=$("badge"); badge.textContent=`Reading ${it.info&&it.info.format||"DPX"}…`; badge.classList.add("busy");
+    try{ const r=await dpxDecode(it); uploadSource(r,true); srcItem=it; return true; }
+    catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
+    finally{ badge.classList.remove("busy"); updateBadge(); } }
   if (it.exr){ const badge=$("badge"); badge.textContent="Reading EXR…"; badge.classList.add("busy");
     try{ const r=await exrDecode(it); uploadSource(r,true); srcItem=it; return true; }
     catch(err){ console.error(err); toast(`Could not decode ${it.name}: ${String(err.message||err).slice(0,80)}`); return false; }
@@ -34,10 +38,21 @@ async function ensureSource(i){
 
 
 async function addFiles(files){
-  const list=[...files].filter(f=>EXR_EXT.test(f.name)||RAW_EXT.test(f.name)||VID_EXT.test(f.name)||f.type.startsWith("video/")||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
-  if (!list.length){ toast("Ernest Lab reads JPEG, PNG, WebP, OpenEXR, camera RAW, and MP4 / MOV / WebM video."); return; }
+  const list0=[...files].filter(f=>EXR_EXT.test(f.name)||DPX_EXT.test(f.name)||RAW_EXT.test(f.name)||VID_EXT.test(f.name)||f.type.startsWith("video/")||f.type.startsWith("image/")||/\.(png|jpe?g|webp|tiff?|bmp|avif)$/i.test(f.name));
+  if (!list0.length){ toast("Ernest Lab reads JPEG, PNG, WebP, OpenEXR, DPX, Cineon, camera RAW, MP4 / MOV / WebM video and image sequences."); return; }
   let first=-1;
+  /* v1.3: numbered frames → one clip each */
+  const {seqs,rest:list}=groupSequences(list0);
+  for (const g of seqs){
+    try{ toast(`Reading ${g.frames.length} frames…`,1500); items.push(await seqProbe(g)); if (first<0) first=items.length-1; }
+    catch(err){ console.error(err); toast(`Could not open the sequence ${g.prefix}…: ${String(err.message||err).slice(0,90)}`,4200); }
+  }
   for (const f of list){
+    if (DPX_EXT.test(f.name)){
+      try{ toast(`Reading ${f.name}…`,1500); items.push(await dpxProbe(f)); if (first<0) first=items.length-1; }
+      catch(err){ console.error(err); toast(`Could not open ${f.name}: ${String(err.message||err).slice(0,90)}`,4200); }
+      continue;
+    }
     if (VID_EXT.test(f.name)||f.type.startsWith("video/")){
       try{ toast(`Opening ${f.name}…`,1500); items.push(await vidProbe(f)); if (first<0) first=items.length-1; }
       catch(err){ console.error(err); toast(String(err.message||err),4200); }

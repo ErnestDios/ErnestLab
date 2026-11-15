@@ -83,6 +83,9 @@ vec3 xferToLin(vec3 c){
     const float a=(262144.0-16.0)/117.45, b=(1023.0-95.0)/1023.0, cc=95.0/1023.0;
     float s=(7.0*log(2.0)*exp2(7.0-14.0*cc/b))/(a*b), t=(exp2(14.0*(-cc/b)+6.0)-64.0)/a;
     return mix(c*s+t, (exp2(14.0*(c-cc)/b+6.0)-64.0)/a, step(vec3(0.0),c)); }
+  if (uInXfer==8){ /* Cineon printing density (Kodak: black 95, white 685, 0.002 D per code, film gamma 0.6), as Nuke */
+    float bo=pow(10.0,(95.0-685.0)*0.002/0.6);
+    return (pow(vec3(10.0),(c*1023.0-685.0)*0.002/0.6)-bo)/(1.0-bo); }
   return c; }
 vec3 inputTransform(vec3 c){ return develop(uInXfer==1 ? uInMat*c : uInXfer>=2 ? uInMat*xferToLin(c) : srgbToLin(c)); }
 vec3 sceneLinear(vec3 l){
@@ -428,7 +431,7 @@ function render(){
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
-  if (srcItem && srcItem.video) srcXfer=vidSpace(srcItem,srcItem.dev||DEV0).xfer;   /* v1.2: a clip's transfer (0 = video as sRGB, as before) */
+  if (srcItem && (srcItem.video||srcItem.dpx)) srcXfer=srcSpaceOf(srcItem).xfer;   /* v1.2/1.3: a clip's or scan's transfer (0 = video as sRGB, as before) */
   drawTo(T.A,P.scene,u=>{ bindTex(0,srcTex); gl.uniform1i(u.uSrc,0); gl.uniform1i(u.uInXfer,srcXfer); gl.uniformMatrix3fv(u.uInMat,true,srcInMat()); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h); setSceneUniforms(u,e,bypass.dev?DEV0:curDev(), bypass.dev?null:profileFor(items[cur],curDev())); });
   /* halation / bloom pyramid and edge-softness blur, from scene-linear */
   const hp=halPhys(e,outW,outH);

@@ -39,7 +39,7 @@ function exrSpace(it,d){
   return {key:"rec709", name:EXR_CS.rec709.name, from:"assumed (no colour metadata in the file)", mat:IDENT3};
 }
 /* the matrix the scene pass uses for the current source (identity for RAW, which LibRaw already gives in Rec.709) */
-function srcInMat(){ const it=srcItem; return it&&it.exr ? exrSpace(it,it.dev||DEV0).mat : it&&it.video ? vidSpace(it,it.dev||DEV0).mat : IDENT3; }
+function srcInMat(){ const it=srcItem; return it&&(it.exr||it.video||it.dpx) ? srcSpaceOf(it).mat : IDENT3; }
 
 let exrQueue=Promise.resolve(), exrCache=null;   /* one decode at a time; the last decoded still stays in memory */
 function exrJob(fn){ const r=exrQueue.then(fn,fn); exrQueue=r.then(()=>{},()=>{}); return r; }
@@ -89,9 +89,17 @@ async function exrDecode(it){
 /* Development rows for EXRs: input colour space and (multi-layer files) which layer */
 function exrSync(){
   const it=items[cur], row=$("inCsRow"), lrow=$("layerRow"); if (!row) return;
-  const vid=!!(it&&it.video), on=!!(it&&(it.exr||vid)); row.hidden=!on; $("inCsNote").hidden=!on; lrow.hidden=!(it&&it.exr&&it.info&&it.info.layers&&it.info.layers.length>1);
+  const kind=!it?null:it.seq?(it.kind==="exr"?"exr":it.kind==="dpx"?"scan":"video"):it.exr?"exr":it.dpx?"scan":it.video?"video":null;
+  const on=!!kind, vid=kind==="video"; row.hidden=!on; $("inCsNote").hidden=!on; lrow.hidden=!(it&&(it.exr||(it.seq&&it.kind==="exr"))&&it.info&&it.info.layers&&it.info.layers.length>1);
   if (!on) return;
-  const sel=$("devInCS"), kind=vid?"video":"exr", d=curDev();
+  const sel=$("devInCS"), d=curDev();
+  if (kind==="scan"){ if (sel.dataset.kind!=="scan"){ sel.dataset.kind="scan"; sel.innerHTML='<option value="auto">Auto</option>'+Object.entries(SCS).map(([k,v])=>`<option value="${k}" title="${v.hint}">${v.name}</option>`).join(""); }
+    const sp=scanSpace(it,d), inf=it.info||{};
+    sel.options[0].textContent=`Auto: ${scanSpace(it,Object.assign({},d,{inCS:"auto"})).name}`; sel.value=SCS[d.inCS]?d.inCS:"auto";
+    $("inCsNote").textContent=`Reading it as ${sp.name}, ${sp.from}. ${inf.bits}-bit${inf.bits===32?" float":""} ${inf.desc||""}, ${inf.endian||""}-endian${inf.fps?`, ${+inf.fps.toFixed(3)} fps in the header`:""}.`
+      + (sp.xfer>=1 ? ` Converted to scene-linear light (18 % grey = 0.18), linear Rec.709; highlights above white are kept, and the profile rolls them off.` : ` Display-referred, read like a JPEG (sRGB).`)
+      + (inf.alpha ? " Alpha is ignored." : "");
+    return; }
   if (sel.dataset.kind!==kind){ sel.dataset.kind=kind; const T=vid?VCS:EXR_CS;
     sel.innerHTML='<option value="auto">Auto</option>'+Object.entries(T).map(([k,v])=>`<option value="${k}" title="${v.hint}">${v.name}</option>`).join(""); }
   if (vid){ const sp=vidSpace(it,d), m=it.vmeta||{};
@@ -111,7 +119,8 @@ function exrSync(){
 }
 function buildExrRows(){
   const sel=$("devInCS"); if (!sel) return;
-  sel.addEventListener("change",()=>{ setDev("inCS",sel.value); const it=items[cur]; if (it&&it.exr&&exrCache&&exrCache.it===it) exrPrepare(it,exrCache.r).then(buildStrip); });
+  sel.addEventListener("change",()=>{ setDev("inCS",sel.value); const it=items[cur]; if (it&&it.exr&&exrCache&&exrCache.it===it) exrPrepare(it,exrCache.r).then(buildStrip);
+    if (it&&it.dpx&&dpxCache&&dpxCache.it===it) codePrepare(it,dpxCache.r).then(buildStrip); });
   $("devLayer").addEventListener("change",async()=>{ const it=items[cur]; if (!it) return; it.layer=$("devLayer").value; srcItem=null;
     if (await ensureSource(cur)){ await exrPrepare(it,exrCache.r); buildStrip(); syncDev(); schedule(); } });
 }

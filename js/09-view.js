@@ -7,8 +7,8 @@ $("btnAdd").addEventListener("click",()=>$("fileIn").click());
 $("fileIn").addEventListener("change",ev=>{ addFiles(ev.target.files); ev.target.value=""; });
 view.addEventListener("dragover",ev=>{ ev.preventDefault(); view.classList.add("dragging"); });
 view.addEventListener("dragleave",ev=>{ if (ev.target===view) view.classList.remove("dragging"); });
-view.addEventListener("drop",ev=>{ ev.preventDefault(); view.classList.remove("dragging"); handleDropped(ev.dataTransfer.files); });
-document.addEventListener("dragover",ev=>ev.preventDefault()); document.addEventListener("drop",ev=>{ ev.preventDefault(); if(!view.contains(ev.target)) handleDropped(ev.dataTransfer.files); });
+view.addEventListener("drop",async ev=>{ ev.preventDefault(); view.classList.remove("dragging"); handleDropped(await filesFromDrop(ev.dataTransfer)); });
+document.addEventListener("dragover",ev=>ev.preventDefault()); document.addEventListener("drop",async ev=>{ ev.preventDefault(); if(!view.contains(ev.target)) handleDropped(await filesFromDrop(ev.dataTransfer)); });
 $("btnZoom").addEventListener("click",()=>zoomToggle());
 $("btnCompare").addEventListener("click",()=>{ compare=!compare; if (compare && split<0) split=0.5; if (compare){ clickOrig=false; showOrig=false; } $("btnCompare").classList.toggle("on",compare); view.classList.toggle("cmp",compare); updateBadge(); schedule(); });
 function setSplit(ev){ const r=canvas.getBoundingClientRect(); split=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)); schedule(); }
