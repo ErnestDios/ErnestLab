@@ -24,6 +24,7 @@ header h1 .perf{display:inline-flex;gap:3px}
 header h1 .perf i{width:5px;height:8px;border-radius:1px;background:var(--accent);opacity:.85}
 .meta{font-family:var(--font-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .bwinfo{padding:2px 0 6px}
+.stk-ok{color:#7fd18b;font-weight:600}.stk-wait{color:#e8c46a;font-weight:600}.stk-bad{color:#ff7a6b;font-weight:600}
 .ctl output.scrub{cursor:ew-resize;touch-action:none;user-select:none;-webkit-user-select:none}
 .ctl output.scrub:hover{color:var(--ink)}
 .ctl output.over{color:var(--accent)}

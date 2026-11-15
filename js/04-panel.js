@@ -123,8 +123,10 @@ function stockSync(){
   const L=STOCK_LIB[base.stock]; sel.value=L?base.stock:"";
   for (const k of ["con","roll","gR","gG","gB"]) if (ctlEls[k]){ ctlEls[k].inp.disabled=!!L; ctlEls[k].row.classList.toggle("off",!!L); }
   if (!L){ info.textContent="By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above."; return; }
-  info.textContent=`Measured: ${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
-    `It sets tone and colour from scene light, so Contrast, Roll-off and the gammas are off; Black lift, White crush, Colour and a LUT still apply on top. Exposure moves you along the film's real curve.`;
+  const k=base.stock, state = typeof stockTexs!=="undefined" && stockTexs[k] ? ["ok","● Measured LUT active."] : (typeof stockErr!=="undefined" && stockErr[k]) ? ["bad",`● LUT failed to load (${stockErr[k]}): showing the preset without the film model.`] : ["wait","● Loading the measured LUT…"];
+  info.innerHTML=""; const st=document.createElement("b"); st.className="stk-"+state[0]; st.textContent=state[1]+" "; info.appendChild(st);
+  info.appendChild(document.createTextNode(`Measured: ${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
+    `It sets tone and colour from scene light, so Contrast, Roll-off and the gammas are off; Black lift, White crush, Colour and a LUT still apply on top. Exposure moves you along the film's real curve.`));
 }
 /* halation model: physical numbers in plain words */
 function halSync(){

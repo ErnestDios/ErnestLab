@@ -348,7 +348,7 @@ function setLookUniforms(u,e){
   const st=stockFor(e.stock); bindTex(2, st||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);
 }
 /* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.json: gzip, base64; uint16, r fastest), kept for the session ---- */
-const stockTexs={}, stockJobs={};
+const stockTexs={}, stockJobs={}, stockErr={};
 function stockFor(key){ if (!key || !STOCK_LIB[key]) return null; if (stockTexs[key]) return stockTexs[key]; loadStock(key); return null; }
 function loadStock(key){
   if (stockJobs[key]) return stockJobs[key];
@@ -360,9 +360,9 @@ function loadStock(key){
       const buf=await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
       const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N; if (q.length!==n*3) throw new Error("bad stock file");
       const f=new Float32Array(n*3); for (let i=0;i<n*3;i++) f[i]=q[i]/65535;
-      stockTexs[key]=makeLutTex(STOCK_N,f); schedule();
-    }catch(err){ console.error(err); toast(`Could not load ${STOCK_LIB[key].label}: ${String(err.message||err).slice(0,80)}`,4200); delete stockJobs[key]; }
-    finally{ if (badge){ badge.classList.remove("busy"); if (typeof updateBadge==="function") updateBadge(); } }
+      stockTexs[key]=makeLutTex(STOCK_N,f); delete stockErr[key]; schedule();
+    }catch(err){ console.error(err); stockErr[key]=String(err.message||err).slice(0,80); toast(`Could not load ${STOCK_LIB[key].label}: ${String(err.message||err).slice(0,80)}`,4200); delete stockJobs[key]; }
+    finally{ if (badge){ badge.classList.remove("busy"); if (typeof updateBadge==="function") updateBadge(); } if (typeof stockSync==="function") stockSync(); }
   })();
 }
 async function stockReady(){ const k=base.stock; if (k && STOCK_LIB[k] && !stockTexs[k]) await loadStock(k); }
