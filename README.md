@@ -64,6 +64,8 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 
 **Video:** MP4 / MOV / WebM clips (made with CG and AI video in mind) get the same look: play and scrub with live grain that changes every frame, then export H.264 MP4 at full resolution with the original sound, rendered frame by frame in the browser via WebCodecs and [Mediabunny](https://mediabunny.dev) (MPL-2.0, `video/`). **ProRes** (422 Proxy to 4444 XQ, with alpha) is decoded in the browser by Mediabunny's ProRes decoder (TurboRes, WebAssembly). **10-bit and HDR** clips (HEVC Main 10, iPhone HLG, VP9 / AV1 10-bit, ProRes) are decoded frame by frame so every bit reaches the film, and HLG / PQ become scene light from the file's tags. **Log** footage (Apple Log, Sony S-Log3, ARRI LogC3 / LogC4) is linearised with the manufacturers' published curves and gamuts, chosen in Development → Input colour. Plain 8-bit clips keep the browser's own player.
 
+**Measured film stocks (v1.4):** 41 real films computed from manufacturers' datasheets with [spectral_film_lut](https://github.com/JanLohse/spectral_film_lut) by Jan Lohse (MIT): photo negatives printed on RA-4 paper (Portra 160 / 400 / 800 and 800 pushed, Ektar 100, Gold 200, UltraMax 400, Vericolor III, Fuji Pro 160S / 400H, Superia X-Tra 400, Reala, C200, Natura 1600, Agfa Vista 100, Aerocolor IV); motion picture negatives on the print stock of their time (Eastman Color 5248 and 5250 on 5381, 5247 II on 5383, 5293 on 5384, EXR 5248 on 5386, Vision 5277, Vision3 50D / 250D / 200T / 500T and Verita 200D on 2383, 500T on 2393 Premier, Eterna 500 and Eterna Vivid on 3513DI); slides and instant film (Velvia 50, also on Ilfochrome, Provia 100F, Kodachrome 64, Ektachrome 100D, Instax, FP-100C); and black & white (Tri-X on Polymax paper, normal and long development, Double-X 5222 on 2302). Each pair is baked to a 33³ LUT over a log shaper (`stocks/`, loaded on demand), applied to scene-linear light after the optics and grain, with the stock's own datasheet granularity as measured grain. The app reproduces the spectral model to about 1 code value on average. How it's made: [`tools/stocks`](tools/stocks/README.md).
+
 **Black & white:** a B&W lab computed from spectra: the film's measured spectral sensitivity (Kodak Tri-X 400 and Double-X 5222 datasheets; orthochromatic, blue-sensitive and extended red modelled from emulsion chemistry; infrared-like and digital luminance) times a measured Wratten filter (#8, #15, #21, #25, #29, #58, #47), integrated over the spectrum. Each filter's cost in stops comes out of the same sum (Tri-X within ~0.15 stop of Kodak's published factors) and is compensated so mid grey stays put; filters that block everything a film sees are greyed out. Silver grain, neutral halation, selenium and sepia toning looks.
 
 **Looks:** eighteen presets: Neutral (the default: no look until you pick one), eight B&W looks (Tri-X, HP5 pushed, FP4, red-filter landscape, orthochromatic silent-era, infrared-like, selenium and sepia prints), Warm Muted, Cold Muted, Bleach bypass, and six film-stock looks named after the stocks that inspired them (Daylight 250, Tungsten 500, Soft 500, Portrait 400, Night 800T, Slide 100), with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
@@ -121,6 +123,7 @@ js/00-config.js       version, support link, PWA registration, About
 js/01-development.js  per-image development: formats, crop, tone sliders, the Development section
 js/02-profiles.js     profile / tone-curve engine, camera-like fit, camera saturation, histograms
 js/03-measured.js     GENERATED from datasheets (tools/spectral): B&W weights, grain granularity, noise statistics
+js/03-stocks.js       GENERATED (tools/stocks): measured film stocks, their grain and presets; LUTs in ./stocks/
 js/03-params.js       look parameters, B&W films and filters, grain stocks, presets
 js/04-panel.js        DOM helpers, the control panel: sections, sliders, switches, virtual sliders
 js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewer and zoom, scheduling
@@ -144,6 +147,7 @@ dpx/                  Ernest Lab's own DPX / Cineon reader (worker), loaded only
 sw.js                 offline support: page, scripts and styles network-first, cached for offline
 tools/                regression renders and tests, version bump
 tools/spectral/       how the measured numbers are made: sources, method, checks (see its README)
+tools/stocks/         how the measured film stocks are baked from spectral_film_lut (see its README)
 ```
 
 The scripts are classic scripts (not ES modules) sharing one global scope, so the app also runs straight from a

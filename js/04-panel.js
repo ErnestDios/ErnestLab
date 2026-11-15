@@ -32,6 +32,17 @@ function buildRack(){
     if (g.id==="lens"){
       const info=document.createElement("div"); info.className="note bwinfo"; info.id="lensInfo"; box.appendChild(info);
     }
+    if (g.id==="curve"){   /* v1.4: a measured stock does tone and colour itself */
+      const r=document.createElement("div"); r.className="grainstock";
+      r.innerHTML='<label for="filmStock">Film stock</label><select id="filmStock"><option value="">None: the curve below</option></select>';
+      const sel=r.querySelector("select"), groups={};
+      for (const k in STOCK_LIB){ const L=STOCK_LIB[k], gl2=STOCK_PRESET_GROUP[L.label]||"Measured";
+        if (!groups[gl2]){ groups[gl2]=document.createElement("optgroup"); groups[gl2].label=gl2.replace(/^Measured · /,""); sel.appendChild(groups[gl2]); }
+        const o=document.createElement("option"); o.value=k; o.textContent=L.label; groups[gl2].appendChild(o); }
+      sel.addEventListener("change",()=>{ base.stock=sel.value; syncUI(); schedule(); });
+      const info=document.createElement("div"); info.className="note bwinfo"; info.id="stockInfo";
+      box.appendChild(r); box.appendChild(info);
+    }
     if (g.id==="hal"){
       const r=document.createElement("div"); r.className="grainstock";
       r.innerHTML='<label for="halModel">Model</label><select id="halModel"><option value="1">Physical (base reflection)</option><option value="0">By eye (threshold)</option></select>';
@@ -106,6 +117,15 @@ function grainSync(){
   info.textContent=`Measured: ${D.src} datasheet granularity (green layer ≈ ${(D.mid[1]).toFixed(3)} stop at a 48 µm spot, mid grey). Amount 1 = as measured; shadows and highlights follow the datasheet. `+
     (own?`Shot on its own gauge.`:`Moved to a ${ratio>1?"smaller":"larger"} gauge: the frame is ${base.gGauge} mm wide instead of ${D.g}, so each grain is ${ratio>1?ratio.toFixed(1)+"× bigger":(1/ratio).toFixed(1)+"× smaller"} relative to the picture.`);
 }
+/* measured stock: what it is, and which film-curve sliders it replaces */
+function stockSync(){
+  const sel=$("filmStock"), info=$("stockInfo"); if (!sel) return;
+  const L=STOCK_LIB[base.stock]; sel.value=L?base.stock:"";
+  for (const k of ["con","roll","gR","gG","gB"]) if (ctlEls[k]){ ctlEls[k].inp.disabled=!!L; ctlEls[k].row.classList.toggle("off",!!L); }
+  if (!L){ info.textContent="By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above."; return; }
+  info.textContent=`Measured: ${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
+    `It sets tone and colour from scene light, so Contrast, Roll-off and the gammas are off; Black lift, White crush, Colour and a LUT still apply on top. Exposure moves you along the film's real curve.`;
+}
 /* halation model: physical numbers in plain words */
 function halSync(){
   const sel=$("halModel"), info=$("halInfo"); if (!sel) return;
@@ -127,15 +147,15 @@ function lensSync(){
 }
 function syncUI(){
   for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); out.classList.toggle("over",isOver(p,base[k])); }
-  grainSync(); halSync(); lensSync(); bwSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
+  grainSync(); halSync(); lensSync(); bwSync(); stockSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
 }
 function buildPresetSelect(){
   const sel=$("preset"); sel.innerHTML="";
-  const g1=document.createElement("optgroup"); g1.label="Film stocks";
-  for (const n in PRESETS){ const o=document.createElement("option"); o.value="p:"+n; o.textContent=n; g1.appendChild(o); }
-  sel.appendChild(g1);
+  const groups={}, grp=n=>{ const L=STOCK_PRESET_GROUP[n]||"Looks"; if (!groups[L]){ groups[L]=document.createElement("optgroup"); groups[L].label=L; sel.appendChild(groups[L]); } return groups[L]; };
+  grp("Neutral (no look)");
+  for (const n in PRESETS){ const o=document.createElement("option"); o.value="p:"+n; o.textContent=n; grp(n).appendChild(o); }
   const names=Object.keys(userLooks);
   if (names.length){ const g2=document.createElement("optgroup"); g2.label="My looks"; for (const n of names){ const o=document.createElement("option"); o.value="u:"+n; o.textContent=n; g2.appendChild(o);} sel.appendChild(g2); }
   sel.value = (userLooks[presetName] && !PRESETS[presetName] ? "u:" : "p:")+presetName;

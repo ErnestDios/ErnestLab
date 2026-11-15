@@ -98,17 +98,20 @@ vec3 sceneLinear(vec3 l){
 }`;
 const LOOK_FN=`
 uniform sampler3D uLut; uniform float uLutMix, uLutSize; uniform float uBWLook;   /* silver is colourless: lens/halation/grain colour collapses to grey */
+uniform sampler3D uStock; uniform float uStockMix;   /* v1.4 measured stock: scene-linear → display, 33³ over a log2 shaper (js/03-stocks.js) */
 uniform float uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt; uniform vec3 uGam,uShCol,uHiCol;
 vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
 float sc(float x){ const float k=6.0, p=0.45; float a=sg(-k*p), b=sg(k*(1.0-p)); return (sg(k*(x-p))-a)/(b-a); }
 float curve(float x){ float s=sc(x); return uCon>=0.0 ? mix(x,s,uCon) : max(mix(x,2.0*x-s,-uCon),0.0); }
 float roll(float y){ float kn=1.0-0.6*uRoll; if (y<=kn||uRoll<=0.0) return y; float r=1.0-kn; return kn + r*(1.0-exp(-(y-kn)/r)); }
-vec3 filmLook(vec3 c){
+vec3 filmPre(vec3 c){
   if (uBWLook>0.0) c=mix(c, vec3(dot(c,vec3(0.2126,0.7152,0.0722))), uBWLook);
   c = pow(c, vec3(1.0)+uGam);
   c = vec3(curve(c.r),curve(c.g),curve(c.b));
   c = vec3(roll(c.r),roll(c.g),roll(c.b));
+  return c; }
+vec3 filmPost(vec3 c){
   c = mix(vec3(uFade), vec3(1.0-uCrush), c);
   float lum = dot(c,W);
   c = mix(vec3(lum), c, uSat);
@@ -117,7 +120,13 @@ vec3 filmLook(vec3 c){
   c = clamp(c,0.0,1.0);
   if (uLutMix>0.0){ vec3 lc = texture(uLut, c*(uLutSize-1.0)/uLutSize + 0.5/uLutSize).rgb; c = mix(c, lc, uLutMix); }
   return clamp(c,0.0,1.0);
-}`;
+}
+vec3 filmLook(vec3 c){ return filmPost(filmPre(c)); }
+vec3 stockLUT(vec3 lin){ vec3 s=clamp((log2(max(lin,vec3(1e-9))/0.18)-(${STOCK_LO.toFixed(1)}))/${(STOCK_HI-STOCK_LO).toFixed(1)},0.0,1.0);
+  return texture(uStock, s*${((STOCK_N-1)/STOCK_N).toFixed(8)}+${(0.5/STOCK_N).toFixed(8)}).rgb; }
+/* the look from scene-linear: the curve-and-colour film (as before), or a measured stock (its LUT, then Black lift /
+   White crush, Colour and a LUT on top); the look's Mix blends the two */
+vec3 lookOut(vec3 lin){ vec3 a=filmLook(linToEnc(lin)); if (uStockMix<=0.0) return a; return mix(a, filmPost(stockLUT(lin)), uStockMix); }`;
 /* Procedural grain noise: hashed value noise, a finer octave and a coarse clumping octave. */
 const GRAIN_FN=`
 uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
@@ -140,7 +149,7 @@ void main(){ vec3 s=texture(uSrc,uCrop.xy+vec2(vUv.x,1.0-vUv.y)*uCrop.zw).rgb;
 /* colour only, no optics: used for the .cube export (identity input, not flipped) */
 const FS_GRADE=HEAD+SCENE_FN+LOOK_FN+`
 uniform sampler2D uSrc;
-void main(){ o=vec4(filmLook(linToEnc(sceneLinear(inputTransform(texture(uSrc,vUv).rgb)))),1.0); }`;
+void main(){ o=vec4(lookOut(sceneLinear(inputTransform(texture(uSrc,vUv).rgb))),1.0); }`;
 /* halation / bloom source: scene-linear highlights above the threshold */
 const FS_BRIGHT=HEAD+`
 uniform sampler2D uTex; uniform float uThr;
@@ -243,7 +252,7 @@ void main(){
 /* 4-5: look encoding + film look -> display */
 const FS_LOOK=HEAD+LOOK_FN+`
 uniform sampler2D uTex;
-void main(){ o=vec4(filmLook(linToEnc(stDec(texture(uTex,vUv).rgb))),1.0); }`;
+void main(){ o=vec4(lookOut(stDec(texture(uTex,vUv).rgb)),1.0); }`;
 /* 6: display image; original / split view */
 const FS_FINAL=HEAD+`
 uniform sampler2D uImg,uSrc; uniform vec4 uCrop;
@@ -336,7 +345,26 @@ function setLookUniforms(u,e){
   gl.uniform3fv(u.uHiCol,hueRGB(e.hiHue)); gl.uniform1f(u.uHiAmt,e.hiAmt);
   bindTex(1, lutTex||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uLut,1);
   gl.uniform1f(u.uLutMix, lutTex ? e.lutMix*lookMix : 0); gl.uniform1f(u.uLutSize, lutTex?lutSize:2);
+  const st=stockFor(e.stock); bindTex(2, st||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);
 }
+/* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.lut.gz, uint16, r fastest), kept for the session ---- */
+const stockTexs={}, stockJobs={};
+function stockFor(key){ if (!key || !STOCK_LIB[key]) return null; if (stockTexs[key]) return stockTexs[key]; loadStock(key); return null; }
+function loadStock(key){
+  if (stockJobs[key]) return stockJobs[key];
+  const badge=$("badge"); if (badge){ badge.textContent=`Loading ${STOCK_LIB[key].label}…`; badge.classList.add("busy"); }
+  return stockJobs[key]=(async()=>{
+    try{
+      const res=await fetch(new URL(`stocks/${key}.lut.gz`,document.baseURI).href); if (!res.ok) throw new Error(res.status+" "+res.statusText);
+      const buf=await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
+      const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N; if (q.length!==n*3) throw new Error("bad stock file");
+      const f=new Float32Array(n*3); for (let i=0;i<n*3;i++) f[i]=q[i]/65535;
+      stockTexs[key]=makeLutTex(STOCK_N,f); schedule();
+    }catch(err){ console.error(err); toast(`Could not load ${STOCK_LIB[key].label}: ${String(err.message||err).slice(0,80)}`,4200); delete stockJobs[key]; }
+    finally{ if (badge){ badge.classList.remove("busy"); if (typeof updateBadge==="function") updateBadge(); } }
+  })();
+}
+async function stockReady(){ const k=base.stock; if (k && STOCK_LIB[k] && !stockTexs[k]) await loadStock(k); }
 
 
 /* ---- measured grain: datasheet granularity -> per-pixel amplitude ----

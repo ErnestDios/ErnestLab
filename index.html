@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
-<link rel="stylesheet" href="css/fonts.css?v=1.3.0">
-<link rel="stylesheet" href="css/app.css?v=1.3.0">
+<link rel="stylesheet" href="css/fonts.css?v=1.4.0">
+<link rel="stylesheet" href="css/app.css?v=1.4.0">
 </head>
 <body>
 <header>
@@ -229,6 +229,7 @@
 
     <h3>4 · Looks</h3>
     <ul>
+      <li><b>Measured film stocks</b> (the Measured groups in the look menu, or <b>Film stock</b> in Film curve): 41 real negatives, prints, slides and instant films, from 1950s Eastman Color to Vision3, Portra, Ektar, Velvia, Kodachrome and Tri-X. Each is computed from the manufacturer's datasheets (spectral sensitivity, characteristic curves, dye densities), the negative printed on its print stock or paper with the printer light timed for a neutral grey, slides projected. They take scene light, so <b>Exposure</b> moves you along the film's real curve, and each brings its own measured grain on its own gauge. The film curve sliders step aside; Black lift, White crush, Colour and a LUT still work on top, and <b>Mix</b> blends the stock in. A stock loads the first time you pick it (about 200 kB), then works offline.</li>
       <li><b>Save look</b> keeps it in this browser under My looks.</li>
       <li>To move looks between devices: <b>Settings JSON</b>, <b>Load look…</b>, or drop a <code>.json</code> on the image.</li>
       <li><b>Grain stock</b> changes only the grain, independent of the colour look. <b>Measured</b> stocks take their grain from Kodak's datasheets (RMS granularity per colour layer) and hold it at any resolution; <b>Gauge</b> moves the emulsion to another film format. Emulsion layers fine-tune the red, green and blue grain.</li>
@@ -273,6 +274,7 @@
     <p><b>Private by design.</b> Everything runs in your browser with WebGL2. Your images never leave your device: Ernest Lab uploads nothing, has no account, no analytics and no tracking, and loads nothing from other sites. The page itself is hosted on GitHub Pages.</p>
     <p class="k">Film stock names describe the stocks that inspired each look. Ernest Lab is not affiliated with or endorsed by any film manufacturer; the looks are original approximations, not measured profiles.</p>
     <p class="k" id="aboutGpu"></p>
+    <p class="k">Measured stocks: computed with spectral_film_lut by Jan Lohse (MIT), from Kodak, Fujifilm, Agfa and Ilford datasheets; see <code>tools/stocks</code>.</p>
     <p class="k">DPX / Cineon: Ernest Lab's own reader (<code>dpx/worker.js</code>).</p>
     <p class="k">Video: Mediabunny (MPL-2.0) over your browser's WebCodecs, and its ProRes decoder (MPL-2.0, TurboRes); see <code>video/README.md</code> in the repository.</p>
     <p class="k">An Ernest Studios app, made by Ernest Dios Viaplana. MIT License © 2026. Interface fonts: IBM Plex (SIL Open Font License). RAW decoding: LibRaw 0.22.1 (LGPL-2.1 / CDDL-1.0, © LibRaw LLC) with Little CMS (MIT), via libraw-wasm (ISC); see <code>raw/README.md</code> in the repository. OpenEXR decoding: the three.js EXRLoader (MIT, © three.js authors) with fflate (MIT); see <code>exr/README.md</code>.</p>
@@ -296,27 +298,28 @@
   </div>
 </div>
 
-<script src="js/00-config.js?v=1.3.0"></script>
-<script src="js/01-development.js?v=1.3.0"></script>
-<script src="js/02-profiles.js?v=1.3.0"></script>
-<script src="js/03-measured.js?v=1.3.0"></script>
-<script src="js/03-params.js?v=1.3.0"></script>
-<script src="js/04-panel.js?v=1.3.0"></script>
-<script src="js/05-gl.js?v=1.3.0"></script>
-<script src="js/06-images.js?v=1.3.0"></script>
-<script src="js/07-raw.js?v=1.3.0"></script>
-<script src="js/07-exr.js?v=1.3.0"></script>
-<script src="js/07-dpx.js?v=1.3.0"></script>
-<script src="js/08-output.js?v=1.3.0"></script>
-<script src="js/08-formats.js?v=1.3.0"></script>
-<script src="js/09-view.js?v=1.3.0"></script>
-<script src="js/10-boot.js?v=1.3.0"></script>
-<script src="js/11-curve-editor.js?v=1.3.0"></script>
-<script src="js/12-video.js?v=1.3.0"></script>
-<script src="js/12-vdec.js?v=1.3.0"></script>
-<script src="js/12-seq.js?v=1.3.0"></script>
-<script src="js/13-help.js?v=1.3.0"></script>
-<script src="js/14-report.js?v=1.3.0"></script>
-<script src="js/15-phone.js?v=1.3.0"></script>
+<script src="js/00-config.js?v=1.4.0"></script>
+<script src="js/01-development.js?v=1.4.0"></script>
+<script src="js/02-profiles.js?v=1.4.0"></script>
+<script src="js/03-measured.js?v=1.4.0"></script>
+<script src="js/03-stocks.js?v=1.4.0"></script>
+<script src="js/03-params.js?v=1.4.0"></script>
+<script src="js/04-panel.js?v=1.4.0"></script>
+<script src="js/05-gl.js?v=1.4.0"></script>
+<script src="js/06-images.js?v=1.4.0"></script>
+<script src="js/07-raw.js?v=1.4.0"></script>
+<script src="js/07-exr.js?v=1.4.0"></script>
+<script src="js/07-dpx.js?v=1.4.0"></script>
+<script src="js/08-output.js?v=1.4.0"></script>
+<script src="js/08-formats.js?v=1.4.0"></script>
+<script src="js/09-view.js?v=1.4.0"></script>
+<script src="js/10-boot.js?v=1.4.0"></script>
+<script src="js/11-curve-editor.js?v=1.4.0"></script>
+<script src="js/12-video.js?v=1.4.0"></script>
+<script src="js/12-vdec.js?v=1.4.0"></script>
+<script src="js/12-seq.js?v=1.4.0"></script>
+<script src="js/13-help.js?v=1.4.0"></script>
+<script src="js/14-report.js?v=1.4.0"></script>
+<script src="js/15-phone.js?v=1.4.0"></script>
 </body>
 </html>

@@ -165,6 +165,7 @@ async function encEXR(F,meta){
 }
 /* render the current source to one file of format f */
 async function encodeCurrent(f,meta){
+  await stockReady();
   if (!XF[f].high){
     const [t,q]= f==="png"?["image/png"]: f==="webp"?["image/webp",0.95]:["image/jpeg",0.95];
     const b=await renderToBlob(t,q); return {data:new Uint8Array(await b.arrayBuffer()), ext: f==="webp"&&b.type!=="image/webp" ? "png" : XF[f].ext};

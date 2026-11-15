@@ -79,11 +79,14 @@ for (const g of GROUPS) for (const p of g.params) DEF[p[0]] = p[5];
    in mm. With a measured stock, Amount 1 = the datasheet granularity on that gauge, and how grain changes with
    tone comes from the datasheet (Midtone bias / Shadow grain don't apply). */
 DEF.gStock=0; DEF.gGauge=0;
+/* Measured film stock (v1.4): a STOCK_LIB key ("" = none: the film curve and colour sliders as before). The stock's LUT
+   does tone and colour from the negative + print datasheets; Black lift / White crush, Colour and a LUT still apply after it. */
+DEF.stock="";
 /* Physical halation (v0.9): halPhys = 1 makes the Halation & bloom section physical: no threshold, sizes in mm on film
    (gauge from gGauge, or 35mm still), halation from base reflection into the layers nearest the base, bloom as
    energy-conserving scatter. 0 = the threshold model, as before. */
 DEF.halPhys=0;
-const NONMIX = ["gStock","gGauge","halPhys","halClip","bwR","bwG","bwB","seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
+const NONMIX = ["stock","gStock","gGauge","halPhys","halClip","bwR","bwG","bwB","seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
   "gAmtR","gAmtG","gAmtB","gSizeR","gSizeG","gSizeB","gClumpR","gClumpG","gClumpB"];
 const MIXABLE = Object.keys(DEF).filter(k => !NONMIX.includes(k));
 /* Grain stocks. "· measured": amount, per-layer balance and tone response from Kodak datasheet granularity
@@ -161,6 +164,9 @@ const PRESETS = {
   "B&W sepia print": {bw:1,...bwW("pan","none"),con:0.3,roll:0.4,fade:0.05,crush:0.03,shHue:28,shAmt:0.12,hiHue:42,hiAmt:0.1,vig:0.3,...BWGRAIN,grain:0.55,grainSize:1.6,grainResp:0.5,grainRough:0.5,grainShadow:0.5},
   "Bleach bypass": {con:0.7,roll:0.2,fade:0.02,sat:0.45,shHue:200,shAmt:0.05,hiHue:45,hiAmt:0.02,hal:0.1,ca:0.2,soft:0.2,vig:0.35,grain:0.5,grainSize:1.5,grainCol:0.1},
 };
+
+/* v1.4: the measured stocks join the presets (grouped in the menu by STOCK_PRESET_GROUP) */
+Object.assign(PRESETS, STOCK_PRESETS);
 
 let userLooks = {};
 /* Storage keys keep the original "filmlab." prefix so looks saved before the rename stay available. */

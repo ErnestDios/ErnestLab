@@ -5,7 +5,7 @@
 let downloads=null;
 (async()=>{ try{ if (window.claude && window.claude.use){ downloads=await window.claude.use("downloads"); } }catch(e){ downloads=null; } })();
 
-function renderToBlob(type,q){ return new Promise(res=>{ renderClean=true; render(); canvas.toBlob(b=>{ renderClean=false; render(); res(b); }, type, q); }); }
+async function renderToBlob(type,q){ await stockReady(); return new Promise(res=>{ renderClean=true; render(); canvas.toBlob(b=>{ renderClean=false; render(); res(b); }, type, q); }); }
 async function offer(filename, blob){
   if (downloads){
     try{ await downloads.save({filename, data:blob}); toast("Saved "+filename); return; }
@@ -110,7 +110,9 @@ $("btnCube").addEventListener("click", async()=>{
    The slider values mean the same in both, so format 1 loads unchanged. Future changes migrate here. */
 const LOOK_FORMAT=3;
 function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This look was saved by a newer Ernest Lab; some settings may be ignored.",4000); return j; }
-function lookJSON(){ return {app:"Ernest Lab", appVersion:APP_VERSION, format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k,+(+base[k]).toFixed(4)]))}; }
+/* string settings (v1.4: the measured stock key) load only when they name something that exists */
+const okStr=(k,v)=>typeof DEF[k]==="string" && typeof v==="string" && (k!=="stock" || v==="" || !!STOCK_LIB[v]);
+function lookJSON(){ return {app:"Ernest Lab", appVersion:APP_VERSION, format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k, typeof DEF[k]==="string" ? String(base[k]||"") : +(+base[k]).toFixed(4)]))}; }
 $("preset").addEventListener("change",ev=>{ const v=ev.target.value; applyPreset(v.slice(2), v.startsWith("u:")); });
 $("mix").addEventListener("input",ev=>{ lookMix=+ev.target.value; $("mixOut").textContent=Math.round(lookMix*100)+"%"; schedule(); });
 $("btnReset").addEventListener("click",()=>{ base=Object.assign({},presetVals); lookMix=1; syncUI(); schedule(); });
@@ -124,7 +126,7 @@ $("btnCloseJson").addEventListener("click",()=>$("jsonModal").classList.remove("
 $("btnCloseSave").addEventListener("click",()=>$("saveModal").classList.remove("open"));
 $("btnCopyJson").addEventListener("click",async()=>{ try{ await navigator.clipboard.writeText($("jsonText").value); toast("Copied."); }catch(e){ $("jsonText").select(); toast("Select the text and copy it with Ctrl/Cmd+C."); } });
 $("btnApplyJson").addEventListener("click",()=>{
-  try{ const j=migrateLook(JSON.parse($("jsonText").value)); const v=j.values||j; for(const k in DEF) if (typeof v[k]==="number") base[k]=v[k]; if (typeof j.strength==="number") lookMix=j.strength; syncUI(); schedule(); $("jsonModal").classList.remove("open"); toast("Look applied."); }
+  try{ const j=migrateLook(JSON.parse($("jsonText").value)); const v=j.values||j; for(const k in DEF) if (typeof v[k]==="number" || okStr(k,v[k])) base[k]=v[k]; if (typeof j.strength==="number") lookMix=j.strength; syncUI(); schedule(); $("jsonModal").classList.remove("open"); toast("Look applied."); }
   catch(e){ toast("That text is not valid look JSON."); }
 });
 /* Load look(s) from .json files: applies the look and adds it to "My looks" in this browser. */
@@ -142,7 +144,7 @@ async function loadLookFiles(files){
       const parsed=JSON.parse(await f.text()); if (parsed && parsed.type==="profile"){ const n=importProfile(parsed,f.name); if (n){ toast(`Loaded profile "${n}" and applied it to this still.`); continue; } }
       const j=migrateLook(parsed); const v=(j&&typeof j.values==="object"&&j.values)||j;
       const vals={}; let hits=0;
-      for (const k in DEF) if (typeof v[k]==="number" && isFinite(v[k])){ vals[k]=v[k]; hits++; }
+      for (const k in DEF) if ((typeof v[k]==="number" && isFinite(v[k])) || okStr(k,v[k])){ vals[k]=v[k]; hits++; }
       if (!hits) throw new Error("no values");
       const n=lookNameFor(j,f.name);
       userLooks[n]=Object.assign({},DEF,vals); last={n, strength:(typeof j.strength==="number"?Math.min(1,Math.max(0,j.strength)):1)}; ok++;

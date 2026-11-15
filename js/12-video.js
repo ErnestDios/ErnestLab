@@ -75,6 +75,7 @@ const DL_NOTE0=$("dlNote").textContent;
 
 let vidMod=null, vidConv=null;   /* vidMod: Mediabunny, loaded on first use (js/12-vdec.js vidLib) */
 async function exportVideo(it){
+  await stockReady();
   if (it.seq) return exportSeq(it);
   if (vidConv) return; const el=it.el; el.pause(); vidUI();
   const box=$("vExp"), T=$("vExpT"), bar=$("vExpBar"); box.hidden=false; T.textContent="Loading the video encoder…"; bar.style.width="0%";
