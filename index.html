@@ -90,18 +90,26 @@
     <div class="row">
       <select id="fmt" aria-label="Export format">
         <option value="jpg">JPEG · quality 95</option>
-        <option value="png">PNG · lossless</option>
+        <option value="png">PNG · 8-bit</option>
+        <option value="png16">PNG · 16-bit</option>
+        <option value="tif16">TIFF · 16-bit</option>
+        <option value="dpx10">DPX · 10-bit</option>
+        <option value="dpx16">DPX · 16-bit</option>
+        <option value="cin">Cineon · 10-bit log</option>
+        <option value="exr">OpenEXR · half, linear</option>
+        <option value="src">Same as source</option>
       </select>
     </div>
     <div class="row">
       <button class="btn primary" id="btnExport">Export this still</button>
-      <button class="btn" id="btnExportAll">Export all (.zip)</button>
+      <button class="btn" id="btnExportAll">Export all</button>
+      <button class="btn" id="btnFrames" hidden title="Export this sequence's frames in the format above (same names, new extension)">Export frames</button>
     </div>
     <div class="row" id="shareRow">
       <button class="btn" id="btnShare" hidden title="Open your device's share menu (Instagram, WhatsApp, Messages… on phones)">Share…</button>
       <button class="btn" id="btnCopy" hidden title="Copy the finished image, then paste it into X, LinkedIn, Slack…">Copy image</button>
     </div>
-    <div class="note" id="dlNote">Exports render at full resolution. Batch export bundles every still in the strip into one zip.</div>
+    <div class="note" id="dlNote">Exports render at full resolution. <b>Export all</b> renders every still and image sequence in the strip, each in the format above (<i>Same as source</i>: EXR stays EXR, DPX stays DPX, RAW becomes 16-bit TIFF), into a zip, or straight into a folder in Chrome / Edge. Clips export one at a time, as MP4.</div>
   </div>
   <div id="groups"></div>
   <div class="exportbox" data-tab="color">
@@ -201,7 +209,10 @@
       <li>The <b>film look</b> (stock, grade, halation, lens, grain) applies to <b>every still in the strip</b>, like shooting one roll of film.</li>
       <li><b>Development is per image.</b> Each still keeps its own format, framing and tones, so you can rescue a dark shot without touching the others.</li>
       <li><b>Apply to all stills</b> copies the current image's development to the whole strip.</li>
-      <li><b>Export all</b> renders every still at full resolution into one zip, with the look's <code>look.json</code>.</li>
+      <li><b>Export all</b> renders every still and image sequence at full resolution, with the look's <code>look.json</code>: into one zip, or (Chrome / Edge on a computer, and always for sequences there) straight into a folder you pick. Video clips export one at a time, as MP4. When two sources would get the same name (<i>shot.exr</i> and <i>shot.jpg</i>), the source type is added (<i>shot_exr_…</i>, <i>shot_jpg_…</i>).</li>
+      <li><b>Formats</b>: JPEG, PNG 8 or 16-bit, TIFF 16-bit, DPX 10 or 16-bit, Cineon 10-bit log, OpenEXR (half, linear, ZIP), or <b>Same as source</b> (EXR stays EXR, DPX stays DPX at its bit depth, Cineon stays Cineon, PNG / WebP / JPEG stay so, camera RAW becomes 16-bit TIFF). High-bit formats are read from the GPU in floating point, so gradients and grain don't go through 8 bits first.</li>
+      <li>What's inside is always the finished picture as you see it (film look and display rendering included): PNG, TIFF and DPX hold display (sRGB) values, the DPX tagged Rec.709 video; Cineon holds the same light as printing density (display white at 685); EXR holds it linear (Rec.709). In Nuke or Resolve view the EXR with a plain sRGB view, not ACES / Filmic / AgX, which would tone-map it again.</li>
+      <li><b>Export frames</b> (on an image sequence) writes its frames in the chosen format, with their own names and numbers (<i>shot_v001.1001.dpx</i> …).</li>
     </ul>
 
     <h3>3 · Compare</h3>
@@ -297,6 +308,7 @@
 <script src="js/07-exr.js?v=1.3.0"></script>
 <script src="js/07-dpx.js?v=1.3.0"></script>
 <script src="js/08-output.js?v=1.3.0"></script>
+<script src="js/08-formats.js?v=1.3.0"></script>
 <script src="js/09-view.js?v=1.3.0"></script>
 <script src="js/10-boot.js?v=1.3.0"></script>
 <script src="js/11-curve-editor.js?v=1.3.0"></script>

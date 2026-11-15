@@ -23,22 +23,21 @@ async function offer(filename, blob){
 function fmtInfo(){ return $("fmt").value==="png" ? ["image/png",undefined,"png"] : ["image/jpeg",0.95,"jpg"]; }
 function slug(s){ return s.replace(/[^\w\-· ]+/g,"").replace(/[\s·]+/g,"_").replace(/_+/g,"_").slice(0,40); }
 $("btnExport").addEventListener("click", async()=>{
-  if (cur<0) return; if (items[cur].video){ exportVideo(items[cur]); return; } const [t,q,ext]=fmtInfo();
-  const b=await renderToBlob(t,q); await offer(`${items[cur].name}_${slug(presetName)}.${ext}`, b);
+  if (cur<0) return; const it=items[cur]; if (it.video){ exportVideo(it); return; }
+  const choice=$("fmt").value, f=fmtFor(it,choice), btn=$("btnExport"); btn.disabled=true;
+  try{ const e=await encodeCurrent(f,{look:presetName,file:it.name}); let nm=exportNames([it],choice).get(it); if (!nm.endsWith("."+e.ext)) nm=nm.replace(/\.[^.]+$/,"."+e.ext);
+    const mime={jpg:"image/jpeg",png:"image/png",webp:"image/webp",tif:"image/tiff",exr:"image/x-exr",dpx:"image/x-dpx",cin:"image/x-cineon"}[e.ext]||"application/octet-stream";
+    await offer(nm,new Blob([e.data],{type:mime})); }
+  catch(err){ console.error(err); toast(String(err&&err.message||err).slice(0,160),5000); }
+  finally{ btn.disabled=false; }
 });
+$("btnFrames").addEventListener("click",()=>{ const it=items[cur]; if (it&&it.seq) exportMany([it],$("fmt").value,null,`${it.name.replace(/\s*\[.*\]$/,"")}_${slug(presetName)}.zip`); });
 $("btnExportAll").addEventListener("click", async()=>{
-  const real=items.filter(it=>!it.sample && !it.video); if (!real.length){ toast(items.some(it=>it.video)?"Export all bundles stills; export each video on its own.":"Add your stills first."); return; }
-  const btn=$("btnExportAll"); btn.disabled=true; const keep=cur; const [t,q,ext]=fmtInfo(); const files=[];
-  try{
-    for (let i=0;i<items.length;i++){ if (items[i].sample || items[i].video) continue; btn.textContent=`Rendering ${files.length+1}/${real.length}…`; cur=i; if (!(await ensureSource(i))) continue; const b=await renderToBlob(t,q); files.push({name:`${items[i].name}_${slug(presetName)}.${ext}`, data:new Uint8Array(await b.arrayBuffer())}); }
-    const lj=lookJSON(); const dv={}; for (const it of items) if (!it.sample && it.dev && devActive(it.dev)) dv[it.name]=it.dev;
-    if (Object.keys(dv).length) lj.development=dv;   /* per-image source prep, for the record (not loaded as part of the look) */
-    files.push({name:"look.json", data:new TextEncoder().encode(JSON.stringify(lj,null,2))});
-    btn.textContent="Zipping…"; const zip=makeZip(files);
-    await offer(`ernest_lab_${slug(presetName)}.zip`, new Blob([zip],{type:"application/zip"}));
-  } finally { btn.disabled=false; btn.textContent="Export all (.zip)"; select(keep); }
+  const list=items.filter(it=>!it.sample && (!it.video || it.seq));
+  if (!list.length){ toast(items.some(it=>it.video)?"Export all renders stills and image sequences; export each video clip on its own (MP4).":"Add your stills first."); return; }
+  const btn=$("btnExportAll"); btn.disabled=true;
+  try{ await exportMany(list,$("fmt").value,null,`ernest_lab_${slug(presetName)}.zip`); } finally{ btn.disabled=false; }
 });
-
 /* store-only zip */
 const CRC=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=c&1?0xEDB88320^(c>>>1):c>>>1; t[n]=c>>>0; } return t; })();
 function crc32(d){ let c=0xFFFFFFFF; for(let i=0;i<d.length;i++) c=CRC[(c^d[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }

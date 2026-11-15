@@ -26,7 +26,8 @@ function groupSequences(files){
 async function seqProbe(g){
   const kind=g.ext==="exr"?"exr":g.ext==="png"?"img":"dpx", nums=g.frames.map(x=>x.n);
   const base=g.prefix.replace(/[._\-\s]+$/,"")||"frames";
-  const it={name:`${base} [${nums[0]}-${nums[nums.length-1]}]`, video:true, seq:true, kind, frames:g.frames.map(x=>x.f), nums, fps:24, url:null, layer:null};
+  const it={name:`${base} [${nums[0]}-${nums[nums.length-1]}]`, video:true, seq:true, kind, frames:g.frames.map(x=>x.f), nums, fps:24, url:null, layer:null,
+    prefix:g.prefix, pad:g.frames[0].digits};   /* frame exports keep the source names: prefix + padded number */
   it.el=new SeqPlayer(it);
   const r=await it.el.frame(0);
   if (kind==="img"){ it.w=r.width; it.h=r.height;

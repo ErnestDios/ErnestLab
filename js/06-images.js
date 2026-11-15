@@ -71,7 +71,7 @@ async function addFiles(files){
     try{
       let bmp=await createImageBitmap(f,{imageOrientation:"from-image",premultiplyAlpha:"none",colorSpaceConversion:"none"});
       if (bmp.width>MAXTEX||bmp.height>MAXTEX){ const s=MAXTEX/Math.max(bmp.width,bmp.height); bmp=await createImageBitmap(bmp,{resizeWidth:Math.floor(bmp.width*s),resizeHeight:Math.floor(bmp.height*s),resizeQuality:"high"}); toast(`${f.name} was scaled to ${bmp.width}×${bmp.height}, the largest this GPU handles.`); }
-      items.push({name:f.name.replace(/\.[^.]+$/,""), bmp, url:URL.createObjectURL(f)});
+      items.push({name:f.name.replace(/\.[^.]+$/,""), bmp, url:URL.createObjectURL(f), file:f, png16:/\.png$/i.test(f.name) && (await pngBits(f))===16});
       if (first<0) first=items.length-1;
     }catch(err){ toast(`Could not open ${f.name}.`); }
   }

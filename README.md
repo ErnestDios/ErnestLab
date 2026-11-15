@@ -79,8 +79,8 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 **Workflow:** a built-in guide (the ? next to the title, or the ? key); on/off switch on every section (Development, Exposure & balance, Film curve, Colour, Halation & bloom, Lens, Grain) to compare with and without it; what you see is what you export. Batch drag-and-drop, film strip, click to flip original/film, hold Space to peek, channel view (R, G, B, L keys or the header switch; same key again for RGB; works with the before/after split), before/after split, Fit/100%, resizable panel, double-click a value to reset it, Clear session. On phones: photo pinned on top, controls in tabs (Develop, Look, Colour, Effects, Grain, Export), ⋯ menu, tap to flip, hold to peek, pinch to zoom, tap a value to reset.
 
 **Output:**
-- Export the current still at full resolution (JPEG 95 or PNG).
-- Export all stills as one zip, with the look's `look.json`.
+- Export the current still at full resolution: JPEG 95, PNG 8 / 16-bit, TIFF 16-bit, DPX 10 / 16-bit, Cineon 10-bit log, OpenEXR (half, linear, ZIP) or the same type as the source (RAW → TIFF 16). High-bit formats are read back from the GPU as floats. Every format holds the finished, display-referred picture; EXR stores it linear Rec.709 (view with a plain sRGB view), Cineon as printing density.
+- Export all stills and image sequences (frames keep their names and numbers, e.g. `shot_v001.1001.dpx`) as one zip or, in Chrome / Edge, straight into a folder, with the look's `look.json`. Names that would clash get the source type added.
 - **Share…** hands the finished image to your device's share menu (on phones: Instagram, WhatsApp, TikTok, Messages…), and **Copy image** puts it on the clipboard for pasting into web composers. Nothing is uploaded by Ernest Lab; each button appears only where the browser supports it.
 - Export the look's colour part as a 33-point `.cube` LUT (Rec.709/sRGB display-referred; in an ACES pipeline apply it after the output transform). Grain, halation, aberration, softness and vignette are spatial and stay in Ernest Lab.
 
@@ -95,7 +95,7 @@ Single page, WebGL2:
 5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, split toning, external LUT → display.
 
 Intermediate images are RGBA16F when `EXT_color_buffer_float` is available.
-The `.cube` export renders the grade shader over an identity 33³ texture and reads it back. Zips are written in-page (store-only, CRC32).
+The `.cube` export renders the grade shader over an identity 33³ texture and reads it back. Zips are written in-page (store-only, CRC32); PNG 16, TIFF, DPX, Cineon and OpenEXR (ZIP-compressed, via the browser's CompressionStream) are written by Ernest Lab's own encoders in `js/08-formats.js`.
 
 ## Film stock names
 
@@ -128,6 +128,7 @@ js/06-images.js       the source image: upload, loading files, select / remove, 
 js/07-raw.js          RAW decoding (LibRaw in ./raw/)
 js/07-exr.js          OpenEXR: decoding (three.js EXRLoader in ./exr/), input colour spaces, layers
 js/07-dpx.js          DPX / Cineon stills (reader in ./dpx/), scan input colour, decoder worker pool
+js/08-formats.js      export formats (PNG 16, TIFF 16, DPX, Cineon, OpenEXR, same as source), names, folder / zip output
 js/08-output.js       export, LUT in / out, looks and JSON, share / copy, clear session
 js/09-view.js         viewer interactions, channels, before / after, resizable panel
 js/10-boot.js         panel start-up, install button, guide

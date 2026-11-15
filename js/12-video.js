@@ -55,8 +55,8 @@ function vidUI(){ const it=vidCur; if (!it) return; const el=it.el, d=el.duratio
 function vidAttach(it){
   if (vidCur && vidCur!==it){ try{ vidCur.el.pause(); }catch(e){} }
   vidCur=it; grainFrame=0; document.body.classList.toggle("vidmode",!!it); $("vbar").hidden=!it;
-  $("btnExport").textContent = it ? "Export video (MP4)" : "Export this still";
-  $("fmt").hidden=!!it; $("shareRow").hidden=!!it;
+  $("btnExport").textContent = it ? "Export video (MP4)" : "Export this still"; $("btnFrames").hidden=!(it&&it.seq);
+  $("fmt").hidden=!!(it && !it.seq); $("shareRow").hidden=!!it;
   $("dlNote").textContent = it ? "Video exports as H.264 MP4 at full resolution, with a new grain pattern every frame and the original sound. It renders frame by frame, so it takes a while; the clip never leaves your device." : DL_NOTE0;
   if (it){ vidUI(); }
 }
