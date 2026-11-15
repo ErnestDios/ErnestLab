@@ -14,6 +14,8 @@ async def main():
         pg=await b.new_page(); errs=[]; pg.on("pageerror",lambda e: errs.append(str(e)))
         await pg.goto("file://"+html); await pg.wait_for_timeout(1500)
         names=await pg.evaluate("Object.keys(PRESETS)")
+        if os.environ.get("NOSTOCK"): names=await pg.evaluate("Object.keys(PRESETS).filter(n=>typeof STOCK_PRESETS==='undefined'||!(n in STOCK_PRESETS))")   # the looks that predate measured stocks
+        if os.environ.get("ONLY"): names=[n for n in names if n in os.environ["ONLY"].split("|")]
         async def shoot(tag):
             for n in names:
                 for ex in exps:

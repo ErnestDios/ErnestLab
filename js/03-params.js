@@ -16,6 +16,11 @@ const GROUPS = [
     ["gR","Red gamma",-0.15,0.15,0.001,0,""],
     ["gG","Green gamma",-0.15,0.15,0.001,0,""],
     ["gB","Blue gamma",-0.15,0.15,0.001,0,""],
+    /* v1.5: printer lights for measured printed stocks, in printer points (1 point = 0.025 log H, 12 ≈ 1 stop) */
+    ["plD","Print density",-24,24,1,0," pt"],
+    ["plR","Red light",-24,24,1,0," pt"],
+    ["plG","Green light",-24,24,1,0," pt"],
+    ["plB","Blue light",-24,24,1,0," pt"],
   ]},
   {id:"color", title:"Colour", params:[
     ["sat","Saturation",0,1.6,0.01,1,""],

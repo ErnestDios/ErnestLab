@@ -99,6 +99,8 @@ vec3 sceneLinear(vec3 l){
 const LOOK_FN=`
 uniform sampler3D uLut; uniform float uLutMix, uLutSize; uniform float uBWLook;   /* silver is colourless: lens/halation/grain colour collapses to grey */
 uniform sampler3D uStock; uniform float uStockMix;   /* v1.4 measured stock: scene-linear → display, 33³ over a log2 shaper (js/03-stocks.js) */
+uniform sampler3D uStock2; uniform highp sampler2D uStockCurve; uniform float uStockTwo; uniform vec3 uPL;   /* v1.5 printed stocks: uStock gives the print's log H, uPL adds the printer lights, the curves give density, uStock2 views it */
+uniform sampler3D uStockR1, uStockR2; uniform float uStockXT; uniform vec3 uPG;   /* colour prints: each layer's exposure share from the R, G, B printer bands; uPG rescales the bands */
 uniform float uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt; uniform vec3 uGam,uShCol,uHiCol;
 vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
@@ -122,8 +124,17 @@ vec3 filmPost(vec3 c){
   return clamp(c,0.0,1.0);
 }
 vec3 filmLook(vec3 c){ return filmPost(filmPre(c)); }
+float stockCurve(float e, int c){ float x=clamp(e,0.0,1.0)*${(STOCK_NC-1).toFixed(1)}; int i=min(int(x),${STOCK_NC-2}); float f=x-float(i);
+  return mix(texelFetch(uStockCurve,ivec2(i,c),0).r, texelFetch(uStockCurve,ivec2(i+1,c),0).r, f); }   /* exact print curve: linear between 1024 points */
 vec3 stockLUT(vec3 lin){ vec3 s=clamp((log2(max(lin,vec3(1e-9))/0.18)-(${STOCK_LO.toFixed(1)}))/${(STOCK_HI-STOCK_LO).toFixed(1)},0.0,1.0);
-  return texture(uStock, s*${((STOCK_N-1)/STOCK_N).toFixed(8)}+${(0.5/STOCK_N).toFixed(8)}).rgb; }
+  const float K=${((STOCK_N-1)/STOCK_N).toFixed(8)}, O=${(0.5/STOCK_N).toFixed(8)};
+  vec3 v=texture(uStock, s*K+O).rgb; if (uStockTwo<0.5) return v;
+  vec3 e=v+uPL;
+  if (uStockXT>0.5){ vec3 a=texture(uStockR1, s*K+O).rgb, b=texture(uStockR2, s*K+O).rgb;
+    vec3 x=vec3(dot(vec3(a.x,a.y,1.0-a.x-a.y),uPG), dot(vec3(a.z,b.x,1.0-a.z-b.x),uPG), dot(vec3(b.y,b.z,1.0-b.y-b.z),uPG));
+    e+=log2(max(x,vec3(1e-6)))*${(Math.LOG10E*Math.LN2/(STOCK_EHI-STOCK_ELO)).toFixed(8)}; }   /* log10, in the LUT's units */
+  vec3 d=vec3(stockCurve(e.r,0), stockCurve(e.g,1), stockCurve(e.b,2));
+  return texture(uStock2, clamp(d,0.0,1.0)*K+O).rgb; }
 /* the look from scene-linear: the curve-and-colour film (as before), or a measured stock: its LUT, then the curve
    sliders as tweaks on its output (all identity at their defaults, so untouched = the measured stock), then Black lift /
    White crush, Colour and a LUT; the look's Mix blends the two */
@@ -346,10 +357,29 @@ function setLookUniforms(u,e){
   gl.uniform3fv(u.uHiCol,hueRGB(e.hiHue)); gl.uniform1f(u.uHiAmt,e.hiAmt);
   bindTex(1, lutTex||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uLut,1);
   gl.uniform1f(u.uLutMix, lutTex ? e.lutMix*lookMix : 0); gl.uniform1f(u.uLutSize, lutTex?lutSize:2);
-  const st=stockFor(e.stock); bindTex(2, st||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);
+  const st=stockFor(e.stock); bindTex(2, st?st.t1:dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);
+  bindTex(3, st&&st.t2||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock2,3); bindTex(4, st&&st.curve||dummyCurve); gl.uniform1i(u.uStockCurve,4);
+  bindTex(5, st&&st.r1||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStockR1,5); bindTex(7, st&&st.r2||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStockR2,7);
+  gl.uniform1f(u.uStockTwo, st&&st.t2 ? 1 : 0); gl.uniform1f(u.uStockXT, st&&st.r1 ? 1 : 0);
+  const pl=stockLights(e, st); gl.uniform3f(u.uPL, pl.off[0], pl.off[1], pl.off[2]); gl.uniform3f(u.uPG, pl.g[0], pl.g[1], pl.g[2]);
 }
 /* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.json: gzip, base64; uint16, r fastest), kept for the session ---- */
 const stockTexs={}, stockJobs={}, stockErr={};
+const dummyCurve=(()=>{ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,2,3,0,gl.RED,gl.FLOAT,new Float32Array(6));
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); return t; })();
+function makeCurveTex(nc,data){ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,nc,3,0,gl.RED,gl.FLOAT,data);
+  for (const p of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T]) gl.texParameteri(gl.TEXTURE_2D,p,gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST); return t; }
+/* printer lights. B&W: one light (Density), an offset of the print's log exposure in the LUT's units.
+   Colour: the R, G, B bands of the printer light scale by g = f(L)/f(0), f = PLM·2^L (the model's band factors), and the
+   shader moves each layer's log H by log10(Σ share·g): the full spectral re-timing, not just a per-layer offset. */
+function stockLights(e, st){ const L=STOCK_LIB[e.stock], none={off:[0,0,0], g:[1,1,1]}; if (!L||!L.print) return none;
+  const d=+e.plD||0;
+  if (L.bw){ const k=STOCK_PT*d/(STOCK_EHI-STOCK_ELO); return {off:[k,k,k], g:[1,1,1]}; }
+  if (!st||!st.plm) return none;
+  const P=st.plm, s=[d+(+e.plR||0), d+(+e.plG||0), d+(+e.plB||0)].map(p=>Math.pow(10, STOCK_PT*p));   /* 2^(stops) = 10^(log H) */
+  const f=P.map(r=>r[0]*s[0]+r[1]*s[1]+r[2]*s[2]), f0=P.map(r=>r[0]+r[1]+r[2]);
+  return {off:[0,0,0], g:f.map((v,i)=>v/f0[i])}; }
 function stockFor(key){ if (!key || !STOCK_LIB[key]) return null; if (stockTexs[key]) return stockTexs[key]; loadStock(key); return null; }
 function loadStock(key){
   if (stockJobs[key]) return stockJobs[key];
@@ -359,9 +389,13 @@ function loadStock(key){
       const res=await fetch(new URL(`stocks/${key}.json`,document.baseURI).href); if (!res.ok) throw new Error(res.status+" "+res.statusText);
       const j=await res.json(), bin=Uint8Array.from(atob(j.data),c=>c.charCodeAt(0));   /* gzip in base64: a file type every host serves */
       const buf=await new Response(new Blob([bin]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
-      const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N; if (q.length!==n*3) throw new Error("bad stock file");
-      const f=new Float32Array(n*3); for (let i=0;i<n*3;i++) f[i]=q[i]/65535;
-      stockTexs[key]=makeLutTex(STOCK_N,f); delete stockErr[key]; schedule();
+      const q=new Uint16Array(buf), n=STOCK_N*STOCK_N*STOCK_N, part=(a,len)=>{ const f=new Float32Array(len); for (let i=0;i<len;i++) f[i]=q[a+i]/65535; return f; };
+      if (j.kind==="print"){   /* v1.5: scene → print log H | colour: band shares (2 LUTs) | print curves | density → display */
+        const nc=j.nc||STOCK_NC, xt=!!j.xt, a=n*3+(xt?n*6:0); if (q.length!==a+nc*3+n*3 || j.elo!==STOCK_ELO || j.ehi!==STOCK_EHI || (xt&&!j.plm)) throw new Error("bad stock file");
+        stockTexs[key]={t1:makeLutTex(STOCK_N,part(0,n*3)), curve:makeCurveTex(nc,part(a,nc*3)), t2:makeLutTex(STOCK_N,part(a+nc*3,n*3)), plm:j.plm||null};
+        if (xt){ stockTexs[key].r1=makeLutTex(STOCK_N,part(n*3,n*3)); stockTexs[key].r2=makeLutTex(STOCK_N,part(n*6,n*3)); }
+      } else { if (q.length!==n*3) throw new Error("bad stock file"); stockTexs[key]={t1:makeLutTex(STOCK_N,part(0,n*3))}; }
+      delete stockErr[key]; schedule();
     }catch(err){ console.error(err); stockErr[key]=String(err.message||err).slice(0,80); toast(`Could not load ${STOCK_LIB[key].label}: ${String(err.message||err).slice(0,80)}`,4200); delete stockJobs[key]; }
     finally{ if (badge){ badge.classList.remove("busy"); if (typeof updateBadge==="function") updateBadge(); } if (typeof stockSync==="function") stockSync(); }
   })();

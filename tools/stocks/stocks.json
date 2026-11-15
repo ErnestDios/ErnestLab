@@ -5,11 +5,12 @@
   "negative": "Kodak Portra 400",
   "print": "Kodak Portra Endura Paper",
   "gauge": 36,
-  "note": "Kodak's all-round portrait negative, 2010\u2013",
+  "note": "Kodak's all-round portrait negative",
   "iso": 400,
   "year": 2010,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.152,
@@ -72,7 +73,17 @@
    0.5039,
    0.504
   ],
-  "err": null
+  "err": [
+   0.32046524994131065,
+   3.187275362323406,
+   27.38766099319033
+  ],
+  "err_lights": [
+   0.4045939846625339,
+   3.5432942537171837,
+   21.815055298726634
+  ],
+  "out_of_domain": 0.0
  },
  "k5207": {
   "label": "Vision3 250D 5207 \u00b7 print 2383",
@@ -80,11 +91,12 @@
   "negative": "Kodak Vision3 250D 5207",
   "print": "Kodak Vision 2383",
   "gauge": 24.89,
-  "note": "Kodak Vision3 daylight, 2007\u2013",
+  "note": "Kodak Vision3 daylight",
   "iso": 250,
   "year": 2009,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1955,
@@ -147,7 +159,17 @@
    0.481,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.39409498919175734,
+   3.9089738708486874,
+   24.069659454547967
+  ],
+  "err_lights": [
+   0.43383983874631,
+   4.603202426608575,
+   30.834591234116356
+  ],
+  "out_of_domain": 0.0
  },
  "velvia50": {
   "label": "Velvia 50",
@@ -155,11 +177,12 @@
   "negative": "Fuji Velvia 50",
   "print": null,
   "gauge": 36,
-  "note": "Fujifilm's saturated landscape slide film, 1990\u2013",
+  "note": "Fujifilm's saturated landscape slide film",
   "iso": 50,
   "year": 2007,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "direct",
   "grain": [
    [
     0.8779,
@@ -222,7 +245,13 @@
    0.4894,
    0.497
   ],
-  "err": null
+  "err": [
+   0.4161109949436496,
+   4.443420159894518,
+   22.158489203596933
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "trix": {
   "label": "Tri-X 400 on Polymax",
@@ -235,6 +264,7 @@
   "year": 2007,
   "maker": "Kodak",
   "bw": true,
+  "kind": "print",
   "grain": [
    [
     0.1107,
@@ -297,7 +327,17 @@
    0.3631,
    0.3631
   ],
-  "err": null
+  "err": [
+   0.23372752288084708,
+   1.812748728254321,
+   7.510397747375606
+  ],
+  "err_lights": [
+   0.23888850595538316,
+   1.7962735239261427,
+   7.517729142092257
+  ],
+  "out_of_domain": 0.0
  },
  "portra160": {
   "label": "Portra 160",
@@ -305,11 +345,12 @@
   "negative": "Kodak Portra 160",
   "print": "Kodak Portra Endura Paper",
   "gauge": 36,
-  "note": "Kodak's fine-grain portrait negative, 2006\u2013",
+  "note": "Kodak's fine-grain portrait negative",
   "iso": 160,
   "year": 2011,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1064,
@@ -372,7 +413,17 @@
    0.5039,
    0.5039
   ],
-  "err": null
+  "err": [
+   0.20069822847177396,
+   1.6880027443802397,
+   9.593640007172649
+  ],
+  "err_lights": [
+   0.28916384112193627,
+   2.779220472491104,
+   17.89659845539465
+  ],
+  "out_of_domain": 0.0
  },
  "portra800": {
   "label": "Portra 800",
@@ -380,11 +431,12 @@
   "negative": "Kodak Portra 800",
   "print": "Kodak Portra Endura Paper",
   "gauge": 36,
-  "note": "the fast Portra, 2006\u2013",
+  "note": "the fast Portra",
   "iso": 800,
   "year": 1998,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1875,
@@ -447,7 +499,17 @@
    0.5039,
    0.5039
   ],
-  "err": null
+  "err": [
+   0.3601041351498339,
+   3.7796181295811424,
+   27.649105579372943
+  ],
+  "err_lights": [
+   0.439604032731143,
+   3.856278072773904,
+   22.360116153708713
+  ],
+  "out_of_domain": 0.0
  },
  "portra1600": {
   "label": "Portra 800 pushed to 1600",
@@ -460,6 +522,7 @@
   "year": 1998,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2503,
@@ -522,7 +585,17 @@
    0.5039,
    0.5043
   ],
-  "err": null
+  "err": [
+   0.36062611333715466,
+   4.205927556800124,
+   28.148358210092653
+  ],
+  "err_lights": [
+   0.41999923610535284,
+   4.816860848543126,
+   37.44550883409793
+  ],
+  "out_of_domain": 0.0
  },
  "ektar100": {
   "label": "Ektar 100",
@@ -530,11 +603,12 @@
   "negative": "Kodak Ektar 100",
   "print": "Kodak Endura Premier Paper",
   "gauge": 36,
-  "note": "Kodak's most saturated, finest-grain negative, 2008\u2013",
+  "note": "Kodak's most saturated, finest-grain negative",
   "iso": 100,
   "year": 2008,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.0855,
@@ -597,7 +671,17 @@
    0.5072,
    0.5075
   ],
-  "err": null
+  "err": [
+   0.3481674790989957,
+   4.312818828637815,
+   39.848434189184026
+  ],
+  "err_lights": [
+   0.4448610878333581,
+   4.366761996462806,
+   34.61362793031875
+  ],
+  "out_of_domain": 0.0
  },
  "gold200": {
   "label": "Gold 200",
@@ -610,6 +694,7 @@
   "year": 2007,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1672,
@@ -672,7 +757,17 @@
    0.501,
    0.5013
   ],
-  "err": null
+  "err": [
+   0.3905011620374748,
+   4.785527347618168,
+   30.516266873747647
+  ],
+  "err_lights": [
+   0.48912416075519644,
+   4.502450573089766,
+   28.915008085701725
+  ],
+  "out_of_domain": 0.0
  },
  "ultramax400": {
   "label": "UltraMax 400",
@@ -685,6 +780,7 @@
   "year": 2007,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1748,
@@ -747,7 +843,17 @@
    0.5009,
    0.5012
   ],
-  "err": null
+  "err": [
+   0.36919190073965596,
+   4.555019457910184,
+   29.941004661216343
+  ],
+  "err_lights": [
+   0.45735637616649616,
+   4.371794325687313,
+   28.486492861994353
+  ],
+  "out_of_domain": 0.0
  },
  "vericolor3": {
   "label": "Vericolor III",
@@ -755,11 +861,12 @@
   "negative": "Kodak Vericolor III",
   "print": "Kodak Portra Endura Paper",
   "gauge": 36,
-  "note": "Kodak's 1980s professional portrait negative",
+  "note": "Kodak's professional portrait negative of the 1980s",
   "iso": 160,
   "year": 1983,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1482,
@@ -822,7 +929,17 @@
    0.5039,
    0.504
   ],
-  "err": null
+  "err": [
+   0.31101901535990345,
+   3.7167782851392728,
+   23.65601308649471
+  ],
+  "err_lights": [
+   0.37402879261800104,
+   3.6534816962253154,
+   22.3028934621834
+  ],
+  "out_of_domain": 0.0
  },
  "pro160s": {
   "label": "Pro 160S",
@@ -835,6 +952,7 @@
   "year": 2004,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1448,
@@ -897,7 +1015,17 @@
    0.5057,
    0.5056
   ],
-  "err": null
+  "err": [
+   0.17179027638324398,
+   1.4248032391120615,
+   8.422532597300277
+  ],
+  "err_lights": [
+   0.18941648680961323,
+   1.7572479616608472,
+   18.036786036168383
+  ],
+  "out_of_domain": 0.0
  },
  "pro400h": {
   "label": "Pro 400H",
@@ -905,11 +1033,12 @@
   "negative": "Fuji Pro 400H",
   "print": "Fuji Crystal Archive Super Type C",
   "gauge": 36,
-  "note": "Fujifilm's four-layer portrait negative, 2004\u20132021",
+  "note": "Fujifilm's four-layer portrait negative",
   "iso": 400,
   "year": 2004,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1395,
@@ -972,7 +1101,17 @@
    0.5057,
    0.5056
   ],
-  "err": null
+  "err": [
+   0.19536049451641213,
+   1.5585616413889989,
+   12.397719149527914
+  ],
+  "err_lights": [
+   0.21799806624618742,
+   1.8129184793379325,
+   12.316934565344448
+  ],
+  "out_of_domain": 0.0
  },
  "superia400": {
   "label": "Superia X-Tra 400",
@@ -985,6 +1124,7 @@
   "year": 1998,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1967,
@@ -1047,7 +1187,17 @@
    0.5057,
    0.5057
   ],
-  "err": null
+  "err": [
+   0.2346319779331636,
+   2.368913930233706,
+   14.68885086326888
+  ],
+  "err_lights": [
+   0.25900608652584384,
+   2.7904255878479574,
+   31.394095679598752
+  ],
+  "out_of_domain": 0.0
  },
  "reala": {
   "label": "Superia Reala 100",
@@ -1055,11 +1205,12 @@
   "negative": "Fuji Superia Reala",
   "print": "Fuji Crystal Archive Super Type C",
   "gauge": 36,
-  "note": "Fujifilm's four-layer consumer negative, 1989\u20132013",
+  "note": "Fujifilm's four-layer consumer negative",
   "iso": 100,
   "year": 1998,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2653,
@@ -1122,7 +1273,17 @@
    0.5057,
    0.5057
   ],
-  "err": null
+  "err": [
+   0.2296544047726183,
+   2.052921978078515,
+   17.41777345426549
+  ],
+  "err_lights": [
+   0.24116304606592381,
+   2.3672838606394784,
+   28.544218277403537
+  ],
+  "out_of_domain": 0.0
  },
  "c200": {
   "label": "Fujicolor C200",
@@ -1135,6 +1296,7 @@
   "year": 2017,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2296,
@@ -1197,7 +1359,17 @@
    0.5057,
    0.5057
   ],
-  "err": null
+  "err": [
+   0.23011684600890925,
+   2.0949845134481273,
+   19.914915139070132
+  ],
+  "err_lights": [
+   0.25155501102580513,
+   2.6367146153759577,
+   33.663045851108826
+  ],
+  "out_of_domain": 0.0
  },
  "natura1600": {
   "label": "Natura 1600",
@@ -1205,11 +1377,12 @@
   "negative": "Fuji Natura 1600",
   "print": "Fuji Crystal Archive Super Type C",
   "gauge": 36,
-  "note": "Fujifilm's ISO 1600 negative, 2003\u20132017",
+  "note": "Fujifilm's ISO 1600 negative",
   "iso": 1600,
   "year": 2003,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.266,
@@ -1272,7 +1445,17 @@
    0.5057,
    0.5058
   ],
-  "err": null
+  "err": [
+   0.2597522566287944,
+   2.44399488953575,
+   18.476084164246704
+  ],
+  "err_lights": [
+   0.2867537949982794,
+   3.1053689166759493,
+   33.58774012251555
+  ],
+  "out_of_domain": 0.0
  },
  "vista100": {
   "label": "Agfa Vista 100",
@@ -1285,6 +1468,7 @@
   "year": 2001,
   "maker": "Agfa",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1751,
@@ -1347,7 +1531,17 @@
    0.5057,
    0.5058
   ],
-  "err": null
+  "err": [
+   0.20046640545139136,
+   1.8343698204118681,
+   12.389053080821418
+  ],
+  "err_lights": [
+   0.21323868560843107,
+   2.2092675084412456,
+   22.443768017237343
+  ],
+  "out_of_domain": 0.0
  },
  "aerocolor": {
   "label": "Aerocolor IV 2460",
@@ -1360,6 +1554,7 @@
   "year": 2009,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.3085,
@@ -1422,7 +1617,17 @@
    0.501,
    0.501
   ],
-  "err": null
+  "err": [
+   0.3226745651412709,
+   3.902298956459374,
+   36.51713496317481
+  ],
+  "err_lights": [
+   0.4138399068935166,
+   3.975961626056313,
+   22.84011952387427
+  ],
+  "out_of_domain": 0.0
  },
  "k5247ii": {
   "label": "Eastman 5247 II \u00b7 print 5383",
@@ -1435,6 +1640,7 @@
   "year": 1974,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.3268,
@@ -1497,7 +1703,17 @@
    0.5027,
    0.5026
   ],
-  "err": null
+  "err": [
+   0.38677352184373415,
+   3.054928481134985,
+   15.526087773102413
+  ],
+  "err_lights": [
+   0.4928758013400927,
+   3.9394879561661202,
+   14.114425491723932
+  ],
+  "out_of_domain": 0.0
  },
  "k5293": {
   "label": "EXR 200T 5293 \u00b7 print 5384",
@@ -1510,6 +1726,7 @@
   "year": 1982,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.3423,
@@ -1572,7 +1789,17 @@
    0.5034,
    0.5034
   ],
-  "err": null
+  "err": [
+   0.3149809184816903,
+   2.1813111178051114,
+   10.294606817478265
+  ],
+  "err_lights": [
+   0.4241325133667904,
+   3.5773253807247403,
+   9.493906667247341
+  ],
+  "out_of_domain": 0.0
  },
  "k5277": {
   "label": "Vision 320T 5277 \u00b7 print 2383",
@@ -1585,6 +1812,7 @@
   "year": 1996,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2551,
@@ -1647,7 +1875,17 @@
    0.481,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.35675297912884535,
+   2.948879792353695,
+   16.718612504116145
+  ],
+  "err_lights": [
+   0.3862188159810045,
+   3.7174968467438276,
+   24.6341889034819
+  ],
+  "out_of_domain": 0.0
  },
  "k5203": {
   "label": "Vision3 50D 5203 \u00b7 print 2383",
@@ -1655,11 +1893,12 @@
   "negative": "Kodak Vision3 50D 5203",
   "print": "Kodak Vision 2383",
   "gauge": 24.89,
-  "note": "Kodak Vision3 daylight, 2007\u2013",
+  "note": "Kodak Vision3 daylight",
   "iso": 50,
   "year": 2011,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.0601,
@@ -1722,7 +1961,17 @@
    0.481,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.34240378323312787,
+   3.2692156955235863,
+   21.580172756609137
+  ],
+  "err_lights": [
+   0.3769183637015956,
+   3.9173513880918387,
+   32.71507669197364
+  ],
+  "out_of_domain": 0.0
  },
  "k5213": {
   "label": "Vision3 200T 5213 \u00b7 print 2383",
@@ -1730,11 +1979,12 @@
   "negative": "Kodak Vision3 200T 5213",
   "print": "Kodak Vision 2383",
   "gauge": 24.89,
-  "note": "Kodak Vision3 tungsten, 2010\u2013",
+  "note": "Kodak Vision3 tungsten",
   "iso": 200,
   "year": 2010,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.145,
@@ -1797,7 +2047,17 @@
    0.481,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.32606421051876644,
+   2.9960055684022415,
+   24.069037880014548
+  ],
+  "err_lights": [
+   0.35553090792634245,
+   3.6251376621325297,
+   32.19973874003578
+  ],
+  "out_of_domain": 0.0
  },
  "k5219": {
   "label": "Vision3 500T 5219 \u00b7 print 2383",
@@ -1805,11 +2065,12 @@
   "negative": "Kodak Vision3 500T 5219",
   "print": "Kodak Vision 2383",
   "gauge": 24.89,
-  "note": "Kodak Vision3 tungsten, 2007\u2013",
+  "note": "Kodak Vision3 tungsten",
   "iso": 500,
   "year": 2007,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1851,
@@ -1872,7 +2133,17 @@
    0.481,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.3754991340361731,
+   3.4305380509848225,
+   19.757838707323423
+  ],
+  "err_lights": [
+   0.41407290076289344,
+   4.014461615466795,
+   25.823980695144428
+  ],
+  "out_of_domain": 0.0
  },
  "k5219p": {
   "label": "Vision3 500T 5219 \u00b7 print 2393 Premier",
@@ -1885,6 +2156,7 @@
   "year": 2007,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1851,
@@ -1947,7 +2219,17 @@
    0.4885,
    0.4885
   ],
-  "err": null
+  "err": [
+   0.39956629010146294,
+   3.3469581397851496,
+   19.36776772359539
+  ],
+  "err_lights": [
+   0.4861077030989888,
+   4.103308448957479,
+   16.405209495673216
+  ],
+  "out_of_domain": 0.0
  },
  "eterna500": {
   "label": "Eterna 500 \u00b7 print 3513DI",
@@ -1960,6 +2242,7 @@
   "year": 2007,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.1444,
@@ -2022,7 +2305,17 @@
    0.5079,
    0.5079
   ],
-  "err": null
+  "err": [
+   0.2974969582696563,
+   2.113833767542133,
+   18.01798736990533
+  ],
+  "err_lights": [
+   0.3476741654224986,
+   3.0600773257434097,
+   15.66447999820281
+  ],
+  "out_of_domain": 0.0
  },
  "eternavivid": {
   "label": "Eterna Vivid 500 \u00b7 print 3513DI",
@@ -2035,6 +2328,7 @@
   "year": 2007,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.133,
@@ -2097,7 +2391,17 @@
    0.5079,
    0.5079
   ],
-  "err": null
+  "err": [
+   0.28813284945319506,
+   2.0959685280025226,
+   17.070782437789923
+  ],
+  "err_lights": [
+   0.34706413415975296,
+   3.1002575784525157,
+   12.67376016928208
+  ],
+  "out_of_domain": 0.0
  },
  "provia100f": {
   "label": "Provia 100F",
@@ -2110,6 +2414,7 @@
   "year": 2000,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "direct",
   "grain": [
    [
     0.5583,
@@ -2172,7 +2477,13 @@
    0.4713,
    0.4809
   ],
-  "err": null
+  "err": [
+   0.27098914106156513,
+   2.5548406246077673,
+   14.890766704765962
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "kodachrome64": {
   "label": "Kodachrome 64",
@@ -2180,11 +2491,12 @@
   "negative": "Kodachrome 64",
   "print": null,
   "gauge": 36,
-  "note": "Kodak's K-14 slide film, 1974\u20132009",
+  "note": "Kodak's K-14 slide film",
   "iso": 64,
   "year": 1974,
   "maker": "Kodak",
   "bw": false,
+  "kind": "direct",
   "grain": [
    [
     1.0254,
@@ -2247,7 +2559,13 @@
    0.4836,
    0.5158
   ],
-  "err": null
+  "err": [
+   0.30280620226523536,
+   2.7115828727589237,
+   16.11669192664668
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "e100d": {
   "label": "Ektachrome 100D",
@@ -2260,6 +2578,7 @@
   "year": 2018,
   "maker": "Kodak",
   "bw": false,
+  "kind": "direct",
   "grain": [
    [
     0.8468,
@@ -2322,7 +2641,13 @@
    0.5037,
    0.5278
   ],
-  "err": null
+  "err": [
+   0.32641471408327793,
+   3.0153584623972556,
+   18.496286201425082
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "velvia_ilfo": {
   "label": "Velvia 50 on Ilfochrome",
@@ -2335,6 +2660,7 @@
   "year": 2007,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.8779,
@@ -2397,7 +2723,17 @@
    0.4783,
    0.4783
   ],
-  "err": null
+  "err": [
+   0.3465522596446551,
+   5.413314633033578,
+   43.060027684073894
+  ],
+  "err_lights": [
+   0.356195799167964,
+   4.689081368321825,
+   38.72358285289373
+  ],
+  "out_of_domain": 0.0
  },
  "instax": {
   "label": "Instax",
@@ -2410,13 +2746,20 @@
   "year": null,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "direct",
   "grain": null,
   "grey": [
    0.7651,
    0.7511,
    0.7518
   ],
-  "err": null
+  "err": [
+   0.30309575225113294,
+   2.9949581849638394,
+   20.287239475833548
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "fp100c": {
   "label": "FP-100C",
@@ -2424,18 +2767,25 @@
   "negative": "Fuji FP-100C",
   "print": null,
   "gauge": 95,
-  "note": "Fujifilm peel-apart instant film, until 2016",
+  "note": "Fujifilm peel-apart instant film",
   "iso": 128,
   "year": 2002,
   "maker": "Fujifilm",
   "bw": false,
+  "kind": "direct",
   "grain": null,
   "grey": [
    0.7159,
    0.6898,
    0.6876
   ],
-  "err": null
+  "err": [
+   0.2711849592053944,
+   2.239796556536319,
+   14.600070998308073
+  ],
+  "err_lights": null,
+  "out_of_domain": 0.0
  },
  "trixpush": {
   "label": "Tri-X 400, long development",
@@ -2448,6 +2798,7 @@
   "year": 2007,
   "maker": "Kodak",
   "bw": true,
+  "kind": "print",
   "grain": [
    [
     0.1238,
@@ -2510,7 +2861,17 @@
    0.3665,
    0.3665
   ],
-  "err": null
+  "err": [
+   0.21963543507211764,
+   2.263801460146824,
+   12.385973995582214
+  ],
+  "err_lights": [
+   0.22347039002620117,
+   2.27320760967311,
+   11.060404256652843
+  ],
+  "out_of_domain": 0.0
  },
  "dx5222": {
   "label": "Double-X 5222 on 2302",
@@ -2523,6 +2884,7 @@
   "year": 1959,
   "maker": "Kodak",
   "bw": true,
+  "kind": "print",
   "grain": [
    [
     0.0806,
@@ -2585,7 +2947,17 @@
    0.3508,
    0.3508
   ],
-  "err": null
+  "err": [
+   0.2799539255252778,
+   1.4420052337814762,
+   6.012664717886276
+  ],
+  "err_lights": [
+   0.28421885151315085,
+   1.4166236603914966,
+   6.560008622388007
+  ],
+  "out_of_domain": 0.0
  },
  "dx5222hard": {
   "label": "Double-X 5222, long development",
@@ -2598,6 +2970,7 @@
   "year": 1959,
   "maker": "Kodak",
   "bw": true,
+  "kind": "print",
   "grain": [
    [
     0.0806,
@@ -2660,7 +3033,17 @@
    0.3509,
    0.3509
   ],
-  "err": null
+  "err": [
+   0.27432676181853827,
+   1.7745083466689096,
+   9.285874718436325
+  ],
+  "err_lights": [
+   0.27432676181853827,
+   1.7745083466689096,
+   9.285874718436325
+  ],
+  "out_of_domain": 0.0
  },
  "ecn5248": {
   "label": "Eastman Color 5248 \u00b7 print 5381",
@@ -2673,6 +3056,7 @@
   "year": 1952,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.3126,
@@ -2735,7 +3119,17 @@
    0.4713,
    0.4711
   ],
-  "err": null
+  "err": [
+   0.6219321385805348,
+   5.434422442252648,
+   38.79760488185915
+  ],
+  "err_lights": [
+   0.6731358788349697,
+   5.522255326443089,
+   27.410067798039783
+  ],
+  "out_of_domain": 0.0
  },
  "ecn5250": {
   "label": "Eastman Color 5250 \u00b7 print 5381",
@@ -2748,6 +3142,7 @@
   "year": 1959,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2179,
@@ -2810,7 +3205,17 @@
    0.4714,
    0.4715
   ],
-  "err": null
+  "err": [
+   0.6088297225269277,
+   5.235217300593144,
+   47.36843763372663
+  ],
+  "err_lights": [
+   0.6677309703278883,
+   5.491509557810843,
+   33.874362220376916
+  ],
+  "out_of_domain": 0.0
  },
  "exr5248": {
   "label": "EXR 100T 5248 \u00b7 print 5386",
@@ -2823,6 +3228,7 @@
   "year": 1990,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.2049,
@@ -2885,7 +3291,17 @@
    0.4779,
    0.4778
   ],
-  "err": null
+  "err": [
+   0.26724213797394375,
+   2.376306242281305,
+   14.015030398296314
+  ],
+  "err_lights": [
+   0.3006523583088509,
+   2.6399361480184096,
+   15.37294068193915
+  ],
+  "out_of_domain": 0.0
  },
  "verita": {
   "label": "Verita 200D 5206 \u00b7 print 2383",
@@ -2898,6 +3314,7 @@
   "year": 2026,
   "maker": "Kodak",
   "bw": false,
+  "kind": "print",
   "grain": [
    [
     0.227,
@@ -2960,6 +3377,16 @@
    0.481,
    0.481
   ],
-  "err": null
+  "err": [
+   0.34899380512542655,
+   3.0289669213143924,
+   22.84281792616827
+  ],
+  "err_lights": [
+   0.3677085943998263,
+   3.4376066370278138,
+   37.70686570104635
+  ],
+  "out_of_domain": 0.0
  }
 }

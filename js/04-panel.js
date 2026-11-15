@@ -4,7 +4,7 @@
 /* ---------------- DOM helpers ---------------- */
 const $ = id => document.getElementById(id);
 function toast(msg, ms=2600){ const t=$("toast"); t.textContent=msg; t.style.display="block"; clearTimeout(toast._t); toast._t=setTimeout(()=>t.style.display="none", ms); }
-function fmtVal(p, v){ const st=p[4]; const d = st>=1?0:st>=0.01?2:3; return (+v).toFixed(d)+(p[6]||""); }
+function fmtVal(p, v){ const st=p[4]; const d = st>=1?0:st>=0.01?2:3; return (p[6]===" pt"&&+v>0?"+":"")+(+v).toFixed(d)+(p[6]||""); }
 
 const ctlEls = {};
 function buildRack(){
@@ -40,7 +40,7 @@ function buildRack(){
         if (!groups[gl2]){ groups[gl2]=document.createElement("optgroup"); groups[gl2].label=gl2.replace(/^Measured · /,""); sel.appendChild(groups[gl2]); }
         const o=document.createElement("option"); o.value=k; o.textContent=L.label; groups[gl2].appendChild(o); }
       sel.addEventListener("change",()=>{ const from=base.stock; base.stock=sel.value;
-        if (!from && sel.value) for (const k of STOCK_TUNE) base[k]=DEF[k];   /* from the by-eye curve: start from the measured stock; stock to stock keeps your tweaks */
+        if (!from && sel.value) for (const k of [...STOCK_TUNE,...PL_KEYS]) base[k]=DEF[k];   /* from the by-eye curve: start from the measured stock, printed neutral; stock to stock keeps your tweaks and timing */
         syncUI(); schedule(); });
       const info=document.createElement("div"); info.className="note bwinfo"; info.id="stockInfo";
       box.appendChild(r); box.appendChild(info);
@@ -68,6 +68,10 @@ function buildRack(){
     let sub=null;
     for (const p of g.params){
       const [k,label,mn,mx,st] = p;
+      if (k==="plD"){   /* v1.5 */
+        const h=document.createElement("div"); h.className="plhead"; h.innerHTML='<b>Printer lights</b> <span class="meta">for printed stocks</span>'; box.appendChild(h);
+        const n=document.createElement("div"); n.className="note bwinfo"; n.id="plInfo"; box.appendChild(n);
+      }
       if (p[7]==="layer" && !sub){
         sub=document.createElement("details"); sub.className="sub";
         sub.innerHTML='<summary>Emulsion layers <span class="meta">R · G · B</span></summary>';
@@ -77,7 +81,7 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)) stockSync(); markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)||PL_KEYS.includes(k)) stockSync(); markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       scrubOut(out,p,()=>base[k],v=>{ base[k]=v; if (k==="bw" && v>0) bypass.bw=false; syncUI(); schedule(); });
@@ -130,17 +134,30 @@ function grainSync(){
     (own?`Shot on its own gauge.`:`Moved to a ${ratio>1?"smaller":"larger"} gauge: the frame is ${base.gGauge} mm wide instead of ${D.g}, so each grain is ${ratio>1?ratio.toFixed(1)+"× bigger":(1/ratio).toFixed(1)+"× smaller"} relative to the picture.`);
 }
 /* measured stock: what it is, and which film-curve sliders it replaces */
-const STOCK_TUNE=["con","roll","gR","gG","gB"];
+const STOCK_TUNE=["con","roll","gR","gG","gB"], PL_KEYS=["plD","plR","plG","plB"];
+function plText(){ const f=v=>(v>0?"+":"")+Math.round(v); const L=STOCK_LIB[base.stock]; if (L&&L.bw) return Math.abs(base.plD)>1e-9 ? `Density ${f(base.plD)}` : "";
+  return [["Density","plD"],["R","plR"],["G","plG"],["B","plB"]].filter(([,k])=>Math.abs(base[k])>1e-9).map(([n,k])=>`${n} ${f(base[k])}`).join(" · "); }
 function stockSync(){
   const sel=$("filmStock"), info=$("stockInfo"); if (!sel) return;
   const L=STOCK_LIB[base.stock]; sel.value=L?base.stock:"";
+  /* printer lights: only a printed stock has a printer; a B&W printer has one light */
+  const printed=!!(L&&L.print), plOn={plD:printed, plR:printed&&!L.bw, plG:printed&&!L.bw, plB:printed&&!L.bw};
+  for (const k of PL_KEYS) if (ctlEls[k]){ ctlEls[k].inp.disabled=!plOn[k]; ctlEls[k].row.classList.toggle("off",!plOn[k]); }
+  const pi=$("plInfo");
+  if (pi) pi.textContent = !L ? "Pick a measured stock that is printed (a negative on paper or print film) to time its print like a lab."
+    : !L.print ? `${L.label} isn't printed (${L.family==="slide"?"a slide is projected":"instant film develops in the print itself"}): use Exposure and Temperature instead.`
+    : L.bw ? `One light, as on a B&W enlarger: + points = more light = a darker print. 12 points ≈ 1 stop. Contrast comes from the paper grade.`
+    : L.reversal ? `${L.print} is a positive paper: + points = more light = a lighter print with more of that colour. 12 points ≈ 1 stop; the slide itself doesn't change.`
+    : `As a lab times a print: + points = more of that light = a denser print with less of that colour (Red +3 → cooler, Blue +3 → warmer). Print density moves all three. 12 points ≈ 1 stop; the negative itself doesn't change, so it's not the same as Exposure.`;
   if (!L){ info.textContent="By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above."; return; }
   const k=base.stock, tuned=STOCK_TUNE.filter(t=>Math.abs(base[t]-DEF[t])>1e-9), names={con:"Contrast",roll:"Roll-off",gR:"Red gamma",gG:"Green gamma",gB:"Blue gamma"};
+  const lights=printed ? plText() : "";
   const state = !(typeof stockTexs!=="undefined" && stockTexs[k]) ? ((typeof stockErr!=="undefined" && stockErr[k]) ? ["bad",`● LUT failed to load (${stockErr[k]}): showing the preset without the film model.`] : ["wait","● Loading the measured LUT…"])
     : tuned.length ? ["tuned",`● Measured, tuned: ${tuned.map(t=>names[t]).join(", ")}.`] : ["ok","● Measured LUT active."];
   info.innerHTML=""; const st=document.createElement("b"); st.className="stk-"+state[0]; st.textContent=state[1]+" "; info.appendChild(st);
-  if (tuned.length && state[0]==="tuned"){ const bt=document.createElement("button"); bt.type="button"; bt.className="linkbtn"; bt.textContent="Back to measured";
-    bt.addEventListener("click",()=>{ for (const t of STOCK_TUNE) base[t]=DEF[t]; syncUI(); schedule(); }); info.appendChild(bt); info.appendChild(document.createTextNode(" ")); }
+  const link=(txt,fn)=>{ const bt=document.createElement("button"); bt.type="button"; bt.className="linkbtn"; bt.textContent=txt; bt.addEventListener("click",()=>{ fn(); syncUI(); schedule(); }); info.appendChild(bt); info.appendChild(document.createTextNode(" ")); };
+  if (tuned.length && state[0]==="tuned") link("Back to measured",()=>{ for (const t of STOCK_TUNE) base[t]=DEF[t]; });
+  if (lights){ const sp=document.createElement("b"); sp.className="stk-print"; sp.textContent=`Printed at ${lights}. `; info.appendChild(sp); link("Neutral print",()=>{ for (const t of PL_KEYS) base[t]=DEF[t]; }); }
   info.appendChild(document.createTextNode(`${L.neg}${L.print?` printed on ${L.print}`:" (projected)"}, modelled from the manufacturers' datasheets (spectral sensitivity, characteristic curves, dyes${L.print?", printer light timed for a neutral grey":""}). ${L.note}. `+
     `Exposure moves you along the film's real curve. Contrast, Roll-off and the gammas tweak the stock's own curve (at zero it's exactly the measured film); Black lift, White crush, Colour and a LUT apply on top.`));
 }
