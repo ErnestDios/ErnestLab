@@ -109,7 +109,10 @@ $("btnCube").addEventListener("click", async()=>{
    3 = v0.3 (emulsion grain layers: gAmt*, gSize*, gClump*; older files get the colour-negative defaults).
    The slider values mean the same in both, so format 1 loads unchanged. Future changes migrate here. */
 const LOOK_FORMAT=3;
-function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This look was saved by a newer Ernest Lab; some settings may be ignored.",4000); return j; }
+function migrateLook(j){ const f=+j.format||1; if (f>LOOK_FORMAT) toast("This look was saved by a newer Ernest Lab; some settings may be ignored.",4000);
+  /* v1.6: light values in a pre-1.6 look without a stock were inert; keep them so (emulated lights start at 1.6) */
+  const ver=String(j.appVersion||"0").split(".").map(Number); if (ver[0]<1 || (ver[0]===1 && (ver[1]||0)<6)) plInert(j.values||j);
+  return j; }
 /* string settings (v1.4: the measured stock key) load only when they name something that exists */
 const okStr=(k,v)=>typeof DEF[k]==="string" && typeof v==="string" && (k!=="stock" || v==="" || !!STOCK_LIB[v]);
 function lookJSON(){ return {app:"Ernest Lab", appVersion:APP_VERSION, format:LOOK_FORMAT, name:presetName, base:presetName, strength:lookMix, values:Object.fromEntries(Object.keys(DEF).map(k=>[k, typeof DEF[k]==="string" ? String(base[k]||"") : +(+base[k]).toFixed(4)]))}; }

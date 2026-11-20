@@ -101,6 +101,7 @@ uniform sampler3D uLut; uniform float uLutMix, uLutSize; uniform float uBWLook; 
 uniform sampler3D uStock; uniform float uStockMix;   /* v1.4 measured stock: scene-linear → display, 33³ over a log2 shaper (js/03-stocks.js) */
 uniform sampler3D uStock2; uniform highp sampler2D uStockCurve; uniform float uStockTwo; uniform vec3 uPL;   /* v1.5 printed stocks: uStock gives the print's log H, uPL adds the printer lights, the curves give density, uStock2 views it */
 uniform sampler3D uStockR1, uStockR2; uniform float uStockXT; uniform vec3 uPG;   /* colour prints: each layer's exposure share from the R, G, B printer bands; uPG rescales the bands */
+uniform vec3 uPLE;   /* v1.6 emulated printer lights on the by-eye curve: per-layer exposure gains before the curve, (1,1,1) = off */
 uniform float uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt; uniform vec3 uGam,uShCol,uHiCol;
 vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
@@ -138,7 +139,7 @@ vec3 stockLUT(vec3 lin){ vec3 s=clamp((log2(max(lin,vec3(1e-9))/0.18)-(${STOCK_L
 /* the look from scene-linear: the curve-and-colour film (as before), or a measured stock: its LUT, then the curve
    sliders as tweaks on its output (all identity at their defaults, so untouched = the measured stock), then Black lift /
    White crush, Colour and a LUT; the look's Mix blends the two */
-vec3 lookOut(vec3 lin){ vec3 a=filmLook(linToEnc(lin)); if (uStockMix<=0.0) return a; return mix(a, filmLook(stockLUT(lin)), uStockMix); }`;
+vec3 lookOut(vec3 lin){ vec3 a=filmLook(linToEnc(lin*uPLE)); if (uStockMix<=0.0) return a; return mix(a, filmLook(stockLUT(lin)), uStockMix); }`;
 /* Procedural grain noise: hashed value noise, a finer octave and a coarse clumping octave. */
 const GRAIN_FN=`
 uvec3 pcg(uvec3 v){ v=v*1664525u+1013904223u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; v^=v>>16u; v.x+=v.y*v.z; v.y+=v.z*v.x; v.z+=v.x*v.y; return v; }
@@ -362,7 +363,18 @@ function setLookUniforms(u,e){
   bindTex(5, st&&st.r1||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStockR1,5); bindTex(7, st&&st.r2||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStockR2,7);
   gl.uniform1f(u.uStockTwo, st&&st.t2 ? 1 : 0); gl.uniform1f(u.uStockXT, st&&st.r1 ? 1 : 0);
   const pl=stockLights(e, st); gl.uniform3f(u.uPL, pl.off[0], pl.off[1], pl.off[2]); gl.uniform3f(u.uPG, pl.g[0], pl.g[1], pl.g[2]);
+  const pe=emuLights(e); gl.uniform3f(u.uPLE, pe[0], pe[1], pe[2]);
 }
+/* v1.6 emulated printer lights, for the by-eye curve (no measured stock). A printer point moves the print's exposure by
+   0.025 log H; seen from the scene that is 0.025/γ(negative) on that layer. Measured on the 34 printed negatives in the
+   library (mid grey): 0.141 stop per point on average (tools/stocks/README.md), so EMU_PT = 0.14 (about 7 points a stop).
+   Each layer moves on its own: on the measured prints, leaving out the dye-band crosstalk changes the result by under
+   1 code on average up to ±12 points, ~2 at Blue ±24 (4 on the worst stock): independent layers are most of what a printer light does. + points = more printer
+   light = less of that colour. Full B&W: one light (Density). A measured stock (printed or not) never takes these. */
+const EMU_PT=0.14;
+function emuLights(e){ if (e.stock && STOCK_LIB[e.stock]) return [1,1,1];
+  const d=+e.plD||0, p=e.bw>=1 ? [d,d,d] : [d+(+e.plR||0), d+(+e.plG||0), d+(+e.plB||0)];
+  return p.map(x=>x ? Math.pow(2,-EMU_PT*x) : 1); }
 /* ---- measured stocks (v1.4): LUTs fetched when chosen (stocks/<key>.json: gzip, base64; uint16, r fastest), kept for the session ---- */
 const stockTexs={}, stockJobs={}, stockErr={};
 const dummyCurve=(()=>{ const t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t); gl.texImage2D(gl.TEXTURE_2D,0,gl.R32F,2,3,0,gl.RED,gl.FLOAT,new Float32Array(6));

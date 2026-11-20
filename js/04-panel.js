@@ -41,6 +41,7 @@ function buildRack(){
         const o=document.createElement("option"); o.value=k; o.textContent=L.label; groups[gl2].appendChild(o); }
       sel.addEventListener("change",()=>{ const from=base.stock; base.stock=sel.value;
         if (!from && sel.value) for (const k of [...STOCK_TUNE,...PL_KEYS]) base[k]=DEF[k];   /* from the by-eye curve: start from the measured stock, printed neutral; stock to stock keeps your tweaks and timing */
+        if (from && !sel.value) for (const k of PL_KEYS) base[k]=DEF[k];   /* v1.6: back to the curve, the emulated print starts neutral (a stock's real timing doesn't carry over) */
         syncUI(); schedule(); });
       const info=document.createElement("div"); info.className="note bwinfo"; info.id="stockInfo";
       box.appendChild(r); box.appendChild(info);
@@ -69,7 +70,7 @@ function buildRack(){
     for (const p of g.params){
       const [k,label,mn,mx,st] = p;
       if (k==="plD"){   /* v1.5 */
-        const h=document.createElement("div"); h.className="plhead"; h.innerHTML='<b>Printer lights</b> <span class="meta">for printed stocks</span>'; box.appendChild(h);
+        const h=document.createElement("div"); h.className="plhead"; h.innerHTML='<b>Printer lights</b> <span class="meta" id="plMeta">for printed stocks</span>'; box.appendChild(h);
         const n=document.createElement("div"); n.className="note bwinfo"; n.id="plInfo"; box.appendChild(n);
       }
       if (p[7]==="layer" && !sub){
@@ -81,7 +82,7 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)||PL_KEYS.includes(k)) stockSync(); markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)||PL_KEYS.includes(k)||k==="bw") stockSync(); markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       scrubOut(out,p,()=>base[k],v=>{ base[k]=v; if (k==="bw" && v>0) bypass.bw=false; syncUI(); schedule(); });
@@ -135,21 +136,29 @@ function grainSync(){
 }
 /* measured stock: what it is, and which film-curve sliders it replaces */
 const STOCK_TUNE=["con","roll","gR","gG","gB"], PL_KEYS=["plD","plR","plG","plB"];
-function plText(){ const f=v=>(v>0?"+":"")+Math.round(v); const L=STOCK_LIB[base.stock]; if (L&&L.bw) return Math.abs(base.plD)>1e-9 ? `Density ${f(base.plD)}` : "";
+const bwFull=()=>base.bw>=1 && !bypass.bw;   /* v1.6: a fully B&W by-eye look prints with one light */
+function plText(){ const f=v=>(v>0?"+":"")+Math.round(v); const L=STOCK_LIB[base.stock]; if (L ? L.bw : bwFull()) return Math.abs(base.plD)>1e-9 ? `Density ${f(base.plD)}` : "";
   return [["Density","plD"],["R","plR"],["G","plG"],["B","plB"]].filter(([,k])=>Math.abs(base[k])>1e-9).map(([n,k])=>`${n} ${f(base[k])}`).join(" · "); }
 function stockSync(){
   const sel=$("filmStock"), info=$("stockInfo"); if (!sel) return;
   const L=STOCK_LIB[base.stock]; sel.value=L?base.stock:"";
   /* printer lights: only a printed stock has a printer; a B&W printer has one light */
-  const printed=!!(L&&L.print), plOn={plD:printed, plR:printed&&!L.bw, plG:printed&&!L.bw, plB:printed&&!L.bw};
+  const printed=!!(L&&L.print), emu=!L, one=emu ? bwFull() : printed&&L.bw;   /* v1.6: no stock = emulated printer lights on the curve */
+  const plOn={plD:printed||emu, plR:(printed||emu)&&!one, plG:(printed||emu)&&!one, plB:(printed||emu)&&!one};
   for (const k of PL_KEYS) if (ctlEls[k]){ ctlEls[k].inp.disabled=!plOn[k]; ctlEls[k].row.classList.toggle("off",!plOn[k]); }
-  const pi=$("plInfo");
-  if (pi) pi.textContent = !L ? "Pick a measured stock that is printed (a negative on paper or print film) to time its print like a lab."
+  const pi=$("plInfo"), pm=$("plMeta");
+  if (pm){ pm.textContent=emu ? "Emulated" : "for printed stocks"; pm.classList.toggle("emu-tag",emu); }
+  if (pi) pi.textContent = emu ? (one
+      ? `Emulated on the curve, one light as on a B&W enlarger: + points = more light = a darker print. 1 point ≈ 1/7 stop of exposure (12 points are a stop of printer light; through a negative that's about 7 points a stop).`
+      : `Emulated on the curve: each light shifts its layer's exposure before the curve, as a printer does through the negative. + points = less of that colour (Red +3 → cooler, Blue +3 → warmer); Print density moves all three. 1 point ≈ 1/7 stop of exposure (12 points are a stop of printer light; through the library's negatives that's about 7 points a stop). The layers move independently; on real prints the crosstalk is tiny, but pick a measured printed stock for the real thing.`)
     : !L.print ? `${L.label} isn't printed (${L.family==="slide"?"a slide is projected":"instant film develops in the print itself"}): use Exposure and Temperature instead.`
     : L.bw ? `One light, as on a B&W enlarger: + points = more light = a darker print. 12 points ≈ 1 stop. Contrast comes from the paper grade.`
     : L.reversal ? `${L.print} is a positive paper: + points = more light = a lighter print with more of that colour. 12 points ≈ 1 stop; the slide itself doesn't change.`
     : `As a lab times a print: + points = more of that light = a denser print with less of that colour (Red +3 → cooler, Blue +3 → warmer). Print density moves all three. 12 points ≈ 1 stop; the negative itself doesn't change, so it's not the same as Exposure.`;
-  if (!L){ info.textContent="By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above."; return; }
+  if (!L){ info.innerHTML=""; const lt=plText();
+    if (lt){ const sp=document.createElement("b"); sp.className="stk-emu"; sp.textContent=`Emulated print · ${lt}. `; info.appendChild(sp);
+      const bt=document.createElement("button"); bt.type="button"; bt.className="linkbtn"; bt.textContent="Neutral print"; bt.addEventListener("click",()=>{ for (const t of PL_KEYS) base[t]=DEF[t]; syncUI(); schedule(); }); info.appendChild(bt); info.appendChild(document.createTextNode(" ")); }
+    info.appendChild(document.createTextNode("By eye: contrast, roll-off and per-channel gamma shape a display curve. Or pick a measured film stock above.")); return; }
   const k=base.stock, tuned=STOCK_TUNE.filter(t=>Math.abs(base[t]-DEF[t])>1e-9), names={con:"Contrast",roll:"Roll-off",gR:"Red gamma",gG:"Green gamma",gB:"Blue gamma"};
   const lights=printed ? plText() : "";
   const state = !(typeof stockTexs!=="undefined" && stockTexs[k]) ? ((typeof stockErr!=="undefined" && stockErr[k]) ? ["bad",`● LUT failed to load (${stockErr[k]}): showing the preset without the film model.`] : ["wait","● Loading the measured LUT…"])
@@ -224,7 +233,7 @@ function makeSwitch(id, sum, det){
   sum.classList.add("hasbyp"); sum.appendChild(b); bypassEls[id]={b,det};
 }
 const bypassEls={};
-function setBypass(id,off){ bypass[id]=!!off; const x=bypassEls[id]; if (x){ x.b.setAttribute("aria-checked", off?"false":"true"); x.det.classList.toggle("bypassed",!!off); } bwSwitchSync(); schedule(); }
+function setBypass(id,off){ bypass[id]=!!off; const x=bypassEls[id]; if (x){ x.b.setAttribute("aria-checked", off?"false":"true"); x.det.classList.toggle("bypassed",!!off); } bwSwitchSync(); if (id==="bw") stockSync(); schedule(); }
 /* Black & white's switch means "B&W on": off when the amount is 0 or the section is bypassed. Turning it on from 0
    sets the amount to 1 (with whatever film and filter are set); turning it off keeps the settings for next time. */
 function bwSwitchSync(){ const x=bypassEls.bw; if (!x) return; const on=!bypass.bw && base.bw>0; x.b.setAttribute("aria-checked",on?"true":"false"); x.det.classList.toggle("bypassed",!on);

@@ -42,3 +42,11 @@ at −6 … +4 stops around mid grey; capped at 0.35 stop. Instant films have no
 
 **Left out**: the original 1950 Kodak 5247 (its data makes near-greys unstable: ±1 % chroma swings blue by 17 codes) and
 Aerochrome (infrared false colour needs an infrared channel the image doesn't have).
+
+**Emulated printer lights (v1.6)**, for the by-eye curve (no stock). A point moves the print's exposure by 0.025 log H;
+seen from the scene that is 0.025 / γ(negative) on that layer. `emu_lights_k.py` measures it on the 34 printed negatives
+(slope of the print log H over ±1 stop at mid grey): 0.141 stop per point on average (R 0.158, G 0.134, B 0.131; theory
+with γ = 0.6: 0.139), so the app uses 0.14 (`EMU_PT`, js/05-gl.js): the layer's scene-linear value × 2^(−0.14·points),
+just before the curve. `emu_lights_check.py` measures what leaving out the dye-band crosstalk costs on the measured
+prints (independent per-layer offsets vs the spectral re-timing, 4000 random colours): R+6 0.13 code mean, R+12 B−12
+0.63, B+24 1.89 (worst stock 4.35), R−24 G+6 B+24 1.72. (`emu_lib.py` evaluates the stock files as the shader does.)

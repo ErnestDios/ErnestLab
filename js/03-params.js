@@ -177,6 +177,10 @@ let userLooks = {};
 /* Storage keys keep the original "filmlab." prefix so looks saved before the rename stay available. */
 try { userLooks = JSON.parse(localStorage.getItem("filmlab.looks") || "{}"); } catch(e) { userLooks = {}; }
 function saveUserLooks(){ try { localStorage.setItem("filmlab.looks", JSON.stringify(userLooks)); } catch(e){} }
+/* v1.6: printer lights also work without a stock (emulated). Before, a look with no stock could carry leftover, inert
+   light values (set on a stock, then None); clear those once so every look saved before v1.6 renders as it did. */
+const PL_OLD=["plD","plR","plG","plB"], plInert=v=>{ if (v && !(typeof v.stock==="string" && STOCK_LIB[v.stock])) for (const k of PL_OLD) if (k in v) v[k]=0; };
+try { if (!localStorage.getItem("filmlab.looksV16")){ for (const n in userLooks) plInert(userLooks[n]); saveUserLooks(); localStorage.setItem("filmlab.looksV16","1"); } } catch(e){}
 
 let base = Object.assign({}, DEF);      // values chosen in sliders
 const DEFAULT_LOOK = "Neutral (no look)";   /* v0.6: start clean; pick a look on purpose */
