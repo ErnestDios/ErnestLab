@@ -26,21 +26,25 @@ const PLATFORM_FITS=[
 function platformHint(W,H){ const r=W/H, fits=PLATFORM_FITS.filter(p=>p[1](r)).map(p=>p[0]);
   const small = fits.length && W<1080 ? ` — only ${W} px wide; these platforms show 1080 px, so they'll upscale it` : "";
   return fits.length ? {ok:true,text:fits.join(" · ")+small} : {ok:false,text:"Social feeds will crop or letterbox this ratio"}; }
-const DEV_PARAMS=[["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
+/* v1.6.2: Push in scales the crop into the frame (0 % = the whole format, 100 % = 2×, 200 % = 3×), any format,
+   Original included; Reframe then moves the pushed-in frame. The export is the real pixels of that crop (no upscaling). */
+const DEV_PARAMS=[["push","Push in",0,200,1,0,"%","push"],["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
   ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"],
   /* v1.0: Fog, an offset (not a multiply like the tone sliders): the density every negative has with no light at all,
      from development chemistry. Added before grain and after the lens, so blacks carry grain; % of mid grey. */
   ["dFog","Fog",0,5,0.01,0,"%"]];
-const DEV0=Object.freeze({fmt:"orig",orient:"auto",panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0});
-function devActive(d){ return d.fmt!=="orig"||d.dShadows||d.dMid||d.dHigh||d.dFog||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",push:0,panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0});
+function devActive(d){ return d.fmt!=="orig"||d.push>0||d.dShadows||d.dMid||d.dHigh||d.dFog||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
 /* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
    Returns UV rect (top-left origin) and the output size in pixels. */
 function cropRect(d,w,h){
-  const f=FORMATS.find(x=>x[0]===d.fmt); let r=f?f[2]:0;
-  if (!r||!w||!h) return {x:0,y:0,w:1,h:1,W:w,H:h};
-  const port = f[3]!=="social" && (d.orient==="port" || (d.orient==="auto" && h>w));
-  if (port) r=1/r;
-  let cw=1, ch=1; if (w/h>r) cw=r*h/w; else ch=w/(r*h);
+  const f=FORMATS.find(x=>x[0]===d.fmt); let r=f?f[2]:0; const z=1+Math.max(0,+d.push||0)/100;
+  if (!w||!h || (!r && z===1)) return {x:0,y:0,w:1,h:1,W:w,H:h};
+  let cw=1, ch=1;
+  if (r){ const port = f[3]!=="social" && (d.orient==="port" || (d.orient==="auto" && h>w));
+    if (port) r=1/r;
+    if (w/h>r) cw=r*h/w; else ch=w/(r*h); }
+  cw/=z; ch/=z;   /* v1.6.2 push in */
   const x=(1-cw)*(d.panX+1)/2, y=(1-ch)*(1-d.panY)/2;
   return {x,y,w:cw,h:ch,W:Math.max(1,Math.round(cw*w)),H:Math.max(1,Math.round(ch*h))};
 }
@@ -51,9 +55,9 @@ function cropRect(d,w,h){
 const devEls={};
 function curDev(){ const it=items[cur]; return (it&&it.dev)||DEV0; }
 function setDev(k,v){ const it=items[cur]; if(!it) return; it.dev=Object.assign({},curDev(),{[k]:v}); syncDev(); schedule(); }
-function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig";
-  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]]; inp.value=d[p[0]]; out.textContent=(d[p[0]]>0?"+":"")+fmtVal(p,d[p[0]]); out.classList.toggle("over",isOver(p,d[p[0]])); row.classList.toggle("changed",d[p[0]]!==0);
-    if (p[7]==="frame"){ inp.disabled=!cropped; row.classList.toggle("off",!cropped); } }
+function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig", movable=cropped||d.push>0;
+  for (const p of DEV_PARAMS){ const {inp,out,row}=devEls[p[0]], v=d[p[0]]||0; inp.value=v; out.textContent=(v>0&&p[7]!=="push"?"+":"")+fmtVal(p,v); out.classList.toggle("over",isOver(p,v)); row.classList.toggle("changed",v!==0);
+    if (p[7]==="frame"){ inp.disabled=!movable; row.classList.toggle("off",!movable); } }
   $("devFmt").value=d.fmt;
   const port = d.orient==="port" || (d.orient==="auto" && srcH>srcW);
   const social=(FORMATS.find(x=>x[0]===d.fmt)||[])[3]==="social";
@@ -84,7 +88,7 @@ function buildDevelop(){
     inp.addEventListener("input",()=>setDev(k,+inp.value));
     const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
     scrubOut(out,p,()=>curDev()[k],v=>setDev(k,v));
-    devEls[k]={inp,out,row}; (p[7]==="frame"?$("devFrame"):box).appendChild(row);
+    devEls[k]={inp,out,row}; (p[7]==="frame"||p[7]==="push"?$("devFrame"):box).appendChild(row);
   }
   $("devCtrls").insertBefore($("profBox"), devEls.dShadows.row);   /* pipeline order: profile curve, then the tone sliders */
   $("btnDevReset").addEventListener("click",()=>{ const it=items[cur]; if(it){ it.dev=Object.assign({},DEV0); syncDev(); schedule(); } });
