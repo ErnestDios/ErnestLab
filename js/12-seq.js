@@ -127,7 +127,9 @@ async function exportSeq(it){
       if (cancelled) throw Object.assign(new Error("cancelled"),{name:"cancel"});
       const r=await it.el.frame(i); it.el.prefetch(i,3); it.el.idx=i;
       seqUpload(it,r); grainFrame=i; renderClean=true; render(); renderClean=false;
-      let out=canvas; if (canvas.width!==OW||canvas.height!==OH){ if (!even) even=new OffscreenCanvas(OW,OH); even.getContext("2d").drawImage(canvas,0,0); out=even; }
+      let out=canvas;
+      if (canvasShort()){ if (!even) even=new OffscreenCanvas(OW,OH); framePut(even); out=even; }   /* v1.6.1: the canvas got a smaller buffer (phones) */
+      else if (canvas.width!==OW||canvas.height!==OH){ if (!even) even=new OffscreenCanvas(OW,OH); even.getContext("2d").drawImage(canvas,0,0); out=even; }
       const s=new mb.VideoSample(out,{timestamp:i/it.fps, duration:1/it.fps}); await src.add(s); s.close();
       bar.style.width=Math.round((i+1)/n*100)+"%"; T.textContent=`Rendering ${it.name}… frame ${i+1} / ${n}`;
     }

@@ -6,7 +6,7 @@ const canvas=$("gl");
 const gl=canvas.getContext("webgl2",{preserveDrawingBuffer:true,antialias:false,premultipliedAlpha:false,alpha:false});
 if (!gl){ document.body.innerHTML='<p style="padding:24px">This browser has no WebGL2, which Ernest Lab needs. Try a recent Chrome, Edge, Firefox or Safari.</p>'; throw new Error("no webgl2"); }
 const hasFloat = !!gl.getExtension("EXT_color_buffer_float");
-const MAXTEX = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+const MAXTEX = Math.min(gl.getParameter(gl.MAX_TEXTURE_SIZE), ...gl.getParameter(gl.MAX_VIEWPORT_DIMS));   /* v1.6.1: a frame must also fit one viewport (some phone GPUs: textures bigger than viewports) */
 const IFMT = hasFloat ? gl.RGBA16F : gl.RGBA8;
 const ITYPE = hasFloat ? gl.HALF_FLOAT : gl.UNSIGNED_BYTE;
 
@@ -502,8 +502,9 @@ function render(){
   const e=effective();
   const cr=cropRect(curDev(),srcW,srcH), outW=cr.W, outH=cr.H;
   const scr=screenView(), fd=scr?fitDims(outW,outH):null, cw=scr?fd.dw:outW, ch=scr?fd.dh:outH;
-  if (scr){ canvas.style.width=fd.cw+"px"; canvas.style.height=fd.ch+"px"; } else if (canvas.style.width){ canvas.style.width=canvas.style.height=""; }
-  if (canvas.width!==cw||canvas.height!==ch){ canvas.width=cw; canvas.height=ch; }
+  const off=renderClean&&finalTo;   /* v1.6.1: an export read back from a full-size target leaves the on-screen canvas alone */
+  if (!off){ if (scr){ canvas.style.width=fd.cw+"px"; canvas.style.height=fd.ch+"px"; } else if (canvas.style.width){ canvas.style.width=canvas.style.height=""; }
+    if (canvas.width!==cw||canvas.height!==ch){ canvas.width=cw; canvas.height=ch; } }
   const vk=outW+"x"+outH+":"+cur; if (vk!==viewKey){ viewKey=vk; vz=1; vcx=vcy=0.5; updZoomUI(); }
   ensureTargets(outW,outH);
   /* 1-2 scene-linear */
@@ -554,13 +555,31 @@ function render(){
      as it would in a downscaled export, instead of aliasing into dark speckle) and sharp pinch zoom. Exports use the full-size path. */
   const mipOn=t=>{ gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,t?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR); };
   if (scr){ bindTex(0,T.A.tex); gl.generateMipmap(gl.TEXTURE_2D); mipOn(true); bindTex(5,srcTex); if (!srcMip && (srcXfer===0||hasFloat)){ gl.generateMipmap(gl.TEXTURE_2D); srcMip=true; } if (srcMip) mipOn(true); }
-  drawTo(null,P.final,u=>{
+  drawTo(off?finalTo:null,P.final,u=>{
     bindTex(0,T.A.tex); gl.uniform1i(u.uImg,0);
     bindTex(5,srcTex); gl.uniform1i(u.uSrc,5); gl.uniform4f(u.uCrop,cr.x,cr.y,cr.w,cr.h);
     gl.uniform2f(u.uRes,cw,ch); gl.uniform1i(u.uSrcLin,srcXfer===1?1:0); if (scr) gl.uniform3f(u.uView,vcx,vcy,1/vz); else gl.uniform3f(u.uView,0.5,0.5,1);
     gl.uniform1f(u.uSplit, renderClean ? -1 : (compare?split:-1)); gl.uniform1i(u.uOrig, (!renderClean && showOrig)?1:0); gl.uniform1i(u.uChan, renderClean?0:viewChan);
   });
   if (scr){ bindTex(0,T.A.tex); mipOn(false); bindTex(5,srcTex); mipOn(false); }
+}
+/* ---- v1.6.1: exports that don't fit the page's canvas ----
+   Browsers may give a WebGL canvas a smaller drawing buffer than asked for (phones cap canvas size: iOS about 16.7 MP),
+   silently; drawing the full frame into it then keeps only part of it. canvasShort() says when that happened;
+   cleanPixels() renders the clean frame into an 8-bit target of the full size instead (the same GPU conversion as the
+   canvas, so the same bytes) and reads it back, top row first. */
+let finalTo=null;
+function canvasShort(){ return gl.drawingBufferWidth<canvas.width || gl.drawingBufferHeight<canvas.height; }
+function cleanPixels(){
+  const cr=cropRect(curDev(),srcW,srcH), w=cr.W, h=cr.H;
+  const tex=mkTex(w,h,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,null,gl.NEAREST), fb=gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,tex,0);
+  const px=new Uint8Array(w*h*4);
+  try{ finalTo={fb,w,h}; renderClean=true; render(); gl.bindFramebuffer(gl.FRAMEBUFFER,fb); gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,px); }
+  finally{ finalTo=null; renderClean=false; gl.bindFramebuffer(gl.FRAMEBUFFER,null); gl.deleteFramebuffer(fb); gl.deleteTexture(tex); }
+  const row=w*4, tmp=new Uint8Array(row);   /* GL rows start at the bottom: flip in place */
+  for (let a=0,b=h-1; a<b; a++,b--){ const A=a*row, B=b*row; tmp.set(px.subarray(A,A+row)); px.copyWithin(A,B,B+row); px.set(tmp,B); }
+  return {w,h,data:px};   /* RGBA 8-bit, display sRGB, alpha 255 */
 }
 /* Phone viewer zoom: vz 1 = fit; (vcx,vcy) = view centre in image uv (y up, as in the shader). */
 let vz=1, vcx=0.5, vcy=0.5, viewKey="";

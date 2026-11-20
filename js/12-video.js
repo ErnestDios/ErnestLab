@@ -74,6 +74,8 @@ document.addEventListener("keydown",ev=>{ if (!vidCur || ev.code!=="KeyK" || /IN
 const DL_NOTE0=$("dlNote").textContent;
 
 let vidMod=null, vidConv=null;   /* vidMod: Mediabunny, loaded on first use (js/12-vdec.js vidLib) */
+/* v1.6.1: a video frame read back at full size into the encoder's canvas (it clips to the even size, as drawImage did) */
+function framePut(oc){ const P=cleanPixels(); oc.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(P.data.buffer),P.w,P.h),0,0); }
 async function exportVideo(it){
   await stockReady();
   if (it.seq) return exportSeq(it);
@@ -100,7 +102,9 @@ async function exportVideo(it){
         else { const oc=new OffscreenCanvas(srcW,srcH), ox=oc.getContext("2d"); sample.draw(ox,0,0,srcW,srcH); gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA8,gl.RGBA,gl.UNSIGNED_BYTE,oc); }
         }
         srcMip=false; grainFrame=n++; renderClean=true; render(); renderClean=false;
-        let out=canvas; if (canvas.width!==OW||canvas.height!==OH){ if (!even){ even=new OffscreenCanvas(OW,OH); } even.getContext("2d").drawImage(canvas,0,0); out=even; }
+        let out=canvas;
+        if (canvasShort()){ if (!even) even=new OffscreenCanvas(OW,OH); framePut(even); out=even; }   /* v1.6.1: the canvas got a smaller buffer (phones) */
+        else if (canvas.width!==OW||canvas.height!==OH){ if (!even){ even=new OffscreenCanvas(OW,OH); } even.getContext("2d").drawImage(canvas,0,0); out=even; }
         return new mb.VideoSample(out,{timestamp:sample.timestamp, duration:sample.duration});
       } } });
     if (!vidConv.isValid){ const why=(vidConv.discardedTracks||[]).map(d=>`${d.track&&d.track.type||"track"}: ${d.reason}`).join(", "); throw new Error("This clip can't be converted here"+(why?` (${why})`:"")+". Try an H.264 MP4."); }

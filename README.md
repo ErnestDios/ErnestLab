@@ -111,7 +111,7 @@ Preset names refer to the film stocks that inspired them. Ernest Lab is not affi
 
 [MIT](LICENSE) © 2026 Ernest Dios Viaplana. Interface fonts: IBM Plex, [SIL Open Font License 1.1](licenses/IBM-Plex-OFL.txt).
 
-Video I/O in [`video/`](video/README.md) is Mediabunny 1.66 ([MPL-2.0](licenses/Mediabunny-MPL-2.0.txt)) and its ProRes decoder with TurboRes ([MPL-2.0](licenses/TurboRes-MPL-2.0.txt)), unmodified. The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
+The fallback JPEG encoder in `jpeg/` (used only when a phone browser can't encode a large export itself) is jpeg-js 0.4.4's encoder ([BSD-3-Clause](licenses/jpeg-js.txt)), unmodified. Video I/O in [`video/`](video/README.md) is Mediabunny 1.66 ([MPL-2.0](licenses/Mediabunny-MPL-2.0.txt)) and its ProRes decoder with TurboRes ([MPL-2.0](licenses/TurboRes-MPL-2.0.txt)), unmodified. The RAW decoder in [`raw/`](raw/README.md) is a separate, replaceable module: LibRaw 0.22.1 ([LGPL-2.1 or CDDL-1.0](licenses/LibRaw/)) with Little CMS 2.19.1 ([MIT](licenses/LittleCMS-MIT.txt)), built by [libraw-wasm](https://github.com/ybouane/LibRaw-Wasm) (ISC).
 
 If Ernest Lab is useful to you, you can [buy me a coffee](https://buymeacoffee.com/ernestdios) ☕
 

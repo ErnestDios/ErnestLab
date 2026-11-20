@@ -5,7 +5,28 @@
 let downloads=null;
 (async()=>{ try{ if (window.claude && window.claude.use){ downloads=await window.claude.use("downloads"); } }catch(e){ downloads=null; } })();
 
-async function renderToBlob(type,q){ await stockReady(); return new Promise(res=>{ renderClean=true; render(); canvas.toBlob(b=>{ renderClean=false; render(); res(b); }, type, q); }); }
+/* v1.6.1: if the canvas can't hold the whole frame (phones cap canvas size; iOS ≈ 16.7 MP), the export is read back from a
+   full-size target and encoded by the browser from a 2D canvas, or, when a canvas that big doesn't work either, by
+   Ernest Lab itself (JPEG: jpeg/encoder.js, loaded on demand; PNG / WebP: an 8-bit PNG). Otherwise exactly as before. */
+const CANVAS_SAFE=16777216;
+async function renderToBlob(type,q){ await stockReady();
+  const cr=cropRect(curDev(),srcW,srcH);
+  if (cr.W*cr.H<=CANVAS_SAFE){
+    const b=await new Promise(res=>{ renderClean=true; render(); if (canvasShort()){ renderClean=false; render(); res(null); return; } canvas.toBlob(x=>{ renderClean=false; render(); res(x); }, type, q); });
+    if (b) return b; }
+  return encodePixels(cleanPixels(), type, q); }
+async function encodePixels(P,type,q){
+  const {w,h,data}=P;
+  try{ const c=document.createElement("canvas"); c.width=w; c.height=h; const x=c.getContext("2d",{alpha:false});
+    if (x){ x.putImageData(new ImageData(new Uint8ClampedArray(data.buffer,data.byteOffset,data.length),w,h),0,0);
+      const k=(w*h-1)*4, t=x.getImageData(w-1,h-1,1,1).data;   /* a canvas past the browser's limit may draw nothing */
+      if (t[0]===data[k]&&t[1]===data[k+1]&&t[2]===data[k+2]){ const b=await new Promise(r=>c.toBlob(r,type,q)); c.width=c.height=0; if (b) return b; }
+      c.width=c.height=0; } }catch(e){ console.warn("canvas encode failed, using Ernest Lab's encoder",e); }
+  if (type==="image/jpeg"){ await loadJpegEnc(); const r=window["jpeg-js"].encode({data,width:w,height:h}, Math.round((q==null?0.92:q)*100)); return new Blob([r.data],{type:"image/jpeg"}); }
+  return new Blob([await encPNG8(P)],{type:"image/png"});
+}
+let jpegEncJob=null;
+function loadJpegEnc(){ return jpegEncJob||(jpegEncJob=new Promise((res,rej)=>{ const s=document.createElement("script"); s.src=new URL("jpeg/encoder.js",document.baseURI).href; s.onload=()=>res(); s.onerror=()=>{ jpegEncJob=null; rej(new Error("Could not load the JPEG encoder")); }; document.head.appendChild(s); })); }
 async function offer(filename, blob){
   if (downloads){
     try{ await downloads.save({filename, data:blob}); toast("Saved "+filename); return; }

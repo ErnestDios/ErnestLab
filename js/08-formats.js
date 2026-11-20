@@ -58,6 +58,17 @@ function toHalf(v){ if (!(v===v)) return 0; _f[0]=v; const x=_u[0], s=(x>>>16)&0
 const ascii=(dv,o,s,n)=>{ for (let i=0;i<n;i++) dv.setUint8(o+i, i<s.length?s.charCodeAt(i)&127:0); };
 const nowStr=()=>{ const d=new Date(), p=x=>String(x).padStart(2,"0"); return `${d.getFullYear()}:${p(d.getMonth()+1)}:${p(d.getDate())}:${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; };
 
+/* v1.6.1: PNG, 8-bit RGB from top-first RGBA bytes (exports too big for the browser's canvas), Sub filter, zlib */
+async function encPNG8(P){
+  const {w,h,data}=P, row=1+w*3, raw=new Uint8Array(row*h);
+  for (let y=0;y<h;y++){ const o=y*row, s=y*w*4; raw[o]=1;
+    for (let x=0;x<w;x++){ const k=s+x*4, d=o+1+x*3; raw[d]=data[k]; raw[d+1]=data[k+1]; raw[d+2]=data[k+2]; }
+    for (let k=row-1;k>=4;k--) raw[o+k]=(raw[o+k]-raw[o+k-3])&255; }
+  const chunk=(type,dat)=>{ const c=new Uint8Array(12+dat.length), dv=new DataView(c.buffer); dv.setUint32(0,dat.length); ascii(dv,4,type,4); c.set(dat,8);
+    dv.setUint32(8+dat.length, crc32(c.subarray(4,8+dat.length))); return c; };
+  const ih=new Uint8Array(13), dv=new DataView(ih.buffer); dv.setUint32(0,w); dv.setUint32(4,h); ih[8]=8; ih[9]=2;
+  return concat([new Uint8Array([137,80,78,71,13,10,26,10]), chunk("IHDR",ih), chunk("sRGB",new Uint8Array([0])), chunk("IDAT",await zlib(raw)), chunk("IEND",new Uint8Array(0))]);
+}
 /* PNG, 16-bit RGB (sRGB chunk), Sub filter, zlib */
 async function encPNG16(F){
   const {w,h}=F, row=1+w*6, raw=new Uint8Array(row*h);
