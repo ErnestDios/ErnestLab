@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
-<link rel="stylesheet" href="css/fonts.css?v=1.6.2">
-<link rel="stylesheet" href="css/app.css?v=1.6.2">
+<link rel="stylesheet" href="css/fonts.css?v=1.6.3">
+<link rel="stylesheet" href="css/app.css?v=1.6.3">
 </head>
 <body>
 <header>
@@ -18,10 +18,12 @@
   </div>
   <button class="btn" id="btnCompare" title="Drag on the image to move the split (or hold Space to see the original)">Before / after</button>
   <button class="btn" id="btnZoom">Fit</button>
+  <button class="btn" id="btnFs" title="Full screen: only the image (F; Esc to leave)">Full screen</button>
   <button class="btn" id="btnClear" title="Remove all images, unload the LUT and reset the grade to the default look. Saved looks are kept.">Clear session</button>
   <button class="btn" id="btnAdd">Add images</button>
   <div class="mbar">
     <button class="ibtn" id="mAdd" aria-label="Add images" title="Add images"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></button>
+    <button class="ibtn" id="mFs" aria-label="Full screen" title="Full screen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="ibtn" id="mCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button>
     <button class="ibtn" id="mMore" aria-label="More" title="More" aria-haspopup="true" aria-expanded="false"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg></button>
   </div>
@@ -34,6 +36,7 @@
   <div id="drop">Drop images (or a look .json) to add them</div>
   <div class="badge" id="badge">Film</div>
   <button class="zchip" id="zoomChip" hidden title="Back to the whole image"></button>
+  <div class="fsbar" id="fsBar"><button class="ibtn" id="fsCompare" aria-label="Before / after" title="Before / after"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M12 3v18"/><path d="M12 5h6.5a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H12z" fill="currentColor" stroke="none" opacity=".35"/></svg></button><button class="ibtn" id="fsExit" aria-label="Leave full screen" title="Leave full screen (Esc)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg></button></div>
   <div class="vbar" id="vbar" hidden>
     <button class="ibtn" id="vPlay" aria-label="Play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></button>
     <input type="range" id="vTime" min="0" max="1000" value="0" step="1" aria-label="Position in the clip">
@@ -261,7 +264,8 @@
     <div class="keys">
       <span><kbd>Space</kbd></span><span>hold to see the original</span>
       <span><kbd>R</kbd> <kbd>G</kbd> <kbd>B</kbd> <kbd>L</kbd></span><span>view a channel (again for colour)</span>
-      <span><kbd>Esc</kbd></span><span>back to colour, close a dialog</span>
+      <span><kbd>F</kbd></span><span>full screen: only the image (pinch or scroll to zoom, drag to pan)</span>
+      <span><kbd>Esc</kbd></span><span>back to colour, close a dialog, leave full screen</span>
       <span><kbd>?</kbd></span><span>this guide</span>
     </div>
     <div class="row"><a class="btn report" id="guideReport" target="_blank" rel="noopener" title="Opens a new issue on GitHub with your app version, browser and graphics filled in">Report a problem</a><span class="spacer"></span><button class="btn primary" id="btnCloseGuide">Got it</button></div>
@@ -298,28 +302,28 @@
   </div>
 </div>
 
-<script src="js/00-config.js?v=1.6.2"></script>
-<script src="js/01-development.js?v=1.6.2"></script>
-<script src="js/02-profiles.js?v=1.6.2"></script>
-<script src="js/03-measured.js?v=1.6.2"></script>
-<script src="js/03-stocks.js?v=1.6.2"></script>
-<script src="js/03-params.js?v=1.6.2"></script>
-<script src="js/04-panel.js?v=1.6.2"></script>
-<script src="js/05-gl.js?v=1.6.2"></script>
-<script src="js/06-images.js?v=1.6.2"></script>
-<script src="js/07-raw.js?v=1.6.2"></script>
-<script src="js/07-exr.js?v=1.6.2"></script>
-<script src="js/07-dpx.js?v=1.6.2"></script>
-<script src="js/08-output.js?v=1.6.2"></script>
-<script src="js/08-formats.js?v=1.6.2"></script>
-<script src="js/09-view.js?v=1.6.2"></script>
-<script src="js/10-boot.js?v=1.6.2"></script>
-<script src="js/11-curve-editor.js?v=1.6.2"></script>
-<script src="js/12-video.js?v=1.6.2"></script>
-<script src="js/12-vdec.js?v=1.6.2"></script>
-<script src="js/12-seq.js?v=1.6.2"></script>
-<script src="js/13-help.js?v=1.6.2"></script>
-<script src="js/14-report.js?v=1.6.2"></script>
-<script src="js/15-phone.js?v=1.6.2"></script>
+<script src="js/00-config.js?v=1.6.3"></script>
+<script src="js/01-development.js?v=1.6.3"></script>
+<script src="js/02-profiles.js?v=1.6.3"></script>
+<script src="js/03-measured.js?v=1.6.3"></script>
+<script src="js/03-stocks.js?v=1.6.3"></script>
+<script src="js/03-params.js?v=1.6.3"></script>
+<script src="js/04-panel.js?v=1.6.3"></script>
+<script src="js/05-gl.js?v=1.6.3"></script>
+<script src="js/06-images.js?v=1.6.3"></script>
+<script src="js/07-raw.js?v=1.6.3"></script>
+<script src="js/07-exr.js?v=1.6.3"></script>
+<script src="js/07-dpx.js?v=1.6.3"></script>
+<script src="js/08-output.js?v=1.6.3"></script>
+<script src="js/08-formats.js?v=1.6.3"></script>
+<script src="js/09-view.js?v=1.6.3"></script>
+<script src="js/10-boot.js?v=1.6.3"></script>
+<script src="js/11-curve-editor.js?v=1.6.3"></script>
+<script src="js/12-video.js?v=1.6.3"></script>
+<script src="js/12-vdec.js?v=1.6.3"></script>
+<script src="js/12-seq.js?v=1.6.3"></script>
+<script src="js/13-help.js?v=1.6.3"></script>
+<script src="js/14-report.js?v=1.6.3"></script>
+<script src="js/15-phone.js?v=1.6.3"></script>
 </body>
 </html>

@@ -10,6 +10,24 @@ view.addEventListener("dragleave",ev=>{ if (ev.target===view) view.classList.rem
 view.addEventListener("drop",async ev=>{ ev.preventDefault(); view.classList.remove("dragging"); handleDropped(await filesFromDrop(ev.dataTransfer)); });
 document.addEventListener("dragover",ev=>ev.preventDefault()); document.addEventListener("drop",async ev=>{ ev.preventDefault(); if(!view.contains(ev.target)) handleDropped(await filesFromDrop(ev.dataTransfer)); });
 $("btnZoom").addEventListener("click",()=>zoomToggle());
+/* v1.6.3 full screen: body.fs keeps only the image (and its zoom, before / after, video bar). Where the browser has
+   element full screen (desktop, Android, iPad) it's used too; iPhone Safari has none for pages, so there the image
+   fills the page. Leaving the browser's full screen (Esc, back gesture) leaves ours. */
+let fsOn=false, fsNative=false;
+const fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement||null;
+function setFs(on){ on=!!on; if (on===fsOn) return; fsOn=on; document.body.classList.toggle("fs",on); $("btnFs").classList.toggle("on",on);
+  const de=document.documentElement;
+  if (on){ if (typeof closeMore==="function") closeMore(); $("hint").classList.add("gone");
+    const rq=de.requestFullscreen||de.webkitRequestFullscreen;
+    if (rq && !fsEl()) try{ const p=rq.call(de,{navigationUI:"hide"}); if (p&&p.catch) p.catch(()=>{}); }catch(e){} }
+  else if (fsEl()){ const ex=document.exitFullscreen||document.webkitExitFullscreen; try{ const p=ex.call(document); if (p&&p.catch) p.catch(()=>{}); }catch(e){} }
+  schedule(); }
+function fsChange(){ if (fsEl()) fsNative=true; else { if (fsNative && fsOn) setFs(false); fsNative=false; } }
+document.addEventListener("fullscreenchange",fsChange); document.addEventListener("webkitfullscreenchange",fsChange);
+$("btnFs").addEventListener("click",()=>setFs(!fsOn));
+$("fsExit").addEventListener("click",()=>setFs(false));
+$("fsCompare").addEventListener("click",()=>$("btnCompare").click());
+new MutationObserver(()=>$("fsCompare").classList.toggle("on",$("btnCompare").classList.contains("on"))).observe($("btnCompare"),{attributes:true});
 $("btnCompare").addEventListener("click",()=>{ compare=!compare; if (compare && split<0) split=0.5; if (compare){ clickOrig=false; showOrig=false; } $("btnCompare").classList.toggle("on",compare); view.classList.toggle("cmp",compare); updateBadge(); schedule(); });
 function setSplit(ev){ const r=canvas.getBoundingClientRect(); split=Math.min(1,Math.max(0,(ev.clientX-r.left)/r.width)); schedule(); }
 let dragging=false;
@@ -24,7 +42,8 @@ document.addEventListener("keydown",ev=>{
   if (document.querySelector(".modal.open") && ev.code!=="Escape") return;
   if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && document.activeElement.type!=="range") return;
   const c={KeyR:1,KeyG:2,KeyB:3,KeyL:4}[ev.code]; if (c){ ev.preventDefault(); setChan(c); }
-  else if (ev.code==="Escape"){ const m=document.querySelector(".modal.open"); if (m) m.classList.remove("open"); else if (viewChan) setChan(viewChan); }
+  else if (ev.code==="KeyF"){ ev.preventDefault(); setFs(!fsOn); }
+  else if (ev.code==="Escape"){ const m=document.querySelector(".modal.open"); if (m) m.classList.remove("open"); else if (viewChan) setChan(viewChan); else if (fsOn) setFs(false); }
 });
 canvas.addEventListener("pointerdown",ev=>{ if(!compare || ev.button===1 || ev.altKey) return; dragging=true; canvas.setPointerCapture(ev.pointerId); setSplit(ev); });
 canvas.addEventListener("pointermove",ev=>{ if(dragging) setSplit(ev); });

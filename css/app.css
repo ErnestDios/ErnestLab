@@ -199,6 +199,19 @@ body.m canvas#gl{box-shadow:0 4px 22px rgba(0,0,0,.6);-webkit-touch-callout:none
 body.m canvas#gl{touch-action:none}
 .zchip{display:block;position:absolute;right:12px;top:12px;z-index:3;font:500 12px/1 var(--font-mono);padding:8px 10px;border-radius:7px;border:1px solid var(--accent);background:rgba(15,14,13,.85);color:var(--accent);cursor:pointer}
 .zchip[hidden]{display:none}
+/* v1.6.3 full screen: only the image; the browser's own full screen where it has one, else the page (iPhone) */
+.fsbar{display:none}
+body.fs{display:block}
+body.fs>header,body.fs #strip,body.fs #resizer,body.fs #rack,body.fs #tabs,body.fs #hint,body.fs #moreMenu{display:none!important}
+body.fs #view{position:fixed;inset:0;z-index:40;background:#000}
+body.fs #view.fit canvas{max-width:100%;max-height:100%}
+body.fs #view.full canvas{margin:0}
+body.fs .fsbar{display:flex;gap:8px;position:absolute;z-index:5;top:calc(10px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right))}
+body.fs .fsbar .ibtn{background:rgba(15,14,13,.72);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:#ece6dc}
+body.fs .fsbar .ibtn.on{color:var(--accent);border-color:var(--accent)}
+body.fs .zchip{top:calc(58px + env(safe-area-inset-top));right:calc(10px + env(safe-area-inset-right))}
+body.fs .badge{top:calc(12px + env(safe-area-inset-top));left:calc(12px + env(safe-area-inset-left))}
+body.fs .vbar{bottom:calc(10px + env(safe-area-inset-bottom))}
 body.m .zchip{right:8px;top:8px}
 canvas#gl.zoomed{cursor:grab} canvas#gl.zoomed:active{cursor:grabbing}
 body.m .badge{top:8px;left:8px}

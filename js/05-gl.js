@@ -585,7 +585,7 @@ function cleanPixels(){
 let vz=1, vcx=0.5, vcy=0.5, viewKey="";
 function screenView(){ return !renderClean && $("view").classList.contains("fit"); }   /* v0.7: desktop too */
 function fitDims(outW,outH){
-  const v=$("view"), pad=document.body.classList.contains("m")?16:32, dpr=window.devicePixelRatio||1;
+  const v=$("view"), pad=document.body.classList.contains("fs")?0:document.body.classList.contains("m")?16:32, dpr=window.devicePixelRatio||1;
   const sc=Math.min(1,(v.clientWidth-pad)/outW,(v.clientHeight-pad)/outH);
   const cw=Math.max(1,Math.floor(outW*sc)), chh=Math.max(1,Math.floor(outH*sc));
   return {cw, ch:chh, dw:Math.min(outW,Math.round(cw*dpr)), dh:Math.min(outH,Math.round(chh*dpr))};

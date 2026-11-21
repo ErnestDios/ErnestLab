@@ -28,6 +28,7 @@ function mirror(src,fn){ new MutationObserver(fn).observe(src,{attributes:true,c
 mirror($("btnCompare"),()=>$("mCompare").classList.toggle("on",$("btnCompare").classList.contains("on")));
 mirror($("btnClear"),()=>{ const armed=$("btnClear").classList.contains("danger"); $("mClear").classList.toggle("danger",armed); $("mClear").firstElementChild.textContent=armed?"Tap again to clear":"Clear session"; });
 $("mAdd").addEventListener("click",()=>$("fileIn").click());
+$("mFs").addEventListener("click",()=>setFs(true));
 $("mCompare").addEventListener("click",()=>$("btnCompare").click());
 /* ⋯ menu */
 function openMore(){ $("mMeta").textContent=$("meta").textContent; $("mVer").textContent="v"+APP_VERSION; $("moreMenu").classList.add("open"); $("mMore").setAttribute("aria-expanded","true"); }
