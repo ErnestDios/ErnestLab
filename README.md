@@ -46,6 +46,11 @@ Left: the original. Right: Ernest Lab, exported at 2000 px and scaled down for t
 
 <sub>Images from Wikimedia Commons: *Tears of Steel* frames 00 1c, 05 6a and 04 3e, (CC) Blender Foundation | mango.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([1](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_00_1c.jpg), [2](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_05_6a.jpg), [3](https://commons.wikimedia.org/wiki/File:Tears_of_Steel_frame_04_3e.jpg)) · *Hong Kong night street 2* by Wilfredor, [CC0](https://creativecommons.org/publicdomain/zero/1.0/) ([source](https://commons.wikimedia.org/wiki/File:Hong_Kong_night_street_2.jpg)) · *Woman in a headwrap in Quebec City* by Wilfredor, CC0 ([source](https://commons.wikimedia.org/wiki/File:Woman_in_a_headwrap_in_Quebec_City.jpg)) · *Big Buck Bunny*, (c) copyright Blender Foundation | peach.blender.org, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/) ([source](https://commons.wikimedia.org/wiki/File:Bbb-splash.png)). AI-generated portrait: Ernest Dios Viaplana. Modified: film looks applied, cropped, split and labelled. The example images are under their own licences, not the MIT licence of the code.</sub>
 
+**Clipped highlights on RAW (v1.7.1):** after white balance, plain clipping cuts every channel where the first one reaches white, so the channels white balance boosts lose up to about a stop at the top. Under a saturated stage light that flattens the colour. *Rebuild* (Development → Clipped highlights) keeps each channel's full range and rebuilds what clipped; shadows and mid-tones stay the same. Neutral look, same exposure, no grain.
+![Clip vs Rebuild on a night CR2 under a blue stage light](docs/examples/ex_raw_highlights.jpg)
+
+<sub>RAW file: `RAW_CANON_5DMARK2_PREPROD.CR2` from [rawsamples.ch](https://www.rawsamples.ch) (via rawpy's test set), [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/); this comparison image is shared under the same licence.</sub>
+
 ## Use it
 
 **Online:** open **https://ernestdios.github.io/ErnestLab/** in a recent Chrome, Edge, Firefox or Safari.
