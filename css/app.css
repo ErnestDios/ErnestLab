@@ -286,3 +286,16 @@ body.m.land #rack{border-top:0;border-left:1px solid var(--line)}
 body.m.land #tabs{border-left:1px solid var(--line)}
 body.m.land #tabs button{min-height:44px;font-size:12px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+/* v1.7 colour wheels, hue curves, channel mixer */
+.wheels{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;padding:2px 0 6px}
+.wheel{display:grid;justify-items:center;gap:2px;min-width:0}
+.wheel canvas{width:100%;max-width:120px;aspect-ratio:1;display:block;touch-action:none;cursor:grab}
+.wheel canvas:active{cursor:grabbing}
+.wheel .wl{font-size:12px;color:var(--ink)}
+.wheel.changed .wl{color:var(--accent)}
+.wheel .wv{font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.wheel.off{opacity:.4}.wheel.off canvas{cursor:not-allowed}
+.hcbox .seg{display:flex;gap:6px}.hcbox .seg .btn{flex:1;font-size:12px;padding:5px 8px}
+.hcbox canvas{width:100%;height:150px;display:block;border-radius:6px;border:1px solid var(--line);touch-action:none;cursor:ns-resize}
+.mixslot{display:grid;gap:7px}
+.chk{display:flex;align-items:center;gap:8px;font-size:13px;padding-top:4px;cursor:pointer}

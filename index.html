@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
-<link rel="stylesheet" href="css/fonts.css?v=1.6.3">
-<link rel="stylesheet" href="css/app.css?v=1.6.3">
+<link rel="stylesheet" href="css/fonts.css?v=1.7.0">
+<link rel="stylesheet" href="css/app.css?v=1.7.0">
 </head>
 <body>
 <header>
@@ -121,7 +121,7 @@
       <button class="btn" id="btnCube">Export look as .cube</button>
       <input type="file" id="lutIn" accept=".cube,.CUBE,text/plain" hidden>
     </div>
-    <div class="note" id="lutNote">No external LUT loaded. The exported .cube holds the colour part of the look (exposure, balance, curve, colour, split tone, loaded LUT) as a 33-point LUT for Rec.709/sRGB display-referred images. In an ACES pipeline, apply it after the output transform. Grain, halation, aberration, softness and vignette are spatial and stay in Ernest Lab.</div>
+    <div class="note" id="lutNote">No external LUT loaded. The exported .cube holds the colour part of the look (exposure, balance, channel mixer, curve, colour, split tone, hue curves, loaded LUT) as a 33-point LUT for Rec.709/sRGB display-referred images. In an ACES pipeline, apply it after the output transform. Grain, halation, aberration, softness and vignette are spatial and stay in Ernest Lab.</div>
   </div>
 </aside>
 <nav id="tabs" role="tablist" aria-label="Controls">
@@ -233,6 +233,7 @@
     <h3>4 · Looks</h3>
     <ul>
       <li><b>Measured film stocks</b> (the Measured groups in the look menu, or <b>Film stock</b> in Film curve): 41 real negatives, prints, slides and instant films, from 1950s Eastman Color to Vision3, Portra, Ektar, Velvia, Kodachrome and Tri-X. Each is computed from the manufacturer's datasheets (spectral sensitivity, characteristic curves, dye densities), the negative printed on its print stock or paper with the printer light timed for a neutral grey, slides projected. They take scene light, so <b>Exposure</b> moves you along the film's real curve, and each brings its own measured grain on its own gauge. Contrast, Roll-off and the gammas then tweak the stock's own curve (at zero you get exactly the measured film; <b>Back to measured</b> resets them, and the look menu shows <i>(edited)</i>); Black lift, White crush, Colour and a LUT work on top. <b>Printer lights</b> time the print as a lab did: Print density and Red / Green / Blue in printer points (12 ≈ 1 stop), the negative unchanged; B&amp;W prints have Density only, slides and instant film aren't printed, and <b>Mix</b> blends the stock in. With no stock, the same lights work on the by-eye curve as <b>Emulated</b> printer lights: each shifts its layer's exposure before the curve (1 point ≈ 1/7 stop, measured on the library's negatives), without a real print's tiny crosstalk. A stock loads the first time you pick it (about 200 kB), then works offline.</li>
+      <li><b>Colour</b> (v1.7): <b>wheels</b> for Shadows, Midtones, Highlights and Print (drag the dot towards a colour; they move the tint, gamma and printer-light sliders, so the numbers stay there for precision), <b>Hue curves</b> (hue → hue, hue → saturation, eight colour points, brightness kept) and a <b>Channel mixer</b> in scene light, before the film. All saved in the look, the <code>.json</code> and the <code>.cube</code>. The tone curve stays per image, in Development.</li>
       <li><b>Save look</b> keeps it in this browser under My looks.</li>
       <li>To move looks between devices: <b>Settings JSON</b>, <b>Load look…</b>, or drop a <code>.json</code> on the image.</li>
       <li><b>Grain stock</b> changes only the grain, independent of the colour look. <b>Measured</b> stocks take their grain from Kodak's datasheets (RMS granularity per colour layer) and hold it at any resolution; <b>Gauge</b> moves the emulsion to another film format. Emulsion layers fine-tune the red, green and blue grain.</li>
@@ -302,28 +303,29 @@
   </div>
 </div>
 
-<script src="js/00-config.js?v=1.6.3"></script>
-<script src="js/01-development.js?v=1.6.3"></script>
-<script src="js/02-profiles.js?v=1.6.3"></script>
-<script src="js/03-measured.js?v=1.6.3"></script>
-<script src="js/03-stocks.js?v=1.6.3"></script>
-<script src="js/03-params.js?v=1.6.3"></script>
-<script src="js/04-panel.js?v=1.6.3"></script>
-<script src="js/05-gl.js?v=1.6.3"></script>
-<script src="js/06-images.js?v=1.6.3"></script>
-<script src="js/07-raw.js?v=1.6.3"></script>
-<script src="js/07-exr.js?v=1.6.3"></script>
-<script src="js/07-dpx.js?v=1.6.3"></script>
-<script src="js/08-output.js?v=1.6.3"></script>
-<script src="js/08-formats.js?v=1.6.3"></script>
-<script src="js/09-view.js?v=1.6.3"></script>
-<script src="js/10-boot.js?v=1.6.3"></script>
-<script src="js/11-curve-editor.js?v=1.6.3"></script>
-<script src="js/12-video.js?v=1.6.3"></script>
-<script src="js/12-vdec.js?v=1.6.3"></script>
-<script src="js/12-seq.js?v=1.6.3"></script>
-<script src="js/13-help.js?v=1.6.3"></script>
-<script src="js/14-report.js?v=1.6.3"></script>
-<script src="js/15-phone.js?v=1.6.3"></script>
+<script src="js/00-config.js?v=1.7.0"></script>
+<script src="js/01-development.js?v=1.7.0"></script>
+<script src="js/02-profiles.js?v=1.7.0"></script>
+<script src="js/03-measured.js?v=1.7.0"></script>
+<script src="js/03-stocks.js?v=1.7.0"></script>
+<script src="js/03-params.js?v=1.7.0"></script>
+<script src="js/04-panel.js?v=1.7.0"></script>
+<script src="js/04-colour.js?v=1.7.0"></script>
+<script src="js/05-gl.js?v=1.7.0"></script>
+<script src="js/06-images.js?v=1.7.0"></script>
+<script src="js/07-raw.js?v=1.7.0"></script>
+<script src="js/07-exr.js?v=1.7.0"></script>
+<script src="js/07-dpx.js?v=1.7.0"></script>
+<script src="js/08-output.js?v=1.7.0"></script>
+<script src="js/08-formats.js?v=1.7.0"></script>
+<script src="js/09-view.js?v=1.7.0"></script>
+<script src="js/10-boot.js?v=1.7.0"></script>
+<script src="js/11-curve-editor.js?v=1.7.0"></script>
+<script src="js/12-video.js?v=1.7.0"></script>
+<script src="js/12-vdec.js?v=1.7.0"></script>
+<script src="js/12-seq.js?v=1.7.0"></script>
+<script src="js/13-help.js?v=1.7.0"></script>
+<script src="js/14-report.js?v=1.7.0"></script>
+<script src="js/15-phone.js?v=1.7.0"></script>
 </body>
 </html>

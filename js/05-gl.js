@@ -30,18 +30,19 @@ const float GRAIN_K=1.0;
                         8-bit images are sRGB-encoded; RAW and EXR arrive linear (uInXfer=1), EXR through a
                         3×3 matrix from its own primaries (uInMat).
    1b. Development      per-image source prep: shadows / midtones / highlights (tone equaliser on luminance).
-   2. Scene-linear      exposure, white balance. Nothing is clipped.
+   2. Scene-linear      exposure, white balance, channel mixer (v1.7). Nothing is clipped.
    3. Optics            chromatic aberration, edge softness, halation, bloom, vignette, all in scene-linear,
                         before the film curve (what the lens and the negative see).
    4. Look encoding     extended sRGB OETF: identical to sRGB up to 1.0 and continues above it.
    5. Film look         per-channel gamma, S-curve, highlight roll-off (compresses >1.0), black lift /
-                        white crush, saturation, split toning, external LUT -> display 0..1.
+                        white crush, saturation, hue curves (v1.7), split toning, external LUT -> display 0..1.
    Grain                part of the emulsion: per-layer grain at the end of the optics pass, before the
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
 uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
 uniform mat3 uInMat;   /* linear sources: the file's primaries → working space (identity for RAW; EXR: from its colour space) */
 uniform float uBW; uniform vec3 uBWw;   /* black & white: amount, colour weights (film sensitivity × filter) */
+uniform mat3 uMix; uniform int uMixOn; uniform float uMixLum;   /* v1.7 channel mixer (rows = outputs), Keep brightness */
 /* Profile (v0.6): a tone curve in stops around mid grey, stored as a 512-sample LUT over -16..+10 stops,
    extended linearly outside with the curve's end slopes. Applied on luminance first, then the tone sliders. */
 uniform sampler2D uCurve; uniform int uCurveOn; uniform vec2 uCurveSlope; uniform float uProfSat;   /* uProfSat: camera saturation (Camera-like RAW), 1 = none */
@@ -93,6 +94,7 @@ vec3 sceneLinear(vec3 l){
   vec3 wb = vec3(1.0+0.25*uTemp, 1.0-0.18*uTint, 1.0-0.25*uTemp);
   wb /= dot(wb,W);
   l = max(l*wb, 0.0);
+  if (uMixOn==1){ vec3 m=uMix*l; if (uMixLum>0.5){ float y1=dot(m,W); m*=y1>1e-7 ? dot(l,W)/y1 : 1.0; } l=max(m,0.0); }   /* v1.7, before the film like a filter on the lens */
   if (uBW>0.0){ float s=uBWw.r+uBWw.g+uBWw.b; float m=max(dot(l,uBWw)/max(s,0.05),0.0); l=mix(l, vec3(m), uBW); }   /* grey preserved: weights normalised */
   return l;
 }`;
@@ -103,6 +105,16 @@ uniform sampler3D uStock2; uniform highp sampler2D uStockCurve; uniform float uS
 uniform sampler3D uStockR1, uStockR2; uniform float uStockXT; uniform vec3 uPG;   /* colour prints: each layer's exposure share from the R, G, B printer bands; uPG rescales the bands */
 uniform vec3 uPLE;   /* v1.6 emulated printer lights on the by-eye curve: per-layer exposure gains before the curve, (1,1,1) = off */
 uniform float uCon,uRoll,uFade,uCrush,uSat,uShAmt,uHiAmt; uniform vec3 uGam,uShCol,uHiCol;
+/* v1.7 hue curves: hue → (hue shift in radians, saturation ×), 72 samples at 5° on the RGB hexagon (red 0°, yellow 60°,
+   green 120°…, the hue of the Shadow / Highlight hue sliders). Chroma is turned and scaled in the plane of constant
+   luminance (uHA, uHB span it), so brightness never changes. */
+uniform vec2 uHC[72]; uniform int uHCOn; uniform vec3 uHA, uHB;
+vec3 hueCurves(vec3 c){
+  float y=dot(c,W); vec3 d=c-y; float u=d.r-0.5*(d.g+d.b), v=0.8660254*(d.g-d.b);
+  if (u*u+v*v<1e-14) return c;
+  float x=mod(atan(v,u)*11.459156, 72.0); int i=min(int(x),71); float f=x-float(i);   /* 72 / 2π */
+  vec2 k=mix(uHC[i], uHC[(i+1)%72], f); float cs=cos(k.x), sn=sin(k.x);
+  return y + uHA*((u*cs-v*sn)*k.y) + uHB*((u*sn+v*cs)*k.y); }
 vec3 linToEnc(vec3 c){ c=max(c,0.0); return mix(c*12.92, 1.055*pow(c,vec3(1.0/2.4))-0.055, step(vec3(0.0031308),c)); }
 float sg(float z){ return 1.0/(1.0+exp(-z)); }
 float sc(float x){ const float k=6.0, p=0.45; float a=sg(-k*p), b=sg(k*(1.0-p)); return (sg(k*(x-p))-a)/(b-a); }
@@ -118,6 +130,7 @@ vec3 filmPost(vec3 c){
   c = mix(vec3(uFade), vec3(1.0-uCrush), c);
   float lum = dot(c,W);
   c = mix(vec3(lum), c, uSat);
+  if (uHCOn==1) c = hueCurves(c);
   float ws = 1.0-smoothstep(0.0,0.55,lum), wh = smoothstep(0.45,1.0,lum);
   c += (uShCol-dot(uShCol,W))*uShAmt*ws + (uHiCol-dot(uHiCol,W))*uHiAmt*wh;
   c = clamp(c,0.0,1.0);
@@ -345,9 +358,30 @@ const dummyLut=makeLutTex(2,new Float32Array([0,0,0, 1,0,0, 0,1,0, 1,1,0, 0,0,1,
 
 function hueRGB(h){ h=((h%360)+360)%360/60; const x=1-Math.abs(h%2-1); const c=[[1,x,0],[x,1,0],[0,1,x],[0,x,1],[x,0,1],[1,0,x]][Math.floor(h)%6]; return c; }
 
+/* v1.7 channel mixer: column-major mat3 for GLSL, or null at the identity (the shader skips it: old looks stay byte-identical) */
+function mixMatrix(e){ const r=MIX_KEYS.map(k=>+e[k]); if (r.every((v,i)=>Math.abs(v-(i%4===0?1:0))<1e-9)) return null;
+  return new Float32Array([r[0],r[3],r[6], r[1],r[4],r[7], r[2],r[5],r[8]]); }
+/* v1.7 hue curves. The 8 points are joined by a periodic monotone cubic (PCHIP tangents over their uneven spacing): each
+   point only bends the curve as far as its neighbours, with no overshoot (raising orange never pushes green the other way).
+   hcCurve(vals, h) is also what the editor draws. */
+function hcCurve(vals, h){
+  const n=HC_HUES.length, X=i=>HC_HUES[((i%n)+n)%n]+360*Math.floor(i/n), Y=i=>vals[((i%n)+n)%n];
+  h=((h%360)+360)%360; let i=n-1; for (let j=0;j<n;j++) if (HC_HUES[j]<=h) i=j;
+  const x0=X(i), x1=X(i+1), y0=Y(i), y1=Y(i+1), t=(h<x0?h+360:h)-x0, w=x1-x0, s=t/w;
+  const m=j=>{ const h0=X(j)-X(j-1), h1=X(j+1)-X(j), s0=(Y(j)-Y(j-1))/h0, s1=(Y(j+1)-Y(j))/h1;
+    if (s0*s1<=0) return 0; const w1=2*h1+h0, w2=h1+2*h0; return (w1+w2)/(w1/s0+w2/s1); };
+  const m0=m(i)*w, m1=m(i+1)*w, s2=s*s, s3=s2*s;
+  return (2*s3-3*s2+1)*y0 + (s3-2*s2+s)*m0 + (-2*s3+3*s2)*y1 + (s3-s2)*m1; }
+const hcVals=(e,p)=>HC_HUES.map((_,i)=>+e[p+i]||0);
+function hcTable(e){ const H=hcVals(e,"hh"), S=hcVals(e,"hs"); if (H.every(v=>Math.abs(v)<1e-9) && S.every(v=>Math.abs(v)<1e-9)) return null;
+  const t=new Float32Array(144); for (let j=0;j<72;j++){ t[2*j]=hcCurve(H,j*5)*Math.PI/180; t[2*j+1]=Math.max(0,1+hcCurve(S,j*5)); } return t; }
+/* the plane of constant Rec.709 luminance, spanned so that (u, v) on the hexagon map back exactly: hexagon(HC_A) = (1, 0), hexagon(HC_B) = (0, 1) */
+const HC_A=(()=>{ const a=[2/3,-1/3,-1/3], t=-(0.2126*a[0]+0.7152*a[1]+0.0722*a[2]); return a.map(v=>v+t); })();
+const HC_B=(()=>{ const r=1/Math.sqrt(3), a=[0,r,-r], t=-(0.7152*r-0.0722*r); return a.map(v=>v+t); })();
 function setSceneUniforms(u,e,dv,crv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh);
   gl.uniform1f(u.uBW,e.bw); gl.uniform3f(u.uBWw,e.bwR,e.bwG,e.bwB);
   gl.uniform1f(u.uProfSat, crv&&crv.sat ? crv.sat : 1.0);
+  const mx=mixMatrix(e); gl.uniform1i(u.uMixOn, mx?1:0); if (mx){ gl.uniformMatrix3fv(u.uMix,false,mx); gl.uniform1f(u.uMixLum, e.mxLum>0.5?1:0); }
   if (crv && crv.pts) crv=crv.pts;
   if (crv){ const c=curveTexFor(crv); bindTex(6,c.tex); gl.uniform1i(u.uCurve,6); gl.uniform2f(u.uCurveSlope,c.lo,c.hi); gl.uniform1i(u.uCurveOn,1); } else gl.uniform1i(u.uCurveOn,0); }
 function setGradeUniforms(u,e){ setSceneUniforms(u,e); setLookUniforms(u,e); }
@@ -356,6 +390,7 @@ function setLookUniforms(u,e){
   gl.uniform1f(u.uSat,e.sat); gl.uniform3f(u.uGam,e.gR,e.gG,e.gB); gl.uniform1f(u.uBWLook,e.bw);
   gl.uniform3fv(u.uShCol,hueRGB(e.shHue)); gl.uniform1f(u.uShAmt,e.shAmt);
   gl.uniform3fv(u.uHiCol,hueRGB(e.hiHue)); gl.uniform1f(u.uHiAmt,e.hiAmt);
+  const hc=hcTable(e); gl.uniform1i(u.uHCOn, hc?1:0); if (hc){ gl.uniform2fv(u.uHC,hc); gl.uniform3fv(u.uHA,HC_A); gl.uniform3fv(u.uHB,HC_B); }
   bindTex(1, lutTex||dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uLut,1);
   gl.uniform1f(u.uLutMix, lutTex ? e.lutMix*lookMix : 0); gl.uniform1f(u.uLutSize, lutTex?lutSize:2);
   const st=stockFor(e.stock); bindTex(2, st?st.t1:dummyLut, gl.TEXTURE_3D); gl.uniform1i(u.uStock,2); gl.uniform1f(u.uStockMix, st ? lookMix : 0);

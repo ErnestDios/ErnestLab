@@ -74,7 +74,7 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 
 **Looks:** eighteen presets: Neutral (the default: no look until you pick one), eight B&W looks (Tri-X, HP5 pushed, FP4, red-filter landscape, orthochromatic silent-era, infrared-like, selenium and sepia prints), Warm Muted, Cold Muted, Bleach bypass, and six film-stock looks named after the stocks that inspired them (Daylight 250, Tungsten 500, Soft 500, Portrait 400, Night 800T, Slide 100), with a look-strength slider. Save your own looks in the browser, move them between machines as `.json` (Settings JSON, **Load look…**, or drop a `.json` on the image).
 
-**Grade** (display-referred, sRGB in): exposure, temperature, tint, S-curve contrast, highlight roll-off, black lift, white crush, per-channel gamma, saturation, shadow/highlight split toning, and an external 3D `.cube` LUT with a mix control.
+**Grade** (display-referred, sRGB in): exposure, temperature, tint, S-curve contrast, highlight roll-off, black lift, white crush, per-channel gamma, saturation, shadow/highlight split toning, **colour wheels** (Shadows, Midtones, Highlights and Print, on the tint, gamma and printer-light controls), **hue curves** (hue vs hue and hue vs saturation over eight colour points, luminance kept), a **channel mixer** in scene light (with Keep brightness), and an external 3D `.cube` LUT with a mix control.
 
 **Halation & bloom:** physical by default in the film looks: light reflected back by the film base into the bottom (red) layer, sized in millimetres on film (base thickness → halo radius ≈ 1.8 × thickness), as a fraction of light (≈10 % without an anti-halation backing, under 1 % with one), with no threshold; bloom as energy-conserving scatter. 8-bit files clip lights at white, so *Clipped light* restores a chosen number of stops there for halation and bloom. The earlier threshold model stays available (Model: By eye).
 
@@ -95,10 +95,10 @@ Drop images on the window, pick a format and a film look, adjust, and export or 
 Single page, WebGL2:
 
 1. **Input transform** to a scene-linear working space (linear Rec.709/sRGB primaries, unbounded). 8-bit images are linearised with the sRGB curve.
-2. **Development, then scene-linear operations:** per-image shadows / midtones / highlights (three monotonic operators on luminance, so tones never invert), then exposure and white balance, with no clipping.
+2. **Development, then scene-linear operations:** per-image shadows / midtones / highlights (three monotonic operators on luminance, so tones never invert), then exposure, white balance and the channel mixer, with no clipping.
 3. **Optics and emulsion, in scene-linear** (comp order, before the grade): chromatic aberration, edge softness, halation and bloom from a blur pyramid (½, ¼, ⅛), vignette, then per-layer grain added in a log-like encoding (close to density), or for measured stocks as an exposure wobble in stops following the datasheet. Physical halation and bloom use their own pyramid sized in millimetres on film.
 4. **Look encoding:** an extended sRGB curve that keeps values above 1.0, so bright highlights reach the film curve and highlight roll-off instead of being clipped.
-5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, split toning, external LUT → display.
+5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, hue curves (chroma turned and scaled in the plane of constant Rec.709 luminance), split toning, external LUT → display.
 
 Intermediate images are RGBA16F when `EXT_color_buffer_float` is available.
 The `.cube` export renders the grade shader over an identity 33³ texture and reads it back. Zips are written in-page (store-only, CRC32); PNG 16, TIFF, DPX, Cineon and OpenEXR (ZIP-compressed, via the browser's CompressionStream) are written by Ernest Lab's own encoders in `js/08-formats.js`.
@@ -130,6 +130,7 @@ js/03-measured.js     GENERATED from datasheets (tools/spectral): B&W weights, g
 js/03-stocks.js       GENERATED (tools/stocks): measured film stocks, their grain and presets; LUTs in ./stocks/
 js/03-params.js       look parameters, B&W films and filters, grain stocks, presets
 js/04-panel.js        DOM helpers, the control panel: sections, sliders, switches, virtual sliders
+js/04-colour.js       colour wheels, hue-curve editor, channel mixer panel
 js/05-gl.js           WebGL: shaders, render targets, the render pipeline, viewer and zoom, scheduling
 js/06-images.js       the source image: upload, loading files, select / remove, the strip, the test still
 js/07-raw.js          RAW decoding (LibRaw in ./raw/)

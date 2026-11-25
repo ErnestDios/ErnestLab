@@ -28,6 +28,15 @@ const GROUPS = [
     ["shAmt","Shadow tint",0,0.3,0.001,0,""],
     ["hiHue","Highlight hue",0,360,1,35,"°"],
     ["hiAmt","Highlight tint",0,0.3,0.001,0,""],
+    /* v1.7 hue curves: 8 fixed hue points (HC_HUES), hue shift in degrees and saturation (0 = unchanged, −1 = grey,
+       +1 = double); drawn in their own editor, no slider rows */
+    ...[0,1,2,3,4,5,6,7].map(i=>["hh"+i,"Hue shift "+i,-60,60,0.5,0,"°","hc"]),
+    ...[0,1,2,3,4,5,6,7].map(i=>["hs"+i,"Saturation "+i,-1,1,0.01,0,"","hc"]),
+    /* v1.7 channel mixer, in scene light before the film: each output channel made from red, green and blue
+       (identity at default). Keep brightness rescales each pixel so its luminance stays the same. */
+    ["mRR","Red",0,2,0.01,1,"","mix"], ["mRG","Green",-1,1,0.01,0,"","mix"], ["mRB","Blue",-1,1,0.01,0,"","mix"],
+    ["mGR","Red",-1,1,0.01,0,"","mix"], ["mGG","Green",0,2,0.01,1,"","mix"], ["mGB","Blue",-1,1,0.01,0,"","mix"],
+    ["mBR","Red",-1,1,0.01,0,"","mix"], ["mBG","Green",-1,1,0.01,0,"","mix"], ["mBB","Blue",0,2,0.01,1,"","mix"],
     ["lutMix","External LUT",0,1,0.01,1,""],
   ]},
   /* Black & white (v0.7): a single silver layer sees colour through its spectral sensitivity and the lens filter.
@@ -91,7 +100,11 @@ DEF.stock="";
    (gauge from gGauge, or 35mm still), halation from base reflection into the layers nearest the base, bloom as
    energy-conserving scatter. 0 = the threshold model, as before. */
 DEF.halPhys=0;
-const NONMIX = ["stock","gStock","gGauge","halPhys","halClip","bwR","bwG","bwB","seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
+/* v1.7: channel mixer Keep brightness (1 = on). On by default; at the identity mix it changes nothing. */
+DEF.mxLum=1;
+const MIX_KEYS=["mRR","mRG","mRB","mGR","mGG","mGB","mBR","mBG","mBB"];
+const HC_HUES=[0,30,60,120,180,240,270,300], HC_NAMES=["Red","Orange","Yellow","Green","Cyan","Blue","Purple","Magenta"];
+const NONMIX = ["mxLum","stock","gStock","gGauge","halPhys","halClip","bwR","bwG","bwB","seed","halThr","halR","halWarm","softStart","vigSize","vigFeather","grainSize","grainCol","grainResp","grainRough","grainShadow","shHue","hiHue","lutMix",
   "gAmtR","gAmtG","gAmtB","gSizeR","gSizeG","gSizeB","gClumpR","gClumpG","gClumpB"];
 const MIXABLE = Object.keys(DEF).filter(k => !NONMIX.includes(k));
 /* Grain stocks. "· measured": amount, per-layer balance and tone response from Kodak datasheet granularity

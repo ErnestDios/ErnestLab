@@ -67,8 +67,11 @@ function buildRack(){
       box.appendChild(r1); box.appendChild(r2); box.appendChild(info);
     }
     let sub=null;
+    if (g.id==="color") box.appendChild(buildWheels());   /* v1.7 */
     for (const p of g.params){
       const [k,label,mn,mx,st] = p;
+      if (p[7]==="hc"){ if (k==="hh0") box.appendChild(buildHueCurves()); continue; }   /* v1.7: drawn in the hue-curve editor */
+      if (p[7]==="mix" && k==="mRR") box.appendChild(buildMixerBox());
       if (k==="plD"){   /* v1.5 */
         const h=document.createElement("div"); h.className="plhead"; h.innerHTML='<b>Printer lights</b> <span class="meta" id="plMeta">for printed stocks</span>'; box.appendChild(h);
         const n=document.createElement("div"); n.className="note bwinfo"; n.id="plInfo"; box.appendChild(n);
@@ -82,12 +85,13 @@ function buildRack(){
       const id="p_"+k;
       row.innerHTML=`<label for="${id}">${label}</label><input type="range" id="${id}" min="${mn}" max="${mx}" step="${st}" ${k.endsWith("Hue")?'class="hue"':""}><output for="${id}" title="Double-click to reset"></output>`;
       const inp=row.querySelector("input"), out=row.querySelector("output");
-      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)||PL_KEYS.includes(k)||k==="bw") stockSync(); markChanged(); schedule(); });
+      inp.addEventListener("input",()=>{ base[k]=+inp.value; out.textContent=fmtVal(p,inp.value); if (/^(grain|gAmt|gSize|gClump)/.test(k)){ const gss=document.getElementById("grainStock"); if (gss) gss.value=""; } if (/^bw[RGB]$/.test(k)) bwSync(); if (k==="bw"){ if (base.bw>0) bypass.bw=false; bwSwitchSync(); } if (STOCK_TUNE.includes(k)||PL_KEYS.includes(k)||k==="bw") stockSync(); if (WHEEL_KEYS.includes(k)||MIX_KEYS.includes(k)) colourSync(); markChanged(); schedule(); });
       const reset=()=>{ base[k]=presetVals[k]; syncUI(); schedule(); };
       out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
       scrubOut(out,p,()=>base[k],v=>{ base[k]=v; if (k==="bw" && v>0) bypass.bw=false; syncUI(); schedule(); });
       ctlEls[k]={inp,out,row,p};
-      (p[7]==="layer" ? sub.lastChild : box).appendChild(row);
+      if (p[7]==="mix") row.querySelector("label").textContent=label;   /* under its output heading */
+      (p[7]==="layer" ? sub.lastChild : p[7]==="mix" ? mixerSlot(k) : box).appendChild(row);
     }
     det.appendChild(box); host.appendChild(det);
   });
@@ -191,7 +195,7 @@ function lensSync(){
 }
 function syncUI(){
   for (const k in ctlEls){ const {inp,out,p}=ctlEls[k]; inp.value=base[k]; out.textContent=fmtVal(p,base[k]); out.classList.toggle("over",isOver(p,base[k])); }
-  grainSync(); halSync(); lensSync(); bwSync(); stockSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
+  grainSync(); halSync(); lensSync(); bwSync(); stockSync(); colourSync(); if (typeof bwSwitchSync==="function") try{ bwSwitchSync(); }catch(e){}
   $("mix").value=lookMix; $("mixOut").textContent=Math.round(lookMix*100)+"%";
   markChanged();
 }
