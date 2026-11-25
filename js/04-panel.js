@@ -247,7 +247,7 @@ function bwToggle(){ const on=!bypass.bw && base.bw>0; if (on){ setBypass("bw",t
 
 /* Virtual slider on the value: drag left / right on the number (Shift = fine). Some values go past the slider's
    range (EXT); the number turns orange when it does, and the slider waits at its end. Hues wrap around. */
-const EXT={exp:[-6,6],dShadows:[-6,6],dMid:[-6,6],dHigh:[-6,6],temp:[-2,2],tint:[-2,2],con:[-2,2],sat:[0,3],hal:[0,3],bloom:[0,3],grain:[0,4],grainSize:[0.3,8],ca:[0,4],glare:[0,25],dFog:[0,15]};
+const EXT={exp:[-6,6],dTemp:[-2,2],dTint:[-2,2],dShadows:[-6,6],dMid:[-6,6],dHigh:[-6,6],temp:[-2,2],tint:[-2,2],con:[-2,2],sat:[0,3],hal:[0,3],bloom:[0,3],grain:[0,4],grainSize:[0.3,8],ca:[0,4],glare:[0,25],dFog:[0,15]};
 function scrubOut(out,p,get,set){
   const [k,,mn,mx,st]=p, lim=EXT[k]||[mn,mx], hue=/Hue$/.test(k); let s=null;
   out.classList.add("scrub"); out.title=(EXT[k]?`Drag to change, beyond the slider (${lim[0]} to ${lim[1]})`:"Drag to change")+" · Shift for fine · double-click to reset";

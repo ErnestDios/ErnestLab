@@ -29,12 +29,15 @@ function platformHint(W,H){ const r=W/H, fits=PLATFORM_FITS.filter(p=>p[1](r)).m
 /* v1.6.2: Push in scales the crop into the frame (0 % = the whole format, 100 % = 2×, 200 % = 3×), any format,
    Original included; Reframe then moves the pushed-in frame. The export is the real pixels of that crop (no upscaling). */
 const DEV_PARAMS=[["push","Push in",0,200,1,0,"%","push"],["panX","Reframe ↔",-1,1,0.01,0,"","frame"],["panY","Reframe ↕",-1,1,0.01,0,"","frame"],
+  /* v1.7: per-image white balance, to fix one frame's colour cast or a wrong camera setting; same scale as the look's
+     Temperature / Tint, applied first, in scene light, before the profile curve (brightness kept) */
+  ["dTemp","Temperature",-1,1,0.01,0,""],["dTint","Tint",-1,1,0.01,0,""],
   ["dShadows","Shadows",-1.5,1.5,0.01,0,"EV"],["dMid","Midtones",-1.5,1.5,0.01,0,"EV"],["dHigh","Highlights",-1.5,1.5,0.01,0,"EV"],
   /* v1.0: Fog, an offset (not a multiply like the tone sliders): the density every negative has with no light at all,
      from development chemistry. Added before grain and after the lens, so blacks carry grain; % of mid grey. */
   ["dFog","Fog",0,5,0.01,0,"%"]];
-const DEV0=Object.freeze({fmt:"orig",orient:"auto",push:0,panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0});
-function devActive(d){ return d.fmt!=="orig"||d.push>0||d.dShadows||d.dMid||d.dHigh||d.dFog||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",push:0,panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0,dTemp:0,dTint:0});
+function devActive(d){ return d.fmt!=="orig"||d.push>0||d.dShadows||d.dMid||d.dHigh||d.dFog||d.dTemp||d.dTint||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
 /* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
    Returns UV rect (top-left origin) and the output size in pixels. */
 function cropRect(d,w,h){
@@ -88,6 +91,7 @@ function buildDevelop(){
     inp.addEventListener("input",()=>setDev(k,+inp.value));
     const reset=()=>setDev(k,0); out.addEventListener("dblclick",reset); inp.addEventListener("dblclick",reset);
     scrubOut(out,p,()=>curDev()[k],v=>setDev(k,v));
+    if (k==="dTemp") row.classList.add("gap");   /* v1.7: white balance starts the tone block */
     devEls[k]={inp,out,row}; (p[7]==="frame"||p[7]==="push"?$("devFrame"):box).appendChild(row);
   }
   $("devCtrls").insertBefore($("profBox"), devEls.dShadows.row);   /* pipeline order: profile curve, then the tone sliders */

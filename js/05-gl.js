@@ -29,7 +29,8 @@ const float GRAIN_K=1.0;
    1. Input transform   source -> scene-linear working space (linear Rec.709/sRGB primaries, unbounded).
                         8-bit images are sRGB-encoded; RAW and EXR arrive linear (uInXfer=1), EXR through a
                         3×3 matrix from its own primaries (uInMat).
-   1b. Development      per-image source prep: shadows / midtones / highlights (tone equaliser on luminance).
+   1b. Development      per-image source prep: white balance (v1.7), profile curve, shadows / midtones / highlights
+                        (tone equaliser on luminance).
    2. Scene-linear      exposure, white balance, channel mixer (v1.7). Nothing is clipped.
    3. Optics            chromatic aberration, edge softness, halation, bloom, vignette, all in scene-linear,
                         before the film curve (what the lens and the negative see).
@@ -39,7 +40,7 @@ const float GRAIN_K=1.0;
    Grain                part of the emulsion: per-layer grain at the end of the optics pass, before the
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
-uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev;
+uniform float uExp,uTemp,uTint; uniform int uInXfer; uniform vec3 uDev; uniform vec3 uDevWB;   /* v1.7 per-image white balance gains, (1,1,1) = off */
 uniform mat3 uInMat;   /* linear sources: the file's primaries → working space (identity for RAW; EXR: from its colour space) */
 uniform float uBW; uniform vec3 uBWw;   /* black & white: amount, colour weights (film sensitivity × filter) */
 uniform mat3 uMix; uniform int uMixOn; uniform float uMixLum;   /* v1.7 channel mixer (rows = outputs), Keep brightness */
@@ -52,6 +53,7 @@ float profileCurve(float s){ float c=clamp(s,-16.0,10.0); float y=texture(uCurve
    luminance so hue is kept. Three operators applied in sequence, each monotonic, so tones never invert. */
 float ssd(float a,float b,float x){ float t=clamp((x-a)/(b-a),0.0,1.0); return t*t*(3.0-2.0*t); }
 vec3 develop(vec3 l){
+  if (uDevWB!=vec3(1.0)) l=max(l*uDevWB,0.0);
   if (uDev==vec3(0.0) && uCurveOn==0 && uProfSat==1.0) return l;
   float y=max(dot(l,W),1e-7), st=log2(y/0.18), x=st;
   if (uCurveOn==1) x=profileCurve(x);
@@ -378,7 +380,10 @@ function hcTable(e){ const H=hcVals(e,"hh"), S=hcVals(e,"hs"); if (H.every(v=>Ma
 /* the plane of constant Rec.709 luminance, spanned so that (u, v) on the hexagon map back exactly: hexagon(HC_A) = (1, 0), hexagon(HC_B) = (0, 1) */
 const HC_A=(()=>{ const a=[2/3,-1/3,-1/3], t=-(0.2126*a[0]+0.7152*a[1]+0.0722*a[2]); return a.map(v=>v+t); })();
 const HC_B=(()=>{ const r=1/Math.sqrt(3), a=[0,r,-r], t=-(0.7152*r-0.0722*r); return a.map(v=>v+t); })();
+/* white balance gains, as the look's Temperature / Tint in the shader (sceneLinear): normalised to Rec.709 luminance */
+function wbGains(t,n){ if (!t && !n) return [1,1,1]; const w=[1+0.25*t, 1-0.18*n, 1-0.25*t], y=0.2126*w[0]+0.7152*w[1]+0.0722*w[2]; return w.map(v=>v/y); }
 function setSceneUniforms(u,e,dv,crv){ gl.uniform1f(u.uExp,e.exp); gl.uniform1f(u.uTemp,e.temp); gl.uniform1f(u.uTint,e.tint); dv=dv||DEV0; gl.uniform3f(u.uDev,dv.dShadows,dv.dMid,dv.dHigh);
+  { const wb=wbGains(+dv.dTemp||0,+dv.dTint||0); gl.uniform3f(u.uDevWB,wb[0],wb[1],wb[2]); }
   gl.uniform1f(u.uBW,e.bw); gl.uniform3f(u.uBWw,e.bwR,e.bwG,e.bwB);
   gl.uniform1f(u.uProfSat, crv&&crv.sat ? crv.sat : 1.0);
   const mx=mixMatrix(e); gl.uniform1i(u.uMixOn, mx?1:0); if (mx){ gl.uniformMatrix3fv(u.uMix,false,mx); gl.uniform1f(u.uMixLum, e.mxLum>0.5?1:0); }
