@@ -4,9 +4,9 @@
    old and new files), cache when offline.
    Icons and manifest: cache first. The RAW decoder (./raw/, ~1.5 MB) is cached the first time a RAW file is opened (the EXR decoder, ./exr/, likewise),
    so RAW works offline after that. Images you open never pass through here: they're read locally. */
-const CACHE = "ernestlab-1.7.1";
+const CACHE = "ernestlab-1.7.2";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-maskable-512.png", "./icons/apple-touch-icon.png"];   /* + SHELL from index.html */
-const SHELL = ["./css/fonts.css?v=1.7.1", "./css/app.css?v=1.7.1", "./js/00-config.js?v=1.7.1", "./js/01-development.js?v=1.7.1", "./js/02-profiles.js?v=1.7.1", "./js/03-measured.js?v=1.7.1", "./js/03-stocks.js?v=1.7.1", "./js/03-params.js?v=1.7.1", "./js/04-panel.js?v=1.7.1", "./js/04-colour.js?v=1.7.1", "./js/05-gl.js?v=1.7.1", "./js/06-images.js?v=1.7.1", "./js/07-raw.js?v=1.7.1", "./js/07-exr.js?v=1.7.1", "./js/07-dpx.js?v=1.7.1", "./js/08-output.js?v=1.7.1", "./js/08-formats.js?v=1.7.1", "./js/09-view.js?v=1.7.1", "./js/10-boot.js?v=1.7.1", "./js/11-curve-editor.js?v=1.7.1", "./js/12-video.js?v=1.7.1", "./js/12-vdec.js?v=1.7.1", "./js/12-seq.js?v=1.7.1", "./js/13-help.js?v=1.7.1", "./js/14-report.js?v=1.7.1", "./js/15-phone.js?v=1.7.1"];
+const SHELL = ["./css/fonts.css?v=1.7.2", "./css/app.css?v=1.7.2", "./js/00-config.js?v=1.7.2", "./js/01-development.js?v=1.7.2", "./js/02-profiles.js?v=1.7.2", "./js/03-measured.js?v=1.7.2", "./js/03-stocks.js?v=1.7.2", "./js/03-params.js?v=1.7.2", "./js/04-panel.js?v=1.7.2", "./js/04-colour.js?v=1.7.2", "./js/05-gl.js?v=1.7.2", "./js/06-images.js?v=1.7.2", "./js/07-raw.js?v=1.7.2", "./js/07-exr.js?v=1.7.2", "./js/07-dpx.js?v=1.7.2", "./js/08-output.js?v=1.7.2", "./js/08-formats.js?v=1.7.2", "./js/09-view.js?v=1.7.2", "./js/10-boot.js?v=1.7.2", "./js/11-curve-editor.js?v=1.7.2", "./js/12-video.js?v=1.7.2", "./js/12-vdec.js?v=1.7.2", "./js/12-seq.js?v=1.7.2", "./js/13-help.js?v=1.7.2", "./js/14-report.js?v=1.7.2", "./js/15-phone.js?v=1.7.2"];
 
 self.addEventListener("install", e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll([...ASSETS, ...SHELL].map(u => new Request(u, {cache: "reload"})))).then(() => self.skipWaiting()));

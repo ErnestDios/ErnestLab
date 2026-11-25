@@ -28,7 +28,20 @@ function rawHLSync(){ const it=items[cur], row=$("rawHLRow"), note=$("rawHLNote"
 function buildRawHL(){ const sel=$("devRawHL"); if (!sel) return;
   sel.addEventListener("change",()=>setDev("rawHL",+sel.value)); }   /* setDev → syncDev → rawHLSync develops it again */
 let rawMod=null, rawQueue=Promise.resolve();
-async function rawLib(){ if (!rawMod) rawMod=import(new URL("raw/index.js",document.baseURI).href).then(m=>m.default); return new (await rawMod)(); }
+/* v1.7.2 watchdog. LibRaw's wrapper (raw/index.js) only settles a call when its worker answers, so a worker that crashed,
+   failed to start or stalled left "Reading …" / "Developing RAW…" up for good, and every later RAW queued behind it
+   until a reload. Now a worker error, an unreadable message or a step that takes too long fails the call (and the ones
+   waiting on it), closes that worker and frees the queue; the caller shows "Could not …". Limits are generous: the
+   full decode of a 21 MP CR2 takes ~4.5 s on two slow cores, so a phone with a 100 MP file stays well inside. */
+const RAW_WAIT={step:60000, decode:90000, perMP:2000};   /* ms; perMP is added to `decode` per megapixel */
+async function rawLib(){ if (!rawMod) rawMod=import(new URL("raw/index.js",document.baseURI).href).then(m=>m.default);
+  const lr=new (await rawMod)();
+  const fail=msg=>{ if (lr.disposed) return; lr.why=msg; const e=new Error(msg); for (const p of lr.pending.values()) p.reject(e); lr.pending.clear(); lr.dispose(); };
+  lr.worker.addEventListener("error",e=>{ e.preventDefault(); console.error("RAW worker error",e.message||e); fail(e.message?`the RAW decoder crashed (${e.message})`:"the RAW decoder failed to start"); });
+  lr.worker.addEventListener("messageerror",()=>fail("the RAW decoder sent unreadable data"));
+  /* lr.step(promise, ms): the call, or an error once ms pass without an answer */
+  lr.step=(p,ms)=>{ let t; return Promise.race([p, new Promise((_,rej)=>{ t=setTimeout(()=>{ const m=`the RAW decoder stopped responding after ${Math.round(ms/1000)} s`; console.error(m); fail(m); rej(new Error(m)); },ms); })]).catch(e=>{ throw lr.why?new Error(lr.why):e; }).finally(()=>clearTimeout(t)); };   /* a worker that died before the call reports why, not "LibRaw disposed" */
+  return lr; }
 function rawJob(fn){ const r=rawQueue.then(fn,fn); rawQueue=r.then(()=>{},()=>{}); return r; }   /* one decode at a time (memory) */
 const f2h=(()=>{ const f=new Float32Array(1), u=new Uint32Array(f.buffer);
   return v=>{ f[0]=v; const x=u[0], sgn=(x>>>16)&0x8000; let e=((x>>>23)&0xff)-112, m=x&0x7fffff;
@@ -41,8 +54,8 @@ async function rawProbe(f){
   return rawJob(async()=>{
     const lr=await rawLib();
     try{
-      await lr.open(new Uint8Array(await f.arrayBuffer()), RAW_OPTS);
-      const meta=await lr.metadata()||{}; let th=null; try{ th=await lr.thumbnailData(); }catch(e){}
+      const S=RAW_WAIT.step; await lr.step(lr.open(new Uint8Array(await f.arrayBuffer()), RAW_OPTS),S);
+      const meta=await lr.step(lr.metadata(),S)||{}; let th=null; try{ th=await lr.step(lr.thumbnailData(),S); }catch(e){ if (lr.disposed) throw e; }
       const it={name:f.name.replace(/\.[^.]+$/,""), raw:true, file:f, w:meta.width, h:meta.height, flip:meta.flip|0,
         cam:[meta.camera_make,meta.camera_model].filter(Boolean).join(" ").trim(), iso:meta.iso_speed, url:null, refLum:null};
       if (it.flip===5||it.flip===6){ const t=it.w; it.w=it.h; it.h=t; }
@@ -71,8 +84,8 @@ async function rawDecode(it){
     try{
       const half = Math.max(it.w,it.h)>MAXTEX;
       const hv=(it.dev&&it.dev.rawHL)|0, hl=RAW_HL[hv]?hv:0;   /* v1.7.1: highlight recovery, per image */
-      await lr.open(new Uint8Array(await it.file.arrayBuffer()), {...RAW_OPTS, halfSize:half, highlight:hl}); it.decHL=hl;
-      const img=await lr.imageData(); const W=img.width, H=img.height, d=img.data;
+      await lr.step(lr.open(new Uint8Array(await it.file.arrayBuffer()), {...RAW_OPTS, halfSize:half, highlight:hl}),RAW_WAIT.step); it.decHL=hl;
+      const img=await lr.step(lr.imageData(), RAW_WAIT.decode+RAW_WAIT.perMP*((it.w||0)*(it.h||0)/1e6)/(half?4:1)); const W=img.width, H=img.height, d=img.data;
       if (!d || img.colors!==3 || img.bits!==16) throw new Error("unexpected RAW output");
       const nM=Math.min(40000,W*H), stM=Math.max(1,Math.floor(W*H/nM)), lumAt=i=>{ const k=i*stM*3; return (0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])/65535; };
       let ev;

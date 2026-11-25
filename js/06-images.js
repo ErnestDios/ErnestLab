@@ -65,7 +65,7 @@ async function addFiles(files){
     }
     if (RAW_EXT.test(f.name)){
       try{ toast(`Reading ${f.name}…`,1500); const it=await rawProbe(f); items.push(it); if (first<0) first=items.length-1; }
-      catch(err){ console.error(err); toast(`Could not open ${f.name} as RAW.`); }
+      catch(err){ console.error(err); toast(`Could not open ${f.name} as RAW: ${String(err.message||err).slice(0,90)}`,4200); }
       continue;
     }
     try{
