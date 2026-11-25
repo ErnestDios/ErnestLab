@@ -50,6 +50,9 @@ $("profIn").addEventListener("change",ev=>{ loadProfileFiles([...ev.target.files
 
 const cv=$("curveCv"), cvx=cv.getContext("2d");
 function cvSize(){ const r=cv.getBoundingClientRect(), dpr=window.devicePixelRatio||1; const w=Math.max(1,Math.round(r.width*dpr)), h=Math.max(1,Math.round(r.height*dpr)); if (cv.width!==w||cv.height!==h){ cv.width=w; cv.height=h; } return {w,h,dpr,r}; }
+/* v1.7.2: the box shows CX0…CX1 stops both ways. Dragging keeps points inside it; points already outside (old drags, loaded
+   profiles, the camera curves' far anchors) sit on its edge, drawn as arrows, and can be grabbed there. */
+const inView=q=>[Math.min(CX1,Math.max(CX0,q[0])), Math.min(CX1,Math.max(CX0,q[1]))];
 const toPx=(x,y,w,h)=>[(x-CX0)/(CX1-CX0)*w, h-(y-CX0)/(CX1-CX0)*h];
 function drawCurve(){
   if (!cv.offsetParent) return; const {w,h,dpr}=cvSize(), g=cvx, it=items[cur], d=curDev(); g.clearRect(0,0,w,h);
@@ -65,13 +68,19 @@ function drawCurve(){
   if (ref) plot(ref,"rgba(232,154,60,.35)",1.2);
   g.setLineDash([]); const c=effCurve(it,d);
   if (c){ plot(c,bypass.dev?"rgba(232,154,60,.35)":"#e89a3c",2); const custom=d.profile==="custom";
-    for (const q of c){ if (q[0]<CX0||q[0]>CX1) continue; const [px,py]=toPx(q[0],q[1],w,h); g.beginPath(); g.arc(px,py,(custom?5:4)*dpr,0,Math.PI*2);
+    for (const q of c){ const [vx,vy]=inView(q), [px,py]=toPx(vx,vy,w,h);
+      if (vx!==q[0]||vy!==q[1]){   /* v1.7.2: a point outside the box: an arrow on the edge, pointing to where it is (grab it there) */
+        const ax=Math.sign(q[0]-vx), ay=-Math.sign(q[1]-vy), n=Math.hypot(ax,ay)||1, ux=ax/n, uy=ay/n, R=6*dpr;
+        const cx=Math.min(w-R,Math.max(R,px)), cy=Math.min(h-R,Math.max(R,py));
+        g.beginPath(); g.moveTo(cx+ux*R,cy+uy*R); g.lineTo(cx-ux*R*0.6-uy*R*0.8,cy-uy*R*0.6+ux*R*0.8); g.lineTo(cx-ux*R*0.6+uy*R*0.8,cy-uy*R*0.6-ux*R*0.8); g.closePath();
+        if (custom){ g.fillStyle="#e89a3c"; g.fill(); } else { g.strokeStyle="#e89a3c"; g.lineWidth=1.5*dpr; g.stroke(); } continue; }
+      const R=(custom?5:4)*dpr; g.beginPath(); g.arc(Math.min(w-R,Math.max(R,px)),Math.min(h-R,Math.max(R,py)),R,0,Math.PI*2);   /* a point on the edge: whole dot, nudged in */
       if (custom){ g.fillStyle="#e89a3c"; g.fill(); } else { g.strokeStyle="#e89a3c"; g.lineWidth=1.5*dpr; g.stroke(); } } }
   else { g.strokeStyle="rgba(232,154,60,.8)"; g.lineWidth=1.5*dpr; g.beginPath(); g.moveTo(...toPx(CX0,CX0,w,h)); g.lineTo(...toPx(CX1,CX1,w,h)); g.stroke(); }
 }
 let cdrag=null, lastTap={i:-1,t:0};
 function evStops(ev){ const r=cv.getBoundingClientRect(); return [CX0+(ev.clientX-r.left)/r.width*(CX1-CX0), CX0+(1-(ev.clientY-r.top)/r.height)*(CX1-CX0)]; }
-function nearest(pts,ev){ const r=cv.getBoundingClientRect(); let bi=-1, bd=1e9; pts.forEach((q,i)=>{ const px=r.left+(q[0]-CX0)/(CX1-CX0)*r.width, py=r.top+(1-(q[1]-CX0)/(CX1-CX0))*r.height, dd=Math.hypot(px-ev.clientX,py-ev.clientY); if (dd<bd){ bd=dd; bi=i; } });
+function nearest(pts,ev){ const r=cv.getBoundingClientRect(); let bi=-1, bd=1e9; pts.forEach((q,i)=>{ const [vx,vy]=inView(q), px=r.left+Math.min(r.width-5,Math.max(5,(vx-CX0)/(CX1-CX0)*r.width)), py=r.top+Math.min(r.height-5,Math.max(5,(1-(vy-CX0)/(CX1-CX0))*r.height)), dd=Math.hypot(px-ev.clientX,py-ev.clientY); if (dd<bd){ bd=dd; bi=i; } });
   return bd<=(ev.pointerType==="touch"?22:12)?bi:-1; }
 function removePoint(i){ const pts=editPts(); if (pts.length<=2) return; pts.splice(i,1); setCurve(pts); }
 cv.addEventListener("pointerdown",ev=>{ if (!items[cur]) return; ev.preventDefault(); const pts=editPts(); let i=effCurve(items[cur],curDev())?nearest(pts,ev):-1;   /* straight line: no visible points, so a tap adds one */
@@ -80,6 +89,7 @@ cv.addEventListener("pointerdown",ev=>{ if (!items[cur]) return; ev.preventDefau
   cdrag={i}; cv.setPointerCapture(ev.pointerId); });
 cv.addEventListener("pointermove",ev=>{ if (!cdrag) return; const pts=editPts(), i=cdrag.i; if (!pts[i]) return; let [x,y]=evStops(ev);
   const lx=i>0?pts[i-1][0]+0.2:-16, hx=i<pts.length-1?pts[i+1][0]-0.2:10, ly=i>0?pts[i-1][1]:-16, hy=i<pts.length-1?pts[i+1][1]:10;
+  [x,y]=inView([x,y]);   /* v1.7.2: stay inside the box (the neighbours' order still wins, so the curve keeps rising) */
   pts[i]=[+Math.min(hx,Math.max(lx,x)).toFixed(3), +Math.min(hy,Math.max(ly,y)).toFixed(3)]; setCurve(pts); });
 const endCdrag=()=>{ cdrag=null; }; cv.addEventListener("pointerup",endCdrag); cv.addEventListener("pointercancel",endCdrag);
 cv.addEventListener("dblclick",ev=>{ const i=nearest(editPts(),ev); if (i>=0) removePoint(i); });

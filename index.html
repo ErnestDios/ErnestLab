@@ -68,7 +68,7 @@
       <div class="grainstock" id="fpsRow" hidden><label for="seqFps">Frame rate</label><select id="seqFps"></select></div>
       <div class="grainstock"><label for="devProf">Profile</label><select id="devProf"></select></div>
       <div class="curvewrap"><canvas id="curveCv" aria-label="Tone curve in stops around mid grey. Drag a point; click the curve to add one; double-click a point to remove it."></canvas></div>
-      <div class="note" id="curveNote">Tone curve in stops around mid grey (input across, output up), over this photo's histogram. Drag a point, click or tap the curve to add one, double-click or double-tap a point to remove it. Applied before Shadows / Midtones / Highlights, on luminance, so colours keep their hue.</div>
+      <div class="note" id="curveNote">Tone curve in stops around mid grey (input across, output up), over this photo's histogram. Drag a point, click or tap the curve to add one, double-click or double-tap a point to remove it. A point beyond the box shows as an arrow on its edge: drag it back in. Applied before Shadows / Midtones / Highlights, on luminance, so colours keep their hue.</div>
       <div class="row"><input type="text" id="profName" placeholder="Name this profile…"><button class="btn" id="btnSaveProf">Save profile</button></div>
       <div class="row wrap"><button class="btn" id="btnDelProf" disabled>Delete</button><button class="btn" id="btnLoadProf" title="Load a profile .json (you can also drop it on the image)">Load…</button><button class="btn" id="btnExportProf">Export</button><button class="btn" id="btnCurveReset">Reset curve</button></div>
       <input type="file" id="profIn" accept=".json,application/json" multiple hidden>
