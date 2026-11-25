@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ernest Lab</title>
-<link rel="stylesheet" href="css/fonts.css?v=1.7.0">
-<link rel="stylesheet" href="css/app.css?v=1.7.0">
+<link rel="stylesheet" href="css/fonts.css?v=1.7.1">
+<link rel="stylesheet" href="css/app.css?v=1.7.1">
 </head>
 <body>
 <header>
@@ -60,6 +60,8 @@
     </div>
     <div class="ctrls" id="devCtrls"></div>
     <div class="profbox" id="profBox">
+      <div class="grainstock" id="rawHLRow" hidden><label for="devRawHL">Clipped highlights</label><select id="devRawHL"><option value="0">Clip (white)</option><option value="2">Blend</option><option value="5">Rebuild</option></select></div>
+      <div class="note" id="rawHLNote" hidden></div>
       <div class="grainstock" id="inCsRow" hidden><label for="devInCS">Input colour</label><select id="devInCS"></select></div>
       <div class="note" id="inCsNote" hidden></div>
       <div class="grainstock" id="layerRow" hidden><label for="devLayer">Layer</label><select id="devLayer"></select></div>
@@ -175,6 +177,7 @@
     <ul>
       <li>RAW files are developed in your browser with <b>LibRaw</b>: camera white balance, full sensor range, straight into Ernest Lab's linear working space, so highlights roll off like film instead of clipping like a JPEG.</li>
       <li><b>Base exposure</b> is matched to the camera's own preview in the file, so a RAW opens as bright as the camera saw it (shown next to the file name). Adjust with Exposure, or per image with Development.</li>
+      <li><b>Clipped highlights</b> (Development, RAW only): <b>Clip</b> cuts every channel where the first one reaches white after white balance, so saturated lights flatten; <b>Blend</b> and <b>Rebuild</b> keep each channel's full range (up to about a stop more at the top) and fade or rebuild what clipped. Shadows and mid-tones stay the same. Changing it develops the RAW again.</li>
       <li><b>Profile → Camera-like</b> (the default for RAW) gives it the contrast of the camera's own JPEG, measured from the preview inside the file, while keeping the RAW's extra highlight detail. <b>Flat</b> leaves the linear data untouched, for building contrast yourself.</li>
       <li>Opening a RAW takes a few seconds (longer on phones). Only the still you're looking at is held in memory; switching back to a RAW develops it again.</li>
       <li>The decoder (about 1.5 MB) loads the first time you open a RAW, then also works offline.</li>
@@ -303,29 +306,29 @@
   </div>
 </div>
 
-<script src="js/00-config.js?v=1.7.0"></script>
-<script src="js/01-development.js?v=1.7.0"></script>
-<script src="js/02-profiles.js?v=1.7.0"></script>
-<script src="js/03-measured.js?v=1.7.0"></script>
-<script src="js/03-stocks.js?v=1.7.0"></script>
-<script src="js/03-params.js?v=1.7.0"></script>
-<script src="js/04-panel.js?v=1.7.0"></script>
-<script src="js/04-colour.js?v=1.7.0"></script>
-<script src="js/05-gl.js?v=1.7.0"></script>
-<script src="js/06-images.js?v=1.7.0"></script>
-<script src="js/07-raw.js?v=1.7.0"></script>
-<script src="js/07-exr.js?v=1.7.0"></script>
-<script src="js/07-dpx.js?v=1.7.0"></script>
-<script src="js/08-output.js?v=1.7.0"></script>
-<script src="js/08-formats.js?v=1.7.0"></script>
-<script src="js/09-view.js?v=1.7.0"></script>
-<script src="js/10-boot.js?v=1.7.0"></script>
-<script src="js/11-curve-editor.js?v=1.7.0"></script>
-<script src="js/12-video.js?v=1.7.0"></script>
-<script src="js/12-vdec.js?v=1.7.0"></script>
-<script src="js/12-seq.js?v=1.7.0"></script>
-<script src="js/13-help.js?v=1.7.0"></script>
-<script src="js/14-report.js?v=1.7.0"></script>
-<script src="js/15-phone.js?v=1.7.0"></script>
+<script src="js/00-config.js?v=1.7.1"></script>
+<script src="js/01-development.js?v=1.7.1"></script>
+<script src="js/02-profiles.js?v=1.7.1"></script>
+<script src="js/03-measured.js?v=1.7.1"></script>
+<script src="js/03-stocks.js?v=1.7.1"></script>
+<script src="js/03-params.js?v=1.7.1"></script>
+<script src="js/04-panel.js?v=1.7.1"></script>
+<script src="js/04-colour.js?v=1.7.1"></script>
+<script src="js/05-gl.js?v=1.7.1"></script>
+<script src="js/06-images.js?v=1.7.1"></script>
+<script src="js/07-raw.js?v=1.7.1"></script>
+<script src="js/07-exr.js?v=1.7.1"></script>
+<script src="js/07-dpx.js?v=1.7.1"></script>
+<script src="js/08-output.js?v=1.7.1"></script>
+<script src="js/08-formats.js?v=1.7.1"></script>
+<script src="js/09-view.js?v=1.7.1"></script>
+<script src="js/10-boot.js?v=1.7.1"></script>
+<script src="js/11-curve-editor.js?v=1.7.1"></script>
+<script src="js/12-video.js?v=1.7.1"></script>
+<script src="js/12-vdec.js?v=1.7.1"></script>
+<script src="js/12-seq.js?v=1.7.1"></script>
+<script src="js/13-help.js?v=1.7.1"></script>
+<script src="js/14-report.js?v=1.7.1"></script>
+<script src="js/15-phone.js?v=1.7.1"></script>
 </body>
 </html>

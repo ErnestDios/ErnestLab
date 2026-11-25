@@ -36,8 +36,8 @@ const DEV_PARAMS=[["push","Push in",0,200,1,0,"%","push"],["panX","Reframe ↔",
   /* v1.0: Fog, an offset (not a multiply like the tone sliders): the density every negative has with no light at all,
      from development chemistry. Added before grain and after the lens, so blacks carry grain; % of mid grey. */
   ["dFog","Fog",0,5,0.01,0,"%"]];
-const DEV0=Object.freeze({fmt:"orig",orient:"auto",push:0,panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0,dTemp:0,dTint:0});
-function devActive(d){ return d.fmt!=="orig"||d.push>0||d.dShadows||d.dMid||d.dHigh||d.dFog||d.dTemp||d.dTint||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto"); }
+const DEV0=Object.freeze({fmt:"orig",orient:"auto",push:0,panX:0,panY:0,dShadows:0,dMid:0,dHigh:0,profile:"auto",curve:null,curveName:null,inCS:"auto",dFog:0,dTemp:0,dTint:0,rawHL:0});
+function devActive(d){ return d.fmt!=="orig"||d.push>0||d.dShadows||d.dMid||d.dHigh||d.dFog||d.dTemp||d.dTint||(d.profile&&d.profile!=="auto")||(d.inCS&&d.inCS!=="auto")||!!d.rawHL; }
 /* Crop rectangle for a still: largest rect of the format's ratio inside the source, moved by panX/panY.
    Returns UV rect (top-left origin) and the output size in pixels. */
 function cropRect(d,w,h){
@@ -67,7 +67,7 @@ function syncDev(){ const d=curDev(), cropped=d.fmt!=="orig", movable=cropped||d
   document.querySelectorAll("#devOrient button").forEach(b=>{ b.classList.toggle("on", cropped && !social && (b.dataset.o==="port")===port); b.disabled=!cropped || social || d.fmt==="1:1"; });
   const c=cropRect(d,srcW,srcH), hnt=platformHint(c.W,c.H), he=$("devHint");
   he.textContent=(hnt.ok?"No extra crop on: ":"")+hnt.text; he.classList.toggle("ok",hnt.ok);
-  $("tick-dev").classList.toggle("live",!!devActive(d)); if (typeof exrSync==="function") exrSync(); if (typeof seqSync==="function") seqSync(); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
+  $("tick-dev").classList.toggle("live",!!devActive(d)); if (typeof exrSync==="function") exrSync(); if (typeof rawHLSync==="function") rawHLSync(); if (typeof seqSync==="function") seqSync(); updMeta(); if (typeof syncProfile==="function" && $("curveCv").getContext) try{ syncProfile(); }catch(e){} }
 function updMeta(){ const it=items[cur]; if(!it) return; const c=cropRect(curDev(),srcW,srcH);
   $("meta").textContent = `${it.name} · ${srcW}×${srcH}` + ((c.W!==srcW||c.H!==srcH) ? ` → ${c.W}×${c.H}` : "")
     + (it.raw && it.baseEV!=null ? ` · RAW${it.iso?" · ISO "+it.iso:""} · base ${it.baseEV>=0?"+":""}${it.baseEV.toFixed(1)} EV` : "")

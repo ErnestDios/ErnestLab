@@ -9,6 +9,24 @@
    it enters the pipeline at the input transform with uInXfer=1, the slot reserved for it since v0.2. */
 const RAW_EXT=/\.(3fr|ari|arw|cr2|cr3|crw|dcr|dng|erf|fff|iiq|k25|kdc|mef|mos|mrw|nef|nrw|orf|pef|raf|raw|rw2|rwl|sr2|srf|srw|x3f)$/i;
 const RAW_OPTS={useCameraWb:true, useCameraMatrix:1, outputColor:1, outputBps:16, gamm:[1,1], noAutoBright:true, highlight:0, userQual:3};
+/* v1.7.1 Clipped highlights (Development, RAW only): LibRaw's highlight modes. 0 Clip (as before): after white balance every
+   channel is cut where the least-boosted one reaches the sensor's white, so the channels white balance boosts (often red,
+   blue) lose up to about a stop at the top: saturated lights (a blue stage light, red neon, a sunset) flatten and blown
+   areas go neutral white. 2 Blend and 5 Rebuild keep each channel's full range (LibRaw then scales the image down; the
+   decode lines it back up on the mid-tones): Blend mixes clipped and unclipped channels into a soft neutral white, Rebuild
+   reconstructs clipped channels from the ones still recording (dcraw -H 5, the usual compromise). Checked on rawpy's test
+   NEF / CR2 (25 Nov): shadows and mid-tones match Clip, the top stop opens up. */
+const RAW_HL={0:"Clip",2:"Blend",5:"Rebuild"};
+function rawHLSync(){ const it=items[cur], row=$("rawHLRow"), note=$("rawHLNote"); if (!row) return; const on=!!(it&&it.raw); row.hidden=note.hidden=!on; if (!on) return;
+  const v=(curDev().rawHL|0); $("devRawHL").value=RAW_HL[v]?String(v):"0";
+  note.textContent = v===5 ? "Rebuild: keeps every channel's full range and rebuilds clipped channels from the ones still recording, so saturated lights, skies and skin keep tone and colour in the top stop. Where all three clipped it stays white. Shadows and mid-tones don't change."
+    : v===2 ? "Blend: keeps every channel's full range and blends clipped and unclipped channels, so blown areas fade softly into neutral white. Shadows and mid-tones don't change."
+    : "Clip (as before): after white balance, channels are cut where the first reaches white, so the boosted ones (often red, blue) lose up to a stop at the top: saturated lights flatten, blown areas go flat white. Try Rebuild for coloured lights, a clipped sky or a hot face.";
+  /* the shown RAW was developed with another mode (changed here, Reset, Apply to all): develop it again */
+  if (srcItem===it && it.decHL!==undefined && it.decHL!==v && !it.hlBusy){ it.hlBusy=true; srcItem=null;
+    ensureSource(cur).then(ok=>{ it.hlBusy=false; if (ok){ syncDev(); schedule(); } }); } }
+function buildRawHL(){ const sel=$("devRawHL"); if (!sel) return;
+  sel.addEventListener("change",()=>setDev("rawHL",+sel.value)); }   /* setDev → syncDev → rawHLSync develops it again */
 let rawMod=null, rawQueue=Promise.resolve();
 async function rawLib(){ if (!rawMod) rawMod=import(new URL("raw/index.js",document.baseURI).href).then(m=>m.default); return new (await rawMod)(); }
 function rawJob(fn){ const r=rawQueue.then(fn,fn); rawQueue=r.then(()=>{},()=>{}); return r; }   /* one decode at a time (memory) */
@@ -52,14 +70,27 @@ async function rawDecode(it){
     const lr=await rawLib();
     try{
       const half = Math.max(it.w,it.h)>MAXTEX;
-      await lr.open(new Uint8Array(await it.file.arrayBuffer()), {...RAW_OPTS, halfSize:half});
+      const hv=(it.dev&&it.dev.rawHL)|0, hl=RAW_HL[hv]?hv:0;   /* v1.7.1: highlight recovery, per image */
+      await lr.open(new Uint8Array(await it.file.arrayBuffer()), {...RAW_OPTS, halfSize:half, highlight:hl}); it.decHL=hl;
       const img=await lr.imageData(); const W=img.width, H=img.height, d=img.data;
       if (!d || img.colors!==3 || img.bits!==16) throw new Error("unexpected RAW output");
+      const nM=Math.min(40000,W*H), stM=Math.max(1,Math.floor(W*H/nM)), lumAt=i=>{ const k=i*stM*3; return (0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])/65535; };
+      let ev;
       if (it.baseEV==null){
-        const n=Math.min(40000,W*H), step=Math.max(1,Math.floor(W*H/n));
-        const med=medianLum(i=>{ const k=i*step*3; return (0.2126*d[k]+0.7152*d[k+1]+0.0722*d[k+2])/65535; }, n);
+        const med=medianLum(lumAt, nM);
         it.baseEV = (it.refLum && med>0) ? Math.min(4,Math.max(-2,Math.log2(it.refLum/med))) : 1;
         it.baseAuto = !!(it.refLum && med>0);
+        it.refSamp={W, n:nM, lum:Float32Array.from({length:nM},(_,i)=>lumAt(i)), hl};   /* this decode's tones, to line others up with it */
+        ev=it.baseEV;
+      } else {
+        /* LibRaw scales by the smallest white-balance multiplier when highlights are recovered (room above white for the
+           rebuilt channels), so the image comes out darker than in Clip. Line it up with the first decode: the median
+           ratio over well-exposed samples (not near black, not clipped) */
+        const R=it.refSamp; let k=0;
+        if (R && R.W===W && R.n===nM){ const r=new Float32Array(nM);
+          for (let i=0;i<nM;i++){ const a=R.lum[i], b=lumAt(i); if (a>0.01 && a<0.6 && b>1e-5) r[k++]=a/b; }
+          if (k>200){ const q=r.subarray(0,k).sort(); ev=it.baseEV+Math.log2(q[k>>1]); } }
+        if (ev===undefined) ev=it.baseEV;
       }
       if (!it.hist || it.camCurve===undefined){
         const n=Math.min(60000,W*H), step=Math.max(1,Math.floor(W*H/n)), k2=Math.pow(2,it.baseEV)/65535, lum=new Float32Array(n);
@@ -74,7 +105,7 @@ async function rawDecode(it){
         }
         if (it.refQ) it.camCurve=fitCamCurve(qs(lum),it.refQ);
       }
-      const g=Math.pow(2,it.baseEV)/65535, lut=new Uint16Array(65536); for (let v=0;v<65536;v++) lut[v]=f2h(v*g);
+      const g=Math.pow(2,ev)/65535, lut=new Uint16Array(65536); for (let v=0;v<65536;v++) lut[v]=f2h(v*g);
       const out=new Uint16Array(W*H*4), ONE=0x3c00;
       for (let i=0,j=0;i<d.length;i+=3,j+=4){ out[j]=lut[d[i]]; out[j+1]=lut[d[i+1]]; out[j+2]=lut[d[i+2]]; out[j+3]=ONE; }
       if (!it.url){   /* no embedded preview: thumbnail from the decoded data */
