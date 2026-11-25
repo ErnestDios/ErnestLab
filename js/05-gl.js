@@ -35,7 +35,7 @@ const float GRAIN_K=1.0;
                         before the film curve (what the lens and the negative see).
    4. Look encoding     extended sRGB OETF: identical to sRGB up to 1.0 and continues above it.
    5. Film look         per-channel gamma, S-curve, highlight roll-off (compresses >1.0), black lift /
-                        white crush, saturation, hue curves (v1.7), split toning, external LUT -> display 0..1.
+                        white crush, hue curves (v1.7), saturation, split toning, external LUT -> display 0..1.
    Grain                part of the emulsion: per-layer grain at the end of the optics pass, before the
                         film curve (see emulsionGrain). */
 const SCENE_FN=`
@@ -128,9 +128,9 @@ vec3 filmPre(vec3 c){
   return c; }
 vec3 filmPost(vec3 c){
   c = mix(vec3(uFade), vec3(1.0-uCrush), c);
+  if (uHCOn==1) c = hueCurves(c);   /* v1.7; here, not after Saturation: a branch there changed SwiftShader's rounding of old looks by 1 code */
   float lum = dot(c,W);
   c = mix(vec3(lum), c, uSat);
-  if (uHCOn==1) c = hueCurves(c);
   float ws = 1.0-smoothstep(0.0,0.55,lum), wh = smoothstep(0.45,1.0,lum);
   c += (uShCol-dot(uShCol,W))*uShAmt*ws + (uHiCol-dot(uHiCol,W))*uHiAmt*wh;
   c = clamp(c,0.0,1.0);

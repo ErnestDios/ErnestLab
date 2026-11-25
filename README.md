@@ -98,7 +98,7 @@ Single page, WebGL2:
 2. **Development, then scene-linear operations:** per-image shadows / midtones / highlights (three monotonic operators on luminance, so tones never invert), then exposure, white balance and the channel mixer, with no clipping.
 3. **Optics and emulsion, in scene-linear** (comp order, before the grade): chromatic aberration, edge softness, halation and bloom from a blur pyramid (½, ¼, ⅛), vignette, then per-layer grain added in a log-like encoding (close to density), or for measured stocks as an exposure wobble in stops following the datasheet. Physical halation and bloom use their own pyramid sized in millimetres on film.
 4. **Look encoding:** an extended sRGB curve that keeps values above 1.0, so bright highlights reach the film curve and highlight roll-off instead of being clipped.
-5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, saturation, hue curves (chroma turned and scaled in the plane of constant Rec.709 luminance), split toning, external LUT → display.
+5. **Film look:** per-channel gamma, S-curve, roll-off, black lift / white crush, hue curves (chroma turned and scaled in the plane of constant Rec.709 luminance), saturation, split toning, external LUT → display.
 
 Intermediate images are RGBA16F when `EXT_color_buffer_float` is available.
 The `.cube` export renders the grade shader over an identity 33³ texture and reads it back. Zips are written in-page (store-only, CRC32); PNG 16, TIFF, DPX, Cineon and OpenEXR (ZIP-compressed, via the browser's CompressionStream) are written by Ernest Lab's own encoders in `js/08-formats.js`.
